@@ -1,0 +1,127 @@
+/* Chronos tokens: the builtbyjosef design system (tokens.css v1.1) plus the
+   Chronos names from spec §9.1 mapped onto it. Dark is the default (the app is a
+   stage surface); light and system are selected with data-theme on <html>. */
+@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-latin-300-normal.woff2") format("woff2"); font-weight: 300; font-display: swap; }
+@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-latin-500-normal.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+
+:root {
+  --bg: #0D0E10;
+  --s1: #16181B;
+  --s2: #1D2024;
+  --s3: #25292E;
+  --sunken: #08090A;
+  --line: #2A2D32;
+  --line-strong: #7B8088;
+  --text: #F3F2EE;
+  --text-2: #A9ADB3;
+  --text-3: #8D9198;
+  --inverse: #F3F2EE;
+  --on-inverse: #0D0E10;
+  --accent: #FF5B1F;
+  --accent-hover: #FF7A47;
+  --accent-press: #E64A12;
+  --on-accent: #0D0E10;
+  --accent-text: #FF5B1F;
+  /* The now-line carries meaning, so it needs 3:1 in both themes (orange on paper is 2.8:1). */
+  --now: #FF5B1F;
+  --ring: #FF5B1F;
+  --ok: #6DB3FF;
+  --warn: #F0B429;
+  --danger: #FF6B7F;
+  --tag1: #56B4E9;
+  --tag2: #2FD3A3;
+  --tag3: #E58FBD;
+  --tag4: #F0C419;
+  --tag5: #B49CFF;
+  --tag6: #4FD6E8;
+  --tag7: #A9ADB3;
+  --tag8: #9BD86B;
+  --shadow-lift: 4px 4px 0 0 #FF5B1F;
+  --shadow-float: 0 12px 32px 0 rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --r: 10px;
+  --pill: 999px;
+  --cap: 6px;
+  --hit: 44px;
+  --dur-instant: 80ms;
+  --dur-fast: 140ms;
+  --dur-base: 240ms;
+  --dur-slow: 400ms;
+  --dur-sweep: 640ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:root[data-theme="light"] {
+  --bg: #F3F2EE;
+  --s1: #FBFAF7;
+  --s2: #EFEDE7;
+  --s3: #E8E6E0;
+  --sunken: #E8E6E0;
+  --line: #D3D0C7;
+  --line-strong: #767A80;
+  --text: #0D0E10;
+  --text-2: #4A4D53;
+  --text-3: #5E6167;
+  --inverse: #0D0E10;
+  --on-inverse: #F3F2EE;
+  --accent-text: #B93A09;
+  --now: #B93A09;
+  --ring: #0D0E10;
+  --ok: #0B5FB5;
+  --warn: #8F5B00;
+  --danger: #C41E3A;
+  --tag1: #0B63C5;
+  --tag2: #00796B;
+  --tag3: #A8326F;
+  --tag4: #9A6700;
+  --tag5: #6D4FD8;
+  --tag6: #0E7490;
+  --tag7: #4A4D53;
+  --tag8: #3B7D23;
+  --shadow-lift: 4px 4px 0 0 #0D0E10;
+  --shadow-float: 0 12px 32px 0 rgba(13, 14, 16, 0.18);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] {
+    --bg: #F3F2EE;
+    --s1: #FBFAF7;
+    --s2: #EFEDE7;
+    --s3: #E8E6E0;
+    --sunken: #E8E6E0;
+    --line: #D3D0C7;
+    --line-strong: #767A80;
+    --text: #0D0E10;
+    --text-2: #4A4D53;
+    --text-3: #5E6167;
+    --inverse: #0D0E10;
+    --on-inverse: #F3F2EE;
+    --accent-text: #B93A09;
+  --now: #B93A09;
+    --ring: #0D0E10;
+    --ok: #0B5FB5;
+    --warn: #8F5B00;
+    --danger: #C41E3A;
+    --tag1: #0B63C5;
+    --tag2: #00796B;
+    --tag3: #A8326F;
+    --tag4: #9A6700;
+    --tag5: #6D4FD8;
+    --tag6: #0E7490;
+    --tag7: #4A4D53;
+    --tag8: #3B7D23;
+    --shadow-lift: 4px 4px 0 0 #0D0E10;
+    --shadow-float: 0 12px 32px 0 rgba(13, 14, 16, 0.18);
+    color-scheme: light;
+  }
+}

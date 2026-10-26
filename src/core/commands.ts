@@ -34,7 +34,7 @@ export type EventInput = Pick<CalEvent, 'title' | 'tagId' | 'scope' | 'tz' | 'st
 export type ClosureInput = Pick<Closure, 'name' | 'startDate' | 'endDate' | 'scopes' | 'confirmed'>;
 export type TagInput = Pick<Tag, 'name' | 'color' | 'kind'>;
 export type SettingsPatch = Partial<Omit<Settings, 'id' | 'createdAt' | 'updatedAt' | 'deviceId' | 'deletedAt' | 'v'>>;
-export const RECYCLABLE: Coll[] = ['tasks', 'events', 'blocks', 'tags', 'ideas', 'closures'];
+export const RECYCLABLE: Coll[] = ['tasks', 'events', 'eventExceptions', 'blocks', 'tags', 'ideas', 'closures'];
 
 export type Command =
   | { type: 'task.create'; input: TaskInput }

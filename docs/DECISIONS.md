@@ -73,3 +73,30 @@ Context: §6.6 says a task inside a block defaults to a countdown to the block e
 
 ## D-024 "Every core module has a test" means referenced by a test
 Context: §11.2. Decision: the audit requires each `src/core/**/*.ts` (except the type-only `model/types.ts`) to be imported by at least one file in `tests/`. Revisit-when: never.
+
+## D-025 The launch dial turns once, then holds still
+Context: §8.3 asks for a slowly rotating dial; the design system's rule is that motion runs once and stops (perpetual motion reads as nervous). Decision: the dial rotates into place over 2.4 s and then stays still; the orange now-notch is the one hot point. Consequence: no animation runs while Home idles. Revisit-when: the owner wants the loop back.
+
+## D-026 Brand assets come from the design system
+Context: §9.10 asks for placeholder `builtbyjosef.svg` and `jy-monogram.svg`. The owner's real logos already exist in the design system repo. Decision: copy `tab-lockup-dark.svg` and `tab-primary-dark.svg` under those exact names; the About brand block sits on a fixed dark stage so the dark variants always read. The owner can still replace the files. Revisit-when: a light-variant About is wanted.
+
+## D-027 Tokens, fonts and launch.css live in the renderer's public folder
+Context: Vite merges stylesheets linked from HTML into the entry CSS, so `launch.css` would not stay a small separate file, and fonts would be copied twice. Decision: `public/tokens.css` (with `@font-face`), `public/launch.css` and `public/fonts/` are copied verbatim and linked from `index.html` and `widget.html`; component CSS is bundled. Consequence: one font copy, launch styles are 2.8 KB and paint before any script. Revisit-when: never.
+
+## D-028 Shelf and Recycle Bin share one main module
+Decision: `main/shelf.ts` lists, opens and trashes (`shell.trashItem`) with one path guard (a direct child of the shelf folder), instead of a separate `trash.ts`. Revisit-when: never.
+
+## D-029 Two ticks in main, and the fast one only while a timer runs
+Context: idle CPU ≈ 0 (§3). Decision: a 30 s tick always (block ends, prep nudges, holidays, purge every 6 h, day rollover) and a 250 ms tick only while a timer runs (Monolith's boundary/heartbeat/gap logic). The widget's 8 ms cursor polling runs only while the pointer is held on it (marked `audit-allow`). Revisit-when: never.
+
+## D-030 Notification dedupe is per run
+Decision: prep-nudge, checkpoint and block-end notifications are deduplicated in memory per app run; a restart can repeat one notification at most. Revisit-when: users report repeats.
+
+## D-031 CHRONOS_USER_DATA overrides the data folder
+Decision: an environment variable (set before the instance lock) points the data folder elsewhere, so the smoke test never touches real data. Revisit-when: never.
+
+## D-032 A separate --now token for the now-line
+Context: orange on paper is 2.8:1, below the 3:1 rule for meaningful marks. Decision: the now-line uses `--now` (orange in dark, `accent-text` #B93A09 in light); caps and the primary fill stay `--accent` as decoration. Tested in `tests/main/contrast.test.ts`. Revisit-when: never.
+
+## D-033 Main blocks every non-local request
+Context: "zero network requests in v1". Decision: besides the CSP, `session.webRequest.onBeforeRequest` cancels anything that is not `file:`, `data:`, `devtools:` or the dev server, and logs it. Revisit-when: v1.1 (allow the Firebase hosts only).

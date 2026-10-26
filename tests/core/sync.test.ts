@@ -6,6 +6,7 @@ import { purge } from '../../src/core/repo/recycle';
 import { live } from '../../src/core/repo/repo';
 import { memoryProvider, memoryServer } from '../../src/core/sync/memoryProvider';
 import { nullProvider } from '../../src/core/sync/nullProvider';
+import { isStub } from '../../src/core/sync/provider';
 import { syncOnce, takeover, type SyncState } from '../../src/core/sync/engine';
 import { fresh, MIN, T0 } from '../helpers';
 
@@ -101,7 +102,7 @@ describe('sync', () => {
     await b.sync(T0 + 10 * DAY);
     await a.sync(T0 + 10 * DAY);
     expect(b.d.tags[id]).toBeUndefined();
-    expect(b.d.tombs.tags?.[id]?.purged).toBe(true);
+    expect(isStub(b.d.tombs.tags![id]!)).toBe(true);
     expect(a.d.tags[id]).toBeUndefined();
     expect(JSON.stringify(a.d)).not.toContain('Edited offline');
   });
