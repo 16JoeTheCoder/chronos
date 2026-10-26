@@ -1,4 +1,4 @@
-// v1 default: no replication. The engine still runs against it, so the code path is exercised.
+// The v1 provider: no replication. v1 never schedules a sync; v1.1 swaps in Firestore (docs/SYNC_V1_1.md).
 
 import type { SyncProvider } from './provider';
 

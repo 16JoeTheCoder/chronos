@@ -15,7 +15,7 @@ One row per MUST sentence in the build spec, plus one row per subsection of §6,
 | M-10.1e | Offline device reconnects after 10 days | `engine.ts` | `sync.test.ts` "reconnecting after 10 days" |
 | M-10.1f | Timer takeover closes the right slice | `engine.ts` (`takeover`, `afterTakeover`) | `sync.test.ts` "timer takeover" |
 | M-10.1g | Running the sync twice is a no-op | `engine.ts` | `sync.test.ts` "running the sync twice" |
-| M-11.1 | Tests (vitest): Monolith timer/tasks/store/recovery ports; time-left; recurrence incl. week A/B and exceptions; zones/DST; holidays/Easter; queue derivation and locked-active; prep nudges; recycle + purge; repo stamping; persistence (atomic, .bak); IPC validation; WCAG contrast; sprint checkpoints; §10 sync | `src/core/**`, `src/main/**` | `tests/core/*.test.ts`, `tests/main/*.test.ts` (145 tests) |
+| M-11.1 | Tests (vitest): Monolith timer/tasks/store/recovery ports; time-left; recurrence incl. week A/B and exceptions; zones/DST; holidays/Easter; queue derivation and locked-active; prep nudges; recycle + purge; repo stamping; persistence (atomic, .bak); IPC validation; WCAG contrast; sprint checkpoints; §10 sync | `src/core/**`, `src/main/**` | `tests/core/*.test.ts`, `tests/main/*.test.ts` (all passing; count in `docs/BUILD_REPORT.md`) |
 | M-11.4 | Reviewer subagent exists and audits | `.claude/agents/reviewer.md` | reviewer passes recorded in `docs/BUILD_REPORT.md` |
 
 ## §6 Core logic

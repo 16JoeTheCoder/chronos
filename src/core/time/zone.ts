@@ -62,7 +62,7 @@ export function localParts(ts: number, tz: string): LocalParts {
 }
 
 /** Offset of tz from UTC at instant ts, in ms (Jakarta: +7h). */
-export function offsetAt(ts: number, tz: string): number {
+function offsetAt(ts: number, tz: string): number {
   const p = localParts(ts, tz);
   return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - Math.floor(ts / 1000) * 1000;
 }

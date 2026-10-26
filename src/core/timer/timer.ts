@@ -33,7 +33,7 @@ export function phaseDuration(task: TimerTask, phase: Phase = task.runtime.phase
 const isBreak = (phase: Phase) => phase !== 'work';
 
 /** Close the running slice at `at`, crediting work or break time. No-op if not running. */
-export function closeSlice<T extends TimerTask>(task: T, at: number): { task: T; slice: Slice | null } {
+function closeSlice<T extends TimerTask>(task: T, at: number): { task: T; slice: Slice | null } {
   const rt = task.runtime;
   if (rt.sliceStartedAt === null) return { task, slice: null };
   const end = Math.max(at, rt.sliceStartedAt);

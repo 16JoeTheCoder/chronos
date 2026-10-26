@@ -1,6 +1,6 @@
 // Home strips: "Before class" prep nudges (§6.5) and the holiday "Heads up" card (§6.3).
 import { useState } from 'react';
-import { clockOf, dateLabel } from '../../core/format';
+import { clockOf, dateLabel, formatHuman } from '../../core/format';
 import { SCOPES, type Closure, type Data, type Scope } from '../../core/model/types';
 import { live } from '../../core/repo/repo';
 import { todayOf } from '../../core/tasks/tasks';
@@ -18,7 +18,7 @@ export function BeforeClass({ d, now }: { d: Data; now: number }) {
         {list.map((n) => (
           <li key={n.key} className={n.tight ? 'tight' : ''}>
             {n.tight && <span className="badge badge-warn">Tight</span>}
-            <b>{n.task.title}</b> · {n.instance.event.title} {clockOf(n.instance.start, n.instance.event.tz)} · needs {n.needsMin}m, {n.freeBeforeMin}m free
+            <b>{n.task.title}</b> · {n.instance.event.title} {clockOf(n.instance.start, n.instance.event.tz)} · needs {formatHuman(n.needsMin * 60_000)}, {formatHuman(n.freeBeforeMin * 60_000)} free
           </li>
         ))}
       </ul>

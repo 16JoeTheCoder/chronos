@@ -53,6 +53,7 @@ function boot(): void {
   let quitting = false;
   let shortcutError: string | null = null;
   const dataDir = app.getPath('userData');
+  const syncConfig = readFirebaseConfig(dataDir) ? 'present' : 'absent';
 
   // v1 makes no network requests: block anything that is not our own files or the dev server.
   const devUrl = process.env.CHRONOS_DEV_URL;
@@ -125,7 +126,7 @@ function boot(): void {
       shortcutError,
       isPackaged: app.isPackaged,
       version: app.getVersion(),
-      platform: `${process.platform} ${os.release()} · Electron ${process.versions.electron} · sync config ${readFirebaseConfig(dataDir) ? 'present' : 'absent'}`,
+      platform: `${process.platform} ${os.release()} · Electron ${process.versions.electron} · sync config ${syncConfig}`,
       dataDir,
       perf: perfMarks(),
       homeView: null,

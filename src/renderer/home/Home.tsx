@@ -23,7 +23,7 @@ import { TimeLeft } from '../runway/TimeLeft';
 import { ScheduleEditor } from '../schedule/ScheduleEditor';
 import { Settings } from '../settings/Settings';
 import { RecentlyDeleted, ShelfPanel, TrashButton } from '../shelf/Shelf';
-import { useNow } from '../store';
+import { useNow, useTheme } from '../store';
 import { DoneDrawer } from './DoneDrawer';
 import { BeforeClass, HeadsUp } from './Strips';
 
@@ -49,12 +49,12 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
 
   useEffect(() => api.onShow((v) => v && setView(v)), []);
 
+  useTheme(s.theme);
   useEffect(() => {
     const root = document.documentElement;
-    root.dataset.theme = s.theme;
     root.classList.toggle('reduce', s.reduceMotion === true);
     root.classList.toggle('full-motion', s.reduceMotion === false);
-  }, [s.theme, s.reduceMotion]);
+  }, [s.reduceMotion]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -66,7 +66,7 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
         else if (!snap.pendingGap) api.win.hide();
         return;
       }
-      if (typing || e.ctrlKey || e.altKey || e.metaKey || top || askOpen()) return;
+      if (typing || e.ctrlKey || e.altKey || e.metaKey || top || document.querySelector('[aria-modal="true"]')) return;
       if (e.key === 'f' || e.key === 'F') setView((v) => (v === 'focus' ? 'runway' : 'focus'));
       else if (e.key === 'n' || e.key === 'N') {
         e.preventDefault();

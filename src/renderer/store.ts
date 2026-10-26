@@ -31,8 +31,6 @@ export function useSnap(): Snapshot | null {
   return useSyncExternalStore(subscribe, () => snap);
 }
 
-export const getSnap = () => snap;
-
 /** Date.now(), refreshed every `ms` while the page is visible. */
 export function useNow(ms: number): number {
   const [now, setNow] = useState(Date.now);
@@ -53,6 +51,17 @@ export function useNow(ms: number): number {
     };
   }, [ms]);
   return now;
+}
+
+/** Resolve 'system' to light/dark (and follow OS changes) so tokens.css holds each palette once. */
+export function useTheme(theme: 'dark' | 'light' | 'system'): void {
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    const apply = () => (document.documentElement.dataset.theme = theme === 'system' ? (mq.matches ? 'light' : 'dark') : theme);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, [theme]);
 }
 
 // ---- Toasts (bottom-centre, polite live region) ----

@@ -100,3 +100,12 @@ Context: orange on paper is 2.8:1, below the 3:1 rule for meaningful marks. Deci
 
 ## D-033 Main blocks every non-local request
 Context: "zero network requests in v1". Decision: besides the CSP, `session.webRequest.onBeforeRequest` cancels anything that is not `file:`, `data:`, `devtools:` or the dev server, and logs it. Revisit-when: v1.1 (allow the Firebase hosts only).
+
+## D-034 In the app, orange is state only
+Context: the reviewer counted several orange points per view (button caps, switch knobs, focus underlines, sprint marks), against "one orange point per view". The design system's app recipe says heat appears only as state. Decision: primary buttons keep the Tab cap in a neutral tone; knobs and focus underlines are ink; orange is reserved for the now-line, the active card's cap, the single accent button (Start/Pause in Focus), the widget's running bar, overtime digits and the launch notch. Revisit-when: the design system changes its app recipe.
+
+## D-035 Keyboard resize moves the end of a block
+Context: §9.11 says "Alt+arrows resize". Decision: Alt+Left/Right moves the block's end by 5 minutes (Shift for 15); the start moves with plain arrows (move) and then Alt to resize. Dragging covers both edges. The schedule editor's week grid has no drawn hour lines (the hour labels carry it) to avoid a gradient. Revisit-when: users ask for start-edge resizing from the keyboard.
+
+## D-036 Drop and Reopen start a new run
+Context: the reviewer showed a dropped task kept `startedAt`, so it re-locked the moment it headed the queue, ahead of a new `must` task. Decision: Drop and Reopen clear `startedAt`; the lock (§6.4) means "the timer has run in this run". Starting again logs a new `started` activity. Revisit-when: never.

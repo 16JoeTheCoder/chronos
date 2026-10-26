@@ -57,7 +57,7 @@ export const snap = (min: number) => Math.round(min / SNAP_MIN) * SNAP_MIN;
 export function freeGaps(d: Data, m: DayModel, now: number, ignoreBlockId?: string): [number, number][] {
   const s = settingsOf(d);
   const busy = [
-    ...m.instances.map((i): [number, number] => [i.startMin, i.endMin]),
+    ...m.instances.map((i): [number, number] => [minuteOf(m, i.start), minuteOf(m, i.end)]),
     ...m.blocks.filter((b) => b.id !== ignoreBlockId).map((b): [number, number] => [b.startMin, b.endMin]),
   ].sort((a, b) => a[0] - b[0]);
   const out: [number, number][] = [];

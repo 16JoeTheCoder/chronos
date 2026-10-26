@@ -6,14 +6,15 @@
 import { useRef, useState, type CSSProperties } from 'react';
 import type { EventInput } from '../../core/commands';
 import { dateLabel, formatHM, parseHM, WEEKDAYS } from '../../core/format';
-import { SCOPES, TAG_COLORS, type CalEvent, type Closure, type Data, type Scope, type TagColor } from '../../core/model/types';
+import { SCOPES, TAG_COLORS, type CalEvent, type Data, type Scope, type TagColor } from '../../core/model/types';
 import { live, settingsOf } from '../../core/repo/repo';
 import { todayOf } from '../../core/tasks/tasks';
 import { expandEvents } from '../../core/time/schedule';
 import { addDays, isValidZone, mondayOf } from '../../core/time/zone';
 import { Icon } from '../components/Icon';
 import { recycleWithUndo } from '../components/actions';
-import { Dialog, Field, Segmented, Switch } from '../components/ui';
+import { Field, Segmented, Switch } from '../components/ui';
+import { Holidays } from './Holidays';
 import { run } from '../store';
 
 const SNAP = 15;
@@ -122,14 +123,14 @@ export function ScheduleEditor({ d, now, guided, onClose }: { d: Data; now: numb
             </div>
           ))}
         </div>
-        {draft ? <EventPanel key={draft.id ?? `new${draft.startMin}${draft.recur?.weekdays.join()}`} d={d} draft={draft} onDone={() => setDraft(null)} /> : <p className="muted sched-hint">Select an event to edit it, or drag on the grid to add one.</p>}
+        {draft ? <EventPanel key={draft.id ?? `new${draft.startMin}${draft.recur?.weekdays.join()}`} d={d} draft={draft} today={todayOf(d, now)} onDone={() => setDraft(null)} /> : <p className="muted sched-hint">Select an event to edit it, or drag on the grid to add one.</p>}
       </div>
-      {holidays && <Holidays d={d} onClose={() => setHolidays(false)} />}
+      {holidays && <Holidays d={d} today={todayOf(d, now)} onClose={() => setHolidays(false)} />}
     </section>
   );
 }
 
-function EventPanel({ d, draft, onDone }: { d: Data; draft: Draft; onDone: () => void }) {
+function EventPanel({ d, draft, today, onDone }: { d: Data; draft: Draft; today: string; onDone: () => void }) {
   const [f, setF] = useState(draft);
   const [tab, setTab] = useState<'basic' | 'advanced'>('basic');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -220,7 +221,7 @@ function EventPanel({ d, draft, onDone }: { d: Data; draft: Draft; onDone: () =>
         </>
       ) : (
         <>
-          <Switch label="Repeats weekly" checked={!!r} onChange={(on) => set(on ? { date: null, recur: { weekdays: [1], everyNWeeks: 1, anchorDate: mondayOf(new Date().toISOString().slice(0, 10)), from: null, until: null } } : { recur: null, date: new Date().toISOString().slice(0, 10) })} />
+          <Switch label="Repeats weekly" checked={!!r} onChange={(on) => set(on ? { date: null, recur: { weekdays: [1], everyNWeeks: 1, anchorDate: mondayOf(today), from: null, until: null } } : { recur: null, date: today })} />
           {r && (
             <>
               <div className="grid2">
@@ -317,76 +318,5 @@ function TimeInput({ value, onChange }: { value: number; onChange: (min: number)
         if (m !== null) onChange(m);
       }}
     />
-  );
-}
-
-function Holidays({ d, onClose }: { d: Data; onClose: () => void }) {
-  const list = live(d, 'closures').sort((a, b) => a.startDate.localeCompare(b.startDate));
-  const [edit, setEdit] = useState<(Omit<Closure, 'id'> & { id: string | null }) | null>(null);
-  const save = async () => {
-    if (!edit) return;
-    const input = { name: edit.name, startDate: edit.startDate, endDate: edit.endDate, scopes: edit.scopes, confirmed: edit.confirmed };
-    const r = edit.id ? await run({ type: 'closure.update', id: edit.id, input }) : await run({ type: 'closure.create', input });
-    if (r.ok) setEdit(null);
-  };
-  return (
-    <Dialog title="Holidays and breaks" onClose={onClose} wide>
-      <p className="muted">Fixed national holidays are pre-filled; add the movable ones (Eid, Nyepi, Vesak, Chinese New Year, joint leave) and school breaks yourself. A closure turns off the scopes you tick.</p>
-      {edit ? (
-        <div className="form">
-          <Field label="Name">
-            <input autoFocus value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
-          </Field>
-          <div className="grid2">
-            <Field label="From">
-              <input type="date" value={edit.startDate} onChange={(e) => setEdit({ ...edit, startDate: e.target.value })} />
-            </Field>
-            <Field label="To">
-              <input type="date" value={edit.endDate} onChange={(e) => setEdit({ ...edit, endDate: e.target.value })} />
-            </Field>
-          </div>
-          <div className="row gap wrap" role="group" aria-label="Off for">
-            {SCOPES.map((sc) => (
-              <button key={sc} className={`chip${edit.scopes.includes(sc) ? ' on' : ''}`} aria-pressed={edit.scopes.includes(sc)} onClick={() => setEdit({ ...edit, scopes: edit.scopes.includes(sc) ? edit.scopes.filter((x) => x !== sc) : [...edit.scopes, sc] })}>
-                {sc} off
-              </button>
-            ))}
-          </div>
-          <Switch label="Confirmed" checked={edit.confirmed} onChange={(confirmed) => setEdit({ ...edit, confirmed })} />
-          <div className="row gap">
-            <button className="btn" onClick={() => void save()}>
-              Save
-            </button>
-            <button className="btn btn-ghost" onClick={() => setEdit(null)}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        <>
-          <button className="btn btn-s" onClick={() => setEdit({ id: null, name: '', startDate: new Date().toISOString().slice(0, 10), endDate: new Date().toISOString().slice(0, 10), scopes: ['school'], source: 'custom', confirmed: true, createdAt: 0, updatedAt: 0, deviceId: '', deletedAt: null, v: 1 })}>
-            <Icon name="plus" size={14} /> Add holiday or break
-          </button>
-          <ul className="list">
-            {list.map((c) => (
-              <li key={c.id}>
-                <span>
-                  {c.confirmed ? <span className="badge badge-ok">{c.scopes.length ? `${c.scopes.join(', ')} off` : 'Not off'}</span> : <span className="badge badge-warn">Unconfirmed</span>} {c.name} · {dateLabel(c.startDate)}
-                  {c.endDate !== c.startDate && ` – ${dateLabel(c.endDate)}`}
-                </span>
-                <span className="row gap">
-                  <button className="btn btn-s btn-ghost" onClick={() => setEdit({ ...c })}>
-                    Edit
-                  </button>
-                  <button className="icon-btn" aria-label={`Delete ${c.name}`} onClick={() => void recycleWithUndo('closures', c.id, c.name)}>
-                    <Icon name="trash" size={16} />
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </Dialog>
   );
 }

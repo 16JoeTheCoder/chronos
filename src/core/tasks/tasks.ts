@@ -27,6 +27,7 @@ export function activeTask(d: Data): Task | undefined {
   return live(d, 'tasks').find((t) => t.status === 'active');
 }
 
+/** Locked once its timer has run in the current run (Drop and Reopen start a new run). */
 export const isLocked = (t: Task): boolean => t.startedAt !== null;
 
 /** Unscheduled order: priority, then fractional order; dropped (parked) tasks go to the back. */

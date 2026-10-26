@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './styles/widget.css';
 import { settingsOf } from '../core/repo/repo';
 import { api } from './api';
-import { initStore, useSnap } from './store';
+import { initStore, useSnap, useTheme } from './store';
 import { Capture } from './widget/Capture';
 import { Widget } from './widget/Widget';
 
@@ -12,7 +12,7 @@ document.documentElement.classList.add(isCapture ? 'is-capture' : 'is-widget');
 
 function App() {
   const snap = useSnap();
-  if (snap) document.documentElement.dataset.theme = settingsOf(snap.data).theme;
+  useTheme(snap ? settingsOf(snap.data).theme : 'dark');
   if (isCapture) return <Capture />;
   return snap ? <Widget snap={snap} /> : null;
 }

@@ -3,7 +3,7 @@
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 400 15px/24px var(--font-sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
 .launch { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--bg); transition: opacity var(--dur-fast) var(--ease-in), transform var(--dur-fast) var(--ease-in); }
 .launch.out { opacity: 0; transform: translateY(-12px); pointer-events: none; }
-.dial { position: absolute; width: min(92vmin, 980px); height: auto; opacity: .55; animation: dial-in 2400ms var(--ease-out) both; }
+.dial { position: absolute; width: min(92vmin, 980px); height: auto; opacity: .55; animation: dial-in var(--dur-sweep) var(--ease-out) both; }
 .dial circle { fill: none; }
 .dial-ring { stroke: var(--line); stroke-width: 1.5; }
 .dial-ring-2 { stroke-width: 1; }
@@ -19,10 +19,9 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 .launch-stats { display: grid; grid-template-columns: repeat(3, minmax(160px, 1fr)); gap: 32px; margin: 48px 0 0; }
 .launch-stats dt { font: 500 12px/16px var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); }
 .launch-stats dt::before { content: ""; display: block; width: 28px; height: 6px; margin-bottom: 8px; background: var(--line-strong); }
-.launch-stats div:first-child dt::before { background: var(--accent); }
 .launch-stats dd { margin: 8px 0 0; font: 300 28px/36px var(--font-sans); font-variant-numeric: tabular-nums; min-height: 36px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sk { background: var(--s2); border-radius: 4px; color: transparent; }
 .launch-hint { margin: 48px 0 0; color: var(--text-3); font-size: 13px; }
 kbd { font: 500 12px/1 var(--font-mono); padding: 3px 6px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--text-2); }
 .hidden *, .hidden *::before, .hidden *::after { animation-play-state: paused !important; }
-@media (prefers-reduced-motion: reduce) { .dial { animation: none; } .launch { transition-duration: 120ms; } .launch.out { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .dial { animation: none; } .launch { transition-duration: var(--dur-fast); } .launch.out { transform: none; } }

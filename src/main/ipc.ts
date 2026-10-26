@@ -7,9 +7,9 @@ import { ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import { RECYCLABLE, type ClosureInput, type Command, type EventInput, type Result, type SettingsPatch, type TaskInput, type TagInput } from '../core/commands';
 import { COLLS, type Coll, type DeviceSettings, type ShelfItem, type Snapshot, type TimerConfig } from '../core/model/types';
 import { CHANNELS } from '../preload/api';
+import { isObj } from '../core/validation';
 
 type Obj = Record<string, unknown>;
-const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
 const str = (v: unknown, max = 5000): string => (typeof v === 'string' ? v.slice(0, max) : '');
 const id = (v: unknown): string | null => (typeof v === 'string' && /^[\w-]{1,100}$/.test(v) ? v : null);
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);

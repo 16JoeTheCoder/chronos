@@ -1,5 +1,5 @@
 // Small shared controls: dialog, field, switch, segmented control, toasts.
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { dismissToast, useToasts } from '../store';
 import { Icon } from './Icon';
 
@@ -20,6 +20,7 @@ export function Dialog({ title, onClose, children, wide, required }: { title: st
         aria-modal="true"
         aria-label={title}
         onKeyDown={(e) => {
+          if (e.key === 'Tab') trapFocus(e, ref.current);
           if (e.key !== 'Escape') return;
           e.preventDefault();
           e.stopPropagation();
@@ -38,6 +39,21 @@ export function Dialog({ title, onClose, children, wide, required }: { title: st
       </div>
     </div>
   );
+}
+
+/** Keep Tab inside an open dialog. */
+function trapFocus(e: KeyboardEvent<HTMLElement>, root: HTMLElement | null): void {
+  const items = [...(root?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select, textarea, [tabindex="0"]') ?? [])];
+  const first = items[0];
+  const last = items.at(-1);
+  if (!first || !last) return;
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
 }
 
 export function Field({ label, error, help, children }: { label: string; error?: string; help?: string; children: ReactNode }) {
@@ -62,9 +78,21 @@ export function Switch({ label, checked, onChange }: { label: string; checked: b
 
 export function Segmented<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
   return (
-    <div className="seg" role="radiogroup" aria-label={label}>
+    <div
+      className="seg"
+      role="radiogroup"
+      aria-label={label}
+      onKeyDown={(e) => {
+        const dir = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+        if (!dir) return;
+        e.preventDefault();
+        const i = (options.findIndex(([v]) => v === value) + dir + options.length) % options.length;
+        onChange(options[i]![0]);
+        (e.currentTarget.children[i] as HTMLElement | undefined)?.focus();
+      }}
+    >
       {options.map(([v, text]) => (
-        <button key={v} role="radio" aria-checked={value === v} className={value === v ? 'on' : ''} onClick={() => onChange(v)}>
+        <button key={v} role="radio" aria-checked={value === v} tabIndex={value === v ? 0 : -1} className={value === v ? 'on' : ''} onClick={() => onChange(v)}>
           {text}
         </button>
       ))}

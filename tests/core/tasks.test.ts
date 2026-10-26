@@ -81,6 +81,15 @@ describe('finish, drop, reopen', () => {
     expect(live(d, 'activity').find((a) => a.type === 'dropped')?.reason).toBe('Blocked on data');
   });
 
+  it('a dropped task is not re-locked: a new must task takes focus over it', () => {
+    let { d, id } = addTask(fresh(), 'Only');
+    d = run(d, { type: 'timer', action: 'start' }, [{ type: 'task.drop', id, reason: 'Wrong idea' }, T0 + MIN]).d;
+    expect(activeTask(d)?.id).toBe(id); // the only startable task
+    d = addTask(d, 'Urgent', { priority: 'must' }).d;
+    expect(activeTask(d)?.title).toBe('Urgent');
+    expect(d.tasks[id]?.workMs).toBe(MIN);
+  });
+
   it('reopen brings a finished task back with its totals', () => {
     let { d, id } = addTask(fresh(), 'Essay');
     d = run(d, { type: 'timer', action: 'start' }, [{ type: 'task.finish', id, phrase: 'I have finished this task' }, T0 + 5 * MIN], { type: 'task.reopen', id }).d;

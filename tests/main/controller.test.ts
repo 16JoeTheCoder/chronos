@@ -116,6 +116,16 @@ describe('runtime ticks and power events', () => {
     expect(t.workMs).toBe(250 + SEC);
   });
 
+  it('resuming after a long pause is not mistaken for a sleep gap', () => {
+    const c = runningTask();
+    for (let t = T0; t <= T0 + 60 * SEC; t += 5 * SEC) c.tick(t);
+    c.command({ type: 'timer', action: 'pause' }, T0 + 60 * SEC);
+    c.command({ type: 'timer', action: 'start' }, T0 + 5 * MIN);
+    c.tick(T0 + 5 * MIN + 250);
+    expect(c.pendingGap).toBeNull();
+    expect(activeTask(c.data)?.runtime.status).toBe('running');
+  });
+
   it('suspend pauses at that moment; resume raises a gap', () => {
     const c = runningTask();
     c.suspend(T0 + 10 * MIN);

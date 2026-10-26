@@ -1,6 +1,6 @@
 /* Chronos tokens: the builtbyjosef design system (tokens.css v1.1) plus the
    Chronos names from spec §9.1 mapped onto it. Dark is the default (the app is a
-   stage surface); light and system are selected with data-theme on <html>. */
+   stage surface); light is selected with data-theme on <html> (the renderer resolves 'system'). */
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-latin-300-normal.woff2") format("woff2"); font-weight: 300; font-display: swap; }
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-latin-500-normal.woff2") format("woff2"); font-weight: 500; font-display: swap; }
@@ -42,6 +42,9 @@
   --tag8: #9BD86B;
   --shadow-lift: 4px 4px 0 0 #FF5B1F;
   --shadow-float: 0 12px 32px 0 rgba(0, 0, 0, 0.6);
+  --brand-ink: #0D0E10;
+  --brand-paper: #F3F2EE;
+  --brand-muted: #A9ADB3;
   color-scheme: dark;
 
   --font-sans: "Space Grotesk", system-ui, sans-serif;
@@ -90,38 +93,4 @@
   --shadow-lift: 4px 4px 0 0 #0D0E10;
   --shadow-float: 0 12px 32px 0 rgba(13, 14, 16, 0.18);
   color-scheme: light;
-}
-
-@media (prefers-color-scheme: light) {
-  :root[data-theme="system"] {
-    --bg: #F3F2EE;
-    --s1: #FBFAF7;
-    --s2: #EFEDE7;
-    --s3: #E8E6E0;
-    --sunken: #E8E6E0;
-    --line: #D3D0C7;
-    --line-strong: #767A80;
-    --text: #0D0E10;
-    --text-2: #4A4D53;
-    --text-3: #5E6167;
-    --inverse: #0D0E10;
-    --on-inverse: #F3F2EE;
-    --accent-text: #B93A09;
-  --now: #B93A09;
-    --ring: #0D0E10;
-    --ok: #0B5FB5;
-    --warn: #8F5B00;
-    --danger: #C41E3A;
-    --tag1: #0B63C5;
-    --tag2: #00796B;
-    --tag3: #A8326F;
-    --tag4: #9A6700;
-    --tag5: #6D4FD8;
-    --tag6: #0E7490;
-    --tag7: #4A4D53;
-    --tag8: #3B7D23;
-    --shadow-lift: 4px 4px 0 0 #0D0E10;
-    --shadow-float: 0 12px 32px 0 rgba(13, 14, 16, 0.18);
-    color-scheme: light;
-  }
 }

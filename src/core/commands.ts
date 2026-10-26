@@ -232,7 +232,8 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
         t.id,
         kill
           ? { ...s.task, status: 'done', outcome: 'killed', completedAt: ctx.now, nextCheckpointMs: null }
-          : { ...s.task, status: 'queued', dropCount: t.dropCount + 1, parkedAt: ctx.now, order: maxOrder(d) + 1 },
+          : // startedAt cleared: the lock (§6.4) applies to the current run, so a dropped task is free again.
+            { ...s.task, status: 'queued', startedAt: null, dropCount: t.dropCount + 1, parkedAt: ctx.now, order: maxOrder(d) + 1 },
         ctx,
       );
       out = create(out, 'activity', { type: kill ? 'killed' : 'dropped', taskId: t.id, at: ctx.now, reason: reason.trim() }, ctx).d;
@@ -242,7 +243,8 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
     case 'task.reopen': {
       const t = get(d, 'tasks', cmd.id);
       if (!t || t.status !== 'done') return fail('Only finished tasks can be reopened.');
-      return ok(update(d, 'tasks', t.id, { status: 'queued', outcome: null, completedAt: null, parkedAt: null, order: minOrder(d) - 1, nextCheckpointMs: t.kind === 'sprint' ? t.workMs + (t.checkpointEveryMin ?? 120) * MIN : null }, ctx));
+      const every = t.checkpointEveryMin ?? settingsOf(d).checkpointEveryMin;
+      return ok(update(d, 'tasks', t.id, { status: 'queued', outcome: null, completedAt: null, startedAt: null, parkedAt: null, order: minOrder(d) - 1, nextCheckpointMs: t.kind === 'sprint' ? t.workMs + every * MIN : null }, ctx));
     }
 
     case 'block.create': {

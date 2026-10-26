@@ -100,8 +100,8 @@ export function Runway({ d, m, now, range, setRange }: { d: Data; m: DayModel; n
                 key={`${i.event.id}-${i.date}`}
                 className={`ev rv-ev${i.end <= now ? ' past' : ''}`}
                 style={{ left: pct(i.start), width: width(i.start, i.end), '--c': `var(--${tag?.color ?? 'tag7'})`, '--i': n } as CSSProperties}
-                aria-label={`${i.event.title}, fixed, ${formatHM(i.startMin)} to ${formatHM(i.endMin)}`}
-                title={`${i.event.title} · ${formatHM(i.startMin)}-${formatHM(i.endMin)}`}
+                aria-label={`${i.event.title}, fixed, ${clockOf(i.start, m.tz)} to ${clockOf(i.end, m.tz)}`}
+                title={`${i.event.title} · ${clockOf(i.start, m.tz)}-${clockOf(i.end, m.tz)}`}
                 onPointerDown={(e) => beginDrag(e, item)}
                 onKeyDown={(e) => {
                   if (e.key === 'Delete') dropOnTrash(item);
