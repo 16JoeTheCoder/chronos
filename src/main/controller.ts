@@ -225,12 +225,12 @@ export class Controller {
         break;
     }
     if (cmd.type === 'timer' && this.pendingGap) return { ok: false, error: 'Answer the time-gap question first.' };
-    // The fast tick only runs while a timer runs, so a (re)start must reset the
-    // tick baseline, or the paused stretch would look like a sleep gap.
-    if (cmd.type === 'timer') this.lastTick = now;
     const res = apply(this.data, cmd, this.ctx(now));
     if (!res.ok) return { ok: false, error: res.error, fields: res.fields };
     this.data = res.d;
+    // The fast tick only runs while a timer runs, so a successful (re)start must
+    // reset the tick baseline, or the paused stretch would look like a sleep gap.
+    if (cmd.type === 'timer' && this.running) this.lastTick = now;
     this.notifyTimer(res.events);
     // Timer and session changes persist immediately; planning edits are debounced.
     this.changed(cmd.type === 'timer' || cmd.type.startsWith('task.') || cmd.type === 'sprint.checkpoint');

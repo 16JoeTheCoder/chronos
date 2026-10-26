@@ -230,7 +230,7 @@ function About({ snap }: { snap: Snapshot }) {
   const diag = JSON.stringify({ version: snap.version, packaged: snap.isPackaged, platform: snap.platform, dataDir: snap.dataDir, deviceId: snap.device.deviceId, startup: snap.perf }, null, 2);
   return (
     <div className="about">
-      <div className="about-stage" data-theme="dark">
+      <div className="about-stage">
         <img className="about-mark" src={monogram} alt="JY monogram" />
         <div>
           <p className="about-name pair">
