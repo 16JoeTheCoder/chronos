@@ -19,7 +19,8 @@ const check = (name, fn) => {
 const files = (dir, ext = /\.(ts|tsx)$/) =>
   readdirSync(dir).flatMap((f) => {
     const p = join(dir, f);
-    return statSync(p).isDirectory() ? files(p, ext) : ext.test(f) ? [p] : [];
+    // Forward slashes everywhere, so path checks behave the same on Windows CI.
+    return statSync(p).isDirectory() ? files(p, ext) : ext.test(f) ? [p.replace(/\\/g, '/')] : [];
   });
 const sh = (cmd) => execSync(cmd, { stdio: 'pipe', encoding: 'utf8' });
 const imports = (src) => [...src.matchAll(/(?:import|export)[^'"]*?from\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)|require\(\s*['"]([^'"]+)['"]\s*\)/g)].map((m) => m[1] ?? m[2] ?? m[3]);
@@ -109,7 +110,7 @@ check('every core module has a test', () => {
   const tests = files('tests').map((f) => readFileSync(f, 'utf8')).join('\n');
   return files('src/core')
     .filter((f) => !f.endsWith('model/types.ts'))
-    .map((f) => relative('src', f).replace(/\.tsx?$/, ''))
+    .map((f) => relative('src', f).replace(/\\/g, '/').replace(/\.tsx?$/, ''))
     .filter((m) => !tests.includes(`src/${m}'`))
     .map((m) => `no test imports src/${m}`);
 });
