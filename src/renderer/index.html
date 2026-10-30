@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <!--CSP-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chronos</title>
+    <link rel="stylesheet" href="./tokens.css" />
+    <link rel="stylesheet" href="./launch.css" />
+  </head>
+  <body>
+    <div id="launch" class="launch" role="dialog" aria-label="Chronos launch screen">
+      <svg class="dial" viewBox="0 0 800 800" aria-hidden="true">
+        <circle class="dial-ring" cx="400" cy="400" r="380" />
+        <circle class="dial-ticks" cx="400" cy="400" r="352" pathLength="360" />
+        <circle class="dial-ring dial-ring-2" cx="400" cy="400" r="300" />
+        <circle class="dial-minor" cx="400" cy="400" r="270" pathLength="720" />
+        <circle class="dial-ring dial-ring-3" cx="400" cy="400" r="190" />
+        <line class="dial-now" x1="400" y1="34" x2="400" y2="96" transform="rotate(60 400 400)" />
+      </svg>
+      <div class="launch-body" tabindex="-1">
+        <p class="launch-word">CHRONOS</p>
+        <p class="launch-tag">own your time</p>
+        <h1 class="launch-greet" id="launch-greet">&nbsp;</h1>
+        <dl class="launch-stats">
+          <div><dt>Time left today</dt><dd class="sk" data-stat="left">&nbsp;</dd></div>
+          <div><dt>What's next</dt><dd class="sk" data-stat="next">&nbsp;</dd></div>
+          <div><dt>Tasks queued</dt><dd class="sk" data-stat="queued">&nbsp;</dd></div>
+        </dl>
+        <p class="launch-hint"><kbd>Enter</kbd> to begin · <kbd>Esc</kbd> for later</p>
+      </div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

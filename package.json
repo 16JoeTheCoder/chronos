@@ -1,0 +1,44 @@
+{
+  "name": "chronos",
+  "productName": "Chronos",
+  "version": "1.0.0",
+  "description": "Own your time: a day runway, a task queue and a single-focus timer for Windows 11.",
+  "author": "Josef Yang (builtbyjosef)",
+  "license": "MIT",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "audit": "node scripts/audit.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "icon": "node scripts/make-icon.mjs",
+    "package:win": "npm run build && electron-builder --win --publish never"
+  },
+  "build": {
+    "appId": "com.builtbyjosef.chronos",
+    "productName": "Chronos",
+    "directories": { "output": "release", "buildResources": "build" },
+    "files": ["dist/**/*", "package.json"],
+    "win": { "icon": "build/icon.png", "target": ["nsis", "portable"] },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "artifactName": "Chronos-Setup-${version}.exe" },
+    "portable": { "artifactName": "Chronos-Portable-${version}.exe" }
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.0",
+    "playwright-core": "^1.48.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
+  }
+}

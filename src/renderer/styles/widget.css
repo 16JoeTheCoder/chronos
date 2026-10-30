@@ -1,0 +1,15 @@
+/* Taskbar widget and quick capture: tiny, transparent around a single card. */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: transparent; color: var(--text); font: 400 13px/16px var(--font-sans); -webkit-font-smoothing: antialiased; overflow: hidden; user-select: none; }
+#root { height: 100%; }
+.widget { position: relative; height: 100%; display: flex; align-items: center; gap: 10px; padding: 0 12px; background: var(--bg); border: 1px solid var(--line-strong); border-radius: 10px; cursor: default; }
+.widget::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 10px 0 0 10px; background: var(--line); }
+.widget.running::before { background: var(--accent); }
+.w-title { flex: 1; min-width: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.digits-widget { font: 500 15px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.digits.over { color: var(--accent-text); }
+.w-left { color: var(--text-2); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.w-dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; background: var(--warn); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.is-capture body { background: var(--s1); }
+.capture { height: 100%; display: flex; }
+.capture input { flex: 1; min-width: 0; padding: 0 20px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--s1); color: var(--text); font: 400 18px/1 var(--font-sans); outline: none; box-shadow: inset 0 -2px 0 0 var(--accent); }
