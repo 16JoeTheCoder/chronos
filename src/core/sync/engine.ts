@@ -111,6 +111,7 @@ export class SyncEngine {
 
   start(provider: SyncProvider): void {
     this.stop();
+    this.seeded = false;
     this.provider = provider;
     this.attach();
     this.flushSoon(0);

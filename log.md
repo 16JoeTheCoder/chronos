@@ -10,7 +10,10 @@ Terse, for a fresh session to resume from.
 - Docs: SYNC.md, SETUP_FIREBASE.md, MCP.md, ARCHITECTURE, WINDOWS_CHECKLIST 13-23, SPEC_MATRIX Phase 1 rows, README; firestore.rules; audit rules.
 - Tests: tests/sync (23, scenarios a-h).
 
-## In progress
+## Phase 1 PR
+- 16JoeTheCoder/chronos#2 merged (with red audit: missing tests). Follow-up on this branch: 232 tests from the test agent, four bugs fixed (D-126), audit green.
+
+## In progress (superseded)
 - Renderer (G1-G5, Settings sync/integrations/experimental/diagnostics, notices): Sonnet agent in a worktree; merge when it reports.
 - Test suite (migration fixtures, validation, exceptions, recurrence, sortKey, search+bench, MCP handlers, bridge/server, controllerSync): Sonnet agent in a worktree; merge and fix any BUGs it reports.
 

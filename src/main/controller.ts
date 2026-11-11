@@ -210,6 +210,10 @@ export class Controller {
         const cur = (this.data[c] as Record<string, Rec>)[id];
         recs[id] = cur ? ({ ...r, fv: cur.fv, fw: cur.fw } as Rec) : r;
       }
+      // Records made after the snapshot are recycled, not dropped, so the restore reaches every device.
+      for (const [id, cur] of Object.entries(this.data[c] as Record<string, Rec>)) {
+        if (!recs[id]) recs[id] = cur.deletedAt === null ? ({ ...cur, deletedAt: now, updatedAt: Math.max(now, cur.updatedAt + 1), deviceId: this.device.deviceId } as Rec) : cur;
+      }
       (merged as Record<string, unknown>)[c] = recs;
     }
     this.commit(normalize(merged, this.ctx(now)), now);

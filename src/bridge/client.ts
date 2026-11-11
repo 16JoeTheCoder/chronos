@@ -53,7 +53,8 @@ export function post(port: number, token: string, body: unknown, timeoutMs = 15_
 
 export async function callChronos(tool: string, args: unknown, dir = dataDir()): Promise<CallResult> {
   const ep = readEndpoint(dir);
-  if (!ep || !ep.port) return { ok: false, error: NOT_RUNNING };
+  if (!ep) return { ok: false, error: NOT_RUNNING };
   if (!ep.enabled) return { ok: false, error: DISABLED };
+  if (!ep.port) return { ok: false, error: NOT_RUNNING };
   return post(ep.port, ep.token, { tool, args });
 }
