@@ -95,7 +95,17 @@ export type Command =
   | { type: 'restore'; coll: Coll; id: string }
   | { type: 'settings.update'; patch: SettingsPatch }
   // Handled by main/controller.ts (they touch the machine, not just data):
-  | { type: 'device.update'; patch: Partial<Omit<DeviceSettings, 'deviceId' | 'sync'>> }
+  | { type: 'device.update'; patch: Partial<Omit<DeviceSettings, 'deviceId' | 'sync' | 'auth' | 'mcp'>> & { mcp?: { enabled: boolean } } }
+  | { type: 'sync.signIn' }
+  | { type: 'sync.signOut' }
+  | { type: 'sync.retry' }
+  | { type: 'sync.forceResync' }
+  | { type: 'diag.clear'; what: 'conflicts' | 'quarantine' }
+  | { type: 'diag.exportLog' }
+  | { type: 'snapshot.restore'; name: string }
+  | { type: 'mcp.regenerateToken' }
+  | { type: 'mcp.copyConfig' }
+  | { type: 'mcp.undo'; token: string }
   | { type: 'gap.answer'; count: boolean }
   | { type: 'timer.takeover' }
   | { type: 'data.import'; source: 'monolith' }

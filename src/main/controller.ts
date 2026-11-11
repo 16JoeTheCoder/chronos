@@ -11,8 +11,12 @@ import fs from 'node:fs';
 import { apply, type Command, type Result } from '../core/commands';
 import { defaultDevice, emptyData } from '../core/model/defaults';
 import { newId } from '../core/model/ids';
-import type { Data, DeviceSettings, Gap, Slice, Task, TimerEvent } from '../core/model/types';
+import { COLLS, type Coll, type Conflict, type Data, type DeviceSettings, type Gap, type QuarantineItem, type Rec, type Slice, type SyncStateKind, type Task, type TimerEvent } from '../core/model/types';
 import { fromMonolith, migrate } from '../core/repo/migrate';
+import { SyncEngine, type SyncHost } from '../core/sync/engine';
+import { clearSyncMeta, diffData, enqueue, replay } from '../core/sync/outbox';
+import type { OutboxEntry, SyncProvider } from '../core/sync/provider';
+import { dateOf } from '../core/time/zone';
 import { purge } from '../core/repo/recycle';
 import { settingsOf, update, type Ctx } from '../core/repo/repo';
 import { checkpointDue } from '../core/tasks/sprints';
@@ -22,7 +26,7 @@ import { prepNudges } from '../core/time/prep';
 import { localParts } from '../core/time/zone';
 import { takeover } from '../core/sync/engine';
 import { advance, pauseAt, start } from '../core/timer/timer';
-import { isObj, validateDevice } from '../core/validation';
+import { isObj, recordProblem, validateDevice } from '../core/validation';
 import { clockOf, formatHuman, phaseLabel } from '../core/format';
 import type { Store } from './store';
 
@@ -42,9 +46,13 @@ export interface ControllerHooks {
   onNotify(n: Notice): void;
   onGap(): void;
   onDeviceChanged(prev: DeviceSettings, next: DeviceSettings): void;
+  /** One line for logs\chronos.log. */
+  log?(msg: string): void;
 }
 
 const noHooks: ControllerHooks = { onChange() {}, onNotify() {}, onGap() {}, onDeviceChanged() {} };
+
+export const LIST_CAP = 500;
 
 export interface ControllerOptions {
   deviceName: string;
@@ -56,6 +64,12 @@ export class Controller {
   data: Data = emptyData();
   device: DeviceSettings;
   pendingGap: Gap | null = null;
+  /** Waiting writes, oldest first; mirrored to outbox.json on every change. */
+  outbox: OutboxEntry[] = [];
+  conflicts: Conflict[] = [];
+  quarantine: QuarantineItem[] = [];
+  sync: { state: SyncStateKind; reason: string | null } = { state: 'off', reason: null };
+  readonly engine: SyncEngine;
   private gapTaskId: string | null = null;
   private lastTick = 0;
   private lastHeartbeat = 0;
@@ -68,6 +82,154 @@ export class Controller {
 
   constructor(private store: Store, private hooks: ControllerHooks = noHooks, private opts: ControllerOptions = { deviceName: 'This PC', monolithFile: '' }) {
     this.device = defaultDevice(newId(), opts.deviceName);
+    this.engine = new SyncEngine(this.syncHost(), { deviceId: () => this.device.deviceId, now: () => Date.now() });
+  }
+
+  /**
+   * The one way local data changes (D-103): whatever differs from the current data
+   * becomes outbox entries (persisted before this returns), then the data is adopted.
+   */
+  commit(next: Data, now = Date.now()): void {
+    if (next === this.data) return;
+    const entries = diffData(this.data, next, now);
+    this.data = next;
+    if (!entries.length) return;
+    if (this.engine.running) this.engine.enqueue(entries);
+    else this.setOutbox(enqueue(this.outbox, entries));
+  }
+
+  private setOutbox(o: OutboxEntry[]): void {
+    this.outbox = o;
+    try {
+      this.store.outbox.save(o);
+    } catch (e) {
+      this.log(`outbox save failed: ${String(e)}`);
+    }
+  }
+
+  private log(msg: string): void {
+    this.hooks.log?.(msg);
+  }
+
+  private syncHost(): SyncHost {
+    return {
+      data: () => this.data,
+      applyRemote: (d) => {
+        // Remote changes are adopted as they are; only what normalize derives from them is a local write.
+        const now = Date.now();
+        this.data = d;
+        this.commit(normalize(d, this.ctx(now)), now);
+        this.save(false);
+        this.hooks.onChange();
+      },
+      outbox: () => this.outbox,
+      setOutbox: (o) => this.setOutbox(o),
+      cursors: () => this.device.sync.cursors,
+      setCursors: (c) => this.saveDevice({ ...this.device, sync: { ...this.device.sync, cursors: c } }),
+      conflicts: (c) => {
+        this.conflicts = [...this.conflicts, ...c].slice(-LIST_CAP);
+        this.store.conflicts.save(this.conflicts);
+      },
+      quarantine: (q) => this.addQuarantine(q),
+      state: (st) => {
+        const changed = st.state !== this.sync.state || st.reason !== this.sync.reason;
+        this.sync = st;
+        if (changed) this.hooks.onChange();
+      },
+      synced: (at) => this.saveDevice({ ...this.device, sync: { ...this.device.sync, lastSyncAt: at } }),
+      log: (m) => this.log(m),
+    };
+  }
+
+  private addQuarantine(q: QuarantineItem[]): void {
+    if (!q.length) return;
+    this.quarantine = [...this.quarantine, ...q].slice(-LIST_CAP);
+    this.store.quarantine.save(this.quarantine);
+  }
+
+  private saveDevice(next: DeviceSettings): void {
+    this.device = next;
+    this.store.device.save(next);
+  }
+
+  /** Signed in: start live sync for this account (a different account re-uploads everything, D-107). */
+  startSync(provider: SyncProvider, uid: string): void {
+    if (this.device.sync.uid !== uid) {
+      if (this.device.sync.uid !== null) this.log(`sync: account changed, clearing server versions`);
+      this.data = clearSyncMeta(this.data);
+      this.save(true);
+      this.saveDevice({ ...this.device, sync: { uid, cursors: {}, lastSyncAt: null } });
+    }
+    this.engine.start(provider);
+  }
+
+  stopSync(): void {
+    this.engine.stop();
+  }
+
+  /** Main-owned device fields (sign-in, MCP port/token): saved as they are, no user validation. */
+  setDeviceFields(patch: Partial<Pick<DeviceSettings, 'auth' | 'mcp' | 'sync'>>): void {
+    this.saveDevice({ ...this.device, ...patch });
+    this.hooks.onChange();
+  }
+
+  clearConflicts(): void {
+    this.conflicts = [];
+    this.store.conflicts.save([]);
+    this.hooks.onChange();
+  }
+
+  clearQuarantine(): void {
+    this.quarantine = [];
+    this.store.quarantine.save([]);
+    this.hooks.onChange();
+  }
+
+  /** Force resync: snapshot first, then clear cursors and pull everything (the outbox is kept). */
+  forceResync(now: number): void {
+    this.store.writeSnapshot(this.data, `chronos-before-resync-${now}.json`);
+    this.engine.forceResync();
+  }
+
+  /** Restore a snapshot: the current data is snapshotted first; the restore syncs like any edit. */
+  restoreSnapshot(name: string, now: number): Result {
+    const raw = this.store.readSnapshot(name);
+    const d = raw ? migrate(raw, dateOf(now, settingsOf(this.data).timezone)) : null;
+    if (!d) return { ok: false, error: 'That snapshot could not be read.' };
+    this.store.writeSnapshot(this.data, `chronos-before-restore-${now}.json`);
+    const { d: valid } = this.splitInvalid(d, now);
+    // Keep the sync versions we know, so the restore is an ordinary edit of each field.
+    const merged = { ...valid } as Data;
+    for (const c of COLLS) {
+      const recs: Record<string, Rec> = {};
+      for (const [id, r] of Object.entries(valid[c] as Record<string, Rec>)) {
+        const cur = (this.data[c] as Record<string, Rec>)[id];
+        recs[id] = cur ? ({ ...r, fv: cur.fv, fw: cur.fw } as Rec) : r;
+      }
+      (merged as Record<string, unknown>)[c] = recs;
+    }
+    this.commit(normalize(merged, this.ctx(now)), now);
+    this.changed(true);
+    return { ok: true };
+  }
+
+  /** Records that fail validation go to quarantine.json instead of the app (D-110). */
+  private splitInvalid(d: Data, now: number): { d: Data; bad: QuarantineItem[] } {
+    const bad: QuarantineItem[] = [];
+    const out = { ...d } as Data;
+    for (const c of COLLS) {
+      const recs = d[c] as Record<string, Rec>;
+      let kept: Record<string, Rec> | null = null;
+      for (const [id, r] of Object.entries(recs)) {
+        const problem = recordProblem(c, r);
+        if (!problem) continue;
+        kept ??= { ...recs };
+        delete kept[id];
+        bad.push({ at: now, coll: c, id, reason: problem, doc: r });
+      }
+      if (kept) (out as Record<string, unknown>)[c] = kept;
+    }
+    return { d: bad.length ? out : d, bad };
   }
 
   private ctx(now: number): Ctx & { deviceName: string } {
@@ -82,7 +244,23 @@ export class Controller {
     this.device = Object.keys(validateDevice(merged)).length ? base : merged;
     this.store.device.save(this.device);
 
-    this.data = migrate(this.store.data.load()) ?? emptyData();
+    const today = (d: unknown) => (isObj(d) && isObj(d.settings) && isObj(d.settings.main) && typeof d.settings.main.timezone === 'string' ? dateOf(now, d.settings.main.timezone) : null);
+    const raw = this.store.data.load();
+    let loaded: Data;
+    try {
+      loaded = migrate(raw, today(raw)) ?? emptyData();
+    } catch {
+      loaded = emptyData();
+    }
+    const listOf = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
+    this.conflicts = listOf<Conflict>(this.store.conflicts.load());
+    this.quarantine = listOf<QuarantineItem>(this.store.quarantine.load());
+    const split = this.splitInvalid(loaded, now);
+    this.addQuarantine(split.bad);
+    if (split.bad.length) this.log(`load: quarantined ${split.bad.length} invalid record(s)`);
+    // Entries survive a crash; re-apply them in case the data file is older than the outbox.
+    this.outbox = listOf<OutboxEntry>(this.store.outbox.load()).filter((e) => isObj(e) && typeof e.opId === 'string' && COLLS.includes(e.coll as Coll) && isObj(e.fields));
+    this.data = replay(split.d, this.outbox);
     this.housekeeping(now);
     this.lastTick = now;
     this.lastSlow = now;
@@ -112,8 +290,17 @@ export class Controller {
     }
     d = normalize(d, ctx);
     if (d !== this.data) {
-      this.data = d;
+      this.commit(d, now);
       this.save(false);
+    }
+    // One snapshot of the data per local day, 7 kept (docs/SYNC.md, contingencies).
+    const date = todayOf(this.data, now);
+    if (!this.store.hasSnapshot(date)) {
+      try {
+        this.store.writeSnapshot(this.data, `chronos-${date}.json`);
+      } catch (e) {
+        this.log(`snapshot failed: ${String(e)}`);
+      }
     }
   }
 
@@ -213,7 +400,7 @@ export class Controller {
         return this.updateDevice(cmd.patch);
       case 'timer.takeover':
         this.lastTick = now;
-        this.data = normalize(takeover(this.data, this.ctx(now)), this.ctx(now));
+        this.commit(normalize(takeover(this.data, this.ctx(now)), this.ctx(now)), now);
         this.changed(true);
         return { ok: true };
       case 'data.import':
@@ -227,7 +414,7 @@ export class Controller {
     if (cmd.type === 'timer' && this.pendingGap) return { ok: false, error: 'Answer the time-gap question first.' };
     const res = apply(this.data, cmd, this.ctx(now));
     if (!res.ok) return { ok: false, error: res.error, fields: res.fields };
-    this.data = res.d;
+    this.commit(res.d, now);
     // The fast tick only runs while a timer runs, so a successful (re)start must
     // reset the tick baseline, or the paused stretch would look like a sleep gap.
     if (cmd.type === 'timer' && this.running) this.lastTick = now;
@@ -255,13 +442,13 @@ export class Controller {
       return { ok: false, error: 'No Monolith data found on this PC.' };
     }
     const r = fromMonolith(this.data, raw, this.ctx(now));
-    this.data = normalize(r.d, this.ctx(now));
+    this.commit(normalize(r.d, this.ctx(now)), now);
     this.changed(true);
     return { ok: true, id: String(r.count) };
   }
 
-  private updateDevice(patch: Partial<DeviceSettings>): Result {
-    const next = { ...this.device, ...patch, deviceId: this.device.deviceId, sync: this.device.sync };
+  private updateDevice(patch: Extract<Command, { type: 'device.update' }>['patch']): Result {
+    const next = { ...this.device, ...patch, deviceId: this.device.deviceId, sync: this.device.sync, auth: this.device.auth, mcp: { ...this.device.mcp, ...(patch.mcp ? { enabled: patch.mcp.enabled } : {}) } };
     const fields = validateDevice(next);
     if (Object.keys(fields).length) return { ok: false, error: 'Please fix the highlighted fields.', fields };
     const prev = this.device;
@@ -309,7 +496,7 @@ export class Controller {
 
   private replace(task: Task, slices: Slice[], now: number): void {
     const ctx = this.ctx(now);
-    this.data = recordSlices(update(this.data, 'tasks', task.id, task, ctx), task.id, slices, ctx);
+    this.commit(recordSlices(update(this.data, 'tasks', task.id, task, ctx), task.id, slices, ctx), now);
   }
 
   private notifyTimer(events: TimerEvent[]): void {

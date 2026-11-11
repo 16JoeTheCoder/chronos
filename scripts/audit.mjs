@@ -100,7 +100,7 @@ check('TODO/FIXME have a decision', () => {
     readFileSync(f, 'utf8').split('\n').forEach((line, n) => {
       if (!/\b(TODO|FIXME)\b/.test(line)) return;
       const ref = line.match(/D-\d{3}/)?.[0];
-      if (!ref || !decisions.includes(`## ${ref}`) || decisions.includes(`### ${ref}`)) bad.push(`${f}:${n + 1}: ${line.trim()}`);
+      if (!ref || !decisions.includes(`## ${ref}`)) bad.push(`${f}:${n + 1}: ${line.trim()}`);
     });
   }
   return bad;

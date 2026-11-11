@@ -45,7 +45,7 @@ export class Device {
         synced: () => {},
         log: () => {},
       },
-      { deviceId: id, now: () => this.now(), flushDelayMs: 0, random: () => 0.5 },
+      { deviceId: () => id, now: () => this.now(), flushDelayMs: 0, random: () => 0.5 },
     );
   }
 

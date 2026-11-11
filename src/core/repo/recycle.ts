@@ -1,12 +1,12 @@
 // Recycle and purge (§5.2). Delete is a tombstone (deletedAt). After 7 days the
 // record's content is wiped and only a stub remains (so the user's content is
-// really gone); after 60 days the stub is dropped too. The stub exists only so an
+// really gone); after 30 days the stub is dropped locally (the server keeps it, D-108). The stub exists only so an
 // offline device cannot resurrect a deleted record when it syncs.
 
 import { COLLS, SCHEMA_V, type Coll, type Data, type Rec, type Stub } from '../model/types';
 
 export const RECYCLE_DAYS = 7;
-export const STUB_DAYS = 60;
+export const STUB_DAYS = 30;
 const DAY = 86_400_000;
 
 /** Items in the recycle bin, newest first. */

@@ -44,7 +44,8 @@ export interface Timers {
 }
 
 export interface EngineOptions {
-  deviceId: string;
+  /** This device's id (read when needed: the host may load it after constructing the engine). */
+  deviceId: () => string;
   now(): number;
   random?: () => number;
   timers?: Timers;
@@ -171,7 +172,7 @@ export class SyncEngine {
         const batch = this.host.outbox().slice(0, this.opts.batch ?? 20);
         if (!batch.length || this.provider !== provider || this.readOnly) break;
         for (const e of batch) this.inflight.add(e.opId);
-        const results = await provider.commit(batch, (e, remote) => planCommit(e, remote, this.localOf(e), this.opts.deviceId, this.opts.now()));
+        const results = await provider.commit(batch, (e, remote) => planCommit(e, remote, this.localOf(e), this.opts.deviceId(), this.opts.now()));
         const done = new Set<string>();
         const conflicts: Conflict[] = [];
         const authoritative: RemoteDoc[] = [];
@@ -297,7 +298,7 @@ export class SyncEngine {
   }
 
   private merge(docs: RemoteDoc[]): void {
-    const ctx: Ctx = { now: this.opts.now(), deviceId: this.opts.deviceId };
+    const ctx: Ctx = { now: this.opts.now(), deviceId: this.opts.deviceId() };
     const m = mergeRemote(this.host.data(), docs, pendingFields(this.host.outbox()), ctx);
     if (m.quarantined.length) {
       this.host.quarantine(m.quarantined);
