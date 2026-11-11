@@ -159,3 +159,33 @@ The derived queue breaks ties by id, and two locked tasks (only after a merge) r
 
 ### D-115 Recurring instances step from the due date
 Next date = first recurrence date after the task's `dueDate` (completion date if none), id `<parentId>:<date>`. Using the due date, not the clock, is what makes two devices agree.
+
+### D-116 Renderers stay offline; sync networking runs in main
+The request blocker and CSP (`connect-src 'none'`, D-033) still apply to every window. Firestore, Firebase Auth and the Google token exchange use Node networking in the main process, which the Chromium request blocker does not see. The audit limits network code to `main/sync/{firestore,auth,remote}.ts`, `main/mcp/server.ts` and `src/bridge`.
+
+### D-117 Firebase loads on demand from `dist/sync.js`
+The SDK (about 1 MB bundled) is a separate esbuild entry that main `require`s only when `firebase.config.json` is complete. `main.js` stays inside its 150 KB budget and the app starts and runs with no config, no network and no sign-in. Firebase, MiniSearch and the MCP SDK are devDependencies bundled at build time, like React (D-017).
+
+### D-118 Config keys include the Desktop OAuth client
+`firebase.config.json` adds `googleClientId` and `googleClientSecret` (a Desktop-app client's secret is not confidential, per Google). It is read from the data folder, then from `firebase/` in the repo for `npm run dev`, or from `CHRONOS_FIREBASE_*` env vars. Incomplete = local-only.
+
+### D-119 The MCP bridge runs on Chronos's own Electron
+Claude Desktop launches `Chronos.exe` with `ELECTRON_RUN_AS_NODE=1` and `resources\chronos-mcp.js` (copied outside the asar via `extraResources`), so Node need not be installed. "Copy Claude Desktop config" writes the exact snippet with real paths. Unverified on Windows (checklist 19).
+
+### D-120 MCP undo reverts only the fields the write changed
+An undo token keeps, per changed record, the previous values of exactly the changed fields (a created record is recycled, never hard-deleted). Undo goes through the `records.revert` command, so it validates, syncs and is logged like any edit. Tokens live in memory (100 kept): a restart forgets them.
+
+### D-121 MCP `drop_task` closes the task (status `dropped`)
+It uses the new `task.close` command (any open task, reason required, blocks from today on recycled), not the in-app park-at-the-back Drop (D-111).
+
+### D-122 Two internal commands are never parsed from IPC
+`records.revert` (undo, snapshot restore) and `activity.claude` exist only for main and the MCP handlers; `parseCommand` has no case for them, so a renderer cannot send them.
+
+### D-123 Snapshots are named by date or by purpose
+`snapshots\chronos-<date>.json` once per local day, `chronos-before-restore-<ms>.json` / `chronos-before-resync-<ms>.json` before those actions; the newest 7 files (by time) are kept.
+
+### D-124 No Firestore emulator run in this build
+Downloading and running the emulator JAR was refused by the session's permission policy, so the real provider and the rules were not exercised; the engine and merge rules are tested against `memoryProvider`, which mimics transactions, server timestamps, field updates and listeners. Rule checks are documented as manual steps (docs/SYNC.md). Revisit: add an emulator job to CI.
+
+### D-125 Invalid singletons fall back to defaults
+If `settings/main` or `timer/current` fails validation at load, it is quarantined and replaced by its defaults; the app never starts without them.
