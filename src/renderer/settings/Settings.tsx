@@ -4,29 +4,34 @@
 
 import { useState } from 'react';
 import type { SettingsPatch } from '../../core/commands';
-import { formatHM, parseHM } from '../../core/format';
-import { TAG_COLORS, type DeviceSettings, type Snapshot, type TagColor } from '../../core/model/types';
+import type { Command } from '../../core/commands';
+import { formatHM, formatHuman, parseHM } from '../../core/format';
+import { TAG_COLORS, type Snapshot, type TagColor } from '../../core/model/types';
 import { live, settingsOf } from '../../core/repo/repo';
 import { RECYCLE_DAYS } from '../../core/repo/recycle';
 import { isValidZone } from '../../core/time/zone';
 import { Icon } from '../components/Icon';
 import { recycleWithUndo } from '../components/actions';
+import { ask } from '../components/ask';
 import { Field, Segmented, Switch } from '../components/ui';
 import { run, toast } from '../store';
 import brand from '../assets/builtbyjosef.svg';
 import monogram from '../assets/jy-monogram.svg';
 
-const SECTIONS = ['General', 'Day', 'Timetable', 'Tags', 'Timer', 'Appearance', 'Data', 'Sync', 'Advanced', 'About'] as const;
+const SECTIONS = ['General', 'Day', 'Timetable', 'Tags', 'Timer', 'Appearance', 'Data', 'Sync', 'Integrations', 'Advanced', 'Diagnostics', 'About'] as const;
 type Section = (typeof SECTIONS)[number];
 
 export function Settings({ snap, onSchedule, onClose }: { snap: Snapshot; onSchedule: () => void; onClose: () => void }) {
   const [sec, setSec] = useState<Section>('General');
+  // Diagnostics only exists while Experimental is on (per device).
+  const sections = SECTIONS.filter((x) => x !== 'Diagnostics' || snap.device.experimental);
+  const shown: Section = sections.includes(sec) ? sec : 'Advanced';
   return (
     <section className="settings" aria-label="Settings">
       <nav className="settings-nav" aria-label="Settings sections">
         <h2>Settings</h2>
-        {SECTIONS.map((x) => (
-          <button key={x} className={sec === x ? 'on' : ''} aria-current={sec === x ? 'page' : undefined} onClick={() => setSec(x)}>
+        {sections.map((x) => (
+          <button key={x} className={shown === x ? 'on' : ''} aria-current={shown === x ? 'page' : undefined} onClick={() => setSec(x)}>
             {x}
           </button>
         ))}
@@ -35,15 +40,16 @@ export function Settings({ snap, onSchedule, onClose }: { snap: Snapshot; onSche
         </button>
       </nav>
       <div className="settings-body">
-        <h3 className="h">{sec}</h3>
-        <Body sec={sec} snap={snap} onSchedule={onSchedule} />
+        <h3 className="h">{shown}</h3>
+        <Body sec={shown} snap={snap} onSchedule={onSchedule} />
       </div>
     </section>
   );
 }
 
 const S = (patch: SettingsPatch) => void run({ type: 'settings.update', patch });
-const D = (patch: Partial<DeviceSettings>) => void run({ type: 'device.update', patch });
+type DevicePatch = Extract<Command, { type: 'device.update' }>['patch'];
+const D = (patch: DevicePatch) => void run({ type: 'device.update', patch });
 
 function Body({ sec, snap, onSchedule }: { sec: Section; snap: Snapshot; onSchedule: () => void }) {
   const s = settingsOf(snap.data);
@@ -155,15 +161,11 @@ function Body({ sec, snap, onSchedule }: { sec: Section; snap: Snapshot; onSched
         </div>
       );
     case 'Sync':
-      return (
-        <div className="form">
-          <p>
-            <span className="badge">Local only</span> Sync arrives in v1.1.
-          </p>
-          <p className="muted">Device: {dev.deviceName}</p>
-          <p className="muted mono">Device ID: {dev.deviceId}</p>
-        </div>
-      );
+      return <SyncSection snap={snap} />;
+    case 'Integrations':
+      return <Integrations snap={snap} />;
+    case 'Diagnostics':
+      return <Diagnostics snap={snap} />;
     case 'Advanced':
       return (
         <div className="form">
@@ -171,11 +173,259 @@ function Body({ sec, snap, onSchedule }: { sec: Section; snap: Snapshot; onSched
           <Num label="Ignore free gaps shorter than (minutes)" value={s.timeLeft.gapFilterMin} onCommit={(gapFilterMin) => S({ timeLeft: { ...s.timeLeft, gapFilterMin } })} />
           <Num label="Transition after each fixed event (minutes)" value={s.timeLeft.transitionMin} onCommit={(transitionMin) => S({ timeLeft: { ...s.timeLeft, transitionMin } })} />
           <Num label="Meal reserve at mid-day (minutes)" value={s.timeLeft.mealReserveMin} onCommit={(mealReserveMin) => S({ timeLeft: { ...s.timeLeft, mealReserveMin } })} />
+          <Switch label="Experimental" checked={dev.experimental} onChange={(experimental) => D({ experimental })} />
+          <p className="muted">Per device. Adds a Diagnostics section with sync internals, snapshots and logs.</p>
         </div>
       );
     case 'About':
       return <About snap={snap} />;
   }
+}
+
+const STATE_TEXT: Record<Snapshot['sync']['state'], string> = {
+  off: 'Off',
+  signedOut: 'Signed out',
+  syncing: 'Syncing…',
+  synced: 'Up to date',
+  pending: 'Changes waiting to sync',
+  offline: 'Offline. Changes are kept and will sync when the PC is back online.',
+  error: 'Sync error',
+  readOnly: 'Read-only',
+};
+
+const when = (ms: number | null) => (ms === null ? 'Never' : new Date(ms).toLocaleString());
+
+function SyncSection({ snap }: { snap: Snapshot }) {
+  const sy = snap.sync;
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const signedIn = sy.email !== null && sy.state !== 'signedOut' && sy.state !== 'off';
+  async function signIn() {
+    setBusy(true);
+    setErr(null);
+    const r = await run({ type: 'sync.signIn' }, true);
+    setBusy(false);
+    if (!r.ok) setErr(r.error);
+  }
+  return (
+    <div className="form">
+      {!sy.configured ? (
+        <p>Sync is not set up on this PC. See docs/SETUP_FIREBASE.md.</p>
+      ) : signedIn ? (
+        <>
+          <p>Signed in as {sy.email}</p>
+          <p className="muted">
+            {STATE_TEXT[sy.state]}
+            {sy.reason ? `: ${sy.reason}` : ''}
+          </p>
+          <p className="muted">Last sync: {when(sy.lastSyncAt)}</p>
+          <div>
+            <button className="btn btn-s btn-ghost" onClick={() => void run({ type: 'sync.signOut' })}>
+              Sign out
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="muted">Sign in to keep your data in step across your PCs.</p>
+          <div className="row gap">
+            <button className="btn btn-s" disabled={busy} onClick={() => void signIn()}>
+              Sign in with Google
+            </button>
+            {busy && (
+              <span className="muted" role="status">
+                Waiting for the browser…
+              </span>
+            )}
+          </div>
+          {err && (
+            <p className="warn" role="alert">
+              {err}
+            </p>
+          )}
+        </>
+      )}
+      <p className="muted">Device: {snap.device.deviceName}</p>
+      <p className="muted mono">Device ID: {snap.device.deviceId}</p>
+    </div>
+  );
+}
+
+function Integrations({ snap }: { snap: Snapshot }) {
+  const dev = snap.device;
+  const m = snap.diag?.mcp;
+  const status = m ? (m.error ? `Error: ${m.error}` : m.running ? `Running on port ${m.port}` : m.enabled ? 'Starting…' : 'Off') : dev.mcp.enabled ? `On, port ${dev.mcp.port}` : 'Off';
+  return (
+    <div className="form">
+      <p className="eyebrow">Claude (MCP)</p>
+      <Switch label="Let Claude Desktop read and change my plan" checked={dev.mcp.enabled} onChange={(enabled) => D({ mcp: { enabled } })} />
+      <p className="muted" role="status">
+        {status}
+      </p>
+      <div>
+        <button className="btn btn-s btn-ghost" onClick={() => void run({ type: 'mcp.copyConfig' }).then((r) => r.ok && toast('Copied. Paste it into claude_desktop_config.json.'))}>
+          <Icon name="copy" size={14} /> Copy Claude Desktop config
+        </button>
+      </div>
+      <p className="muted">
+        Claude Desktop config lives at <code>%APPDATA%\Claude\claude_desktop_config.json</code>. Restart Claude Desktop after pasting.
+      </p>
+    </div>
+  );
+}
+
+const short = (v: unknown, n = 60) => {
+  const t = JSON.stringify(v) ?? 'undefined';
+  return t.length > n ? `${t.slice(0, n)}…` : t;
+};
+
+function Diagnostics({ snap }: { snap: Snapshot }) {
+  const diag = snap.diag;
+  const sy = snap.sync;
+  const [show, setShow] = useState(false);
+  if (!diag) return <p className="muted">Loading diagnostics…</p>;
+  const cursors = Object.entries(diag.cursors);
+  const oldest = sy.oldestPendingAt === null ? null : formatHuman(Math.max(0, Date.now() - sy.oldestPendingAt));
+  return (
+    <div className="form">
+      <section className="set-sec" aria-label="Sync state">
+        <p className="eyebrow">Sync</p>
+        <dl className="kv">
+          <dt>State</dt>
+          <dd>
+            {sy.state}
+            {sy.reason ? `: ${sy.reason}` : ''}
+          </dd>
+          <dt>Outbox</dt>
+          <dd>{sy.pending > 0 ? `${sy.pending} waiting${oldest ? `, oldest ${oldest} old` : ''}` : 'empty'}</dd>
+          <dt>Last sync</dt>
+          <dd>{when(sy.lastSyncAt)}</dd>
+        </dl>
+        <p className="eyebrow">Cursors</p>
+        {cursors.length === 0 ? (
+          <p className="muted">None yet.</p>
+        ) : (
+          <dl className="kv mono">
+            {cursors.map(([k, v]) => (
+              <div key={k} style={{ display: 'contents' }}>
+                <dt>{k}</dt>
+                <dd>{Number(v)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+        <div>
+          <button
+            className="btn btn-s btn-ghost"
+            onClick={() =>
+              ask({
+                title: 'Force resync?',
+                body: 'Chronos snapshots your data, then downloads everything from the cloud again and merges it. Changes waiting to upload are kept.',
+                actions: [{ label: 'Force resync', primary: true, run: () => void run({ type: 'sync.forceResync' }) }],
+              })
+            }
+          >
+            Force resync
+          </button>
+        </div>
+      </section>
+
+      <section className="set-sec" aria-label="Snapshots">
+        <p className="eyebrow">Snapshots</p>
+        {diag.snapshots.length === 0 && <p className="muted">No snapshots yet.</p>}
+        <ul className="diag-list">
+          {diag.snapshots.map((name) => (
+            <li key={name}>
+              <span className="row gap">
+                <code>{name}</code>
+                <button
+                  className="btn btn-s btn-ghost"
+                  onClick={() =>
+                    ask({
+                      title: `Restore ${name}?`,
+                      body: `Restore ${name}? The current data is snapshotted first.`,
+                      actions: [{ label: 'Restore', primary: true, run: () => void run({ type: 'snapshot.restore', name }) }],
+                    })
+                  }
+                >
+                  Restore
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="set-sec" aria-label="Conflict log">
+        <div className="row gap">
+          <p className="eyebrow grow">Conflicts ({diag.conflicts.length})</p>
+          {diag.conflicts.length > 0 && (
+            <button className="btn btn-s btn-ghost" onClick={() => void run({ type: 'diag.clear', what: 'conflicts' })}>
+              Clear
+            </button>
+          )}
+        </div>
+        {diag.conflicts.length === 0 && <p className="muted">None.</p>}
+        <ul className="diag-list">
+          {diag.conflicts.map((c, i) => (
+            <li key={`${c.at}-${i}`}>
+              <span>
+                {when(c.at)} · {c.coll}/{c.id} · {c.field}
+              </span>
+              <code>
+                {short(c.overwrittenValue)} → {short(c.newValue)} · device {c.otherDeviceId}
+              </code>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="set-sec" aria-label="Quarantine">
+        <div className="row gap">
+          <p className="eyebrow grow">Quarantine ({diag.quarantine.length})</p>
+          {diag.quarantine.length > 0 && (
+            <button className="btn btn-s btn-ghost" onClick={() => void run({ type: 'diag.clear', what: 'quarantine' })}>
+              Clear
+            </button>
+          )}
+        </div>
+        {diag.quarantine.length === 0 && <p className="muted">None.</p>}
+        <ul className="diag-list">
+          {diag.quarantine.map((q, i) => (
+            <li key={`${q.at}-${i}`}>
+              <span>
+                {when(q.at)} · {q.coll}/{q.id}
+              </span>
+              <code>{q.reason}</code>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="set-sec" aria-label="Claude (MCP)">
+        <p className="eyebrow">Claude (MCP)</p>
+        <dl className="kv">
+          <dt>Status</dt>
+          <dd>{diag.mcp.error ? `Error: ${diag.mcp.error}` : diag.mcp.running ? 'Running' : diag.mcp.enabled ? 'Starting' : 'Off'}</dd>
+          <dt>Port</dt>
+          <dd>{diag.mcp.port}</dd>
+          <dt>Token</dt>
+          <dd className="mono">{show ? diag.mcp.token : '•'.repeat(16)}</dd>
+        </dl>
+        <div className="row gap wrap">
+          <button className="btn btn-s btn-ghost" aria-pressed={show} onClick={() => setShow((v) => !v)}>
+            {show ? 'Hide token' : 'Show token'}
+          </button>
+          <button className="btn btn-s btn-ghost" onClick={() => void run({ type: 'mcp.regenerateToken' })}>
+            Regenerate token
+          </button>
+          <button className="btn btn-s btn-ghost" onClick={() => void run({ type: 'diag.exportLog' }).then((r) => r.ok && toast('Log exported.'))}>
+            Export log
+          </button>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function Tags({ snap }: { snap: Snapshot }) {
