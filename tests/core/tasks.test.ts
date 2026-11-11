@@ -52,11 +52,11 @@ describe('queue derivation', () => {
 });
 
 describe('finish, drop, reopen', () => {
-  it('finish requires the phrase (case, spaces and a trailing period ignored) and logs sessions', () => {
+  it('finish (held in the app, no typed phrase) stops the timer and logs sessions; done tasks cannot finish again', () => {
     let { d, id } = addTask(fresh(), 'Essay');
     d = run(d, { type: 'timer', action: 'start' }).d;
-    expect(apply(d, { type: 'task.finish', id, phrase: 'done' }, ctx(T0 + MIN)).ok).toBe(false);
-    d = run(d, [{ type: 'task.finish', id, phrase: '  i have   FINISHED this task. ' }, T0 + 30 * MIN]).d;
+    d = run(d, [{ type: 'task.finish', id }, T0 + 30 * MIN]).d;
+    expect(apply(d, { type: 'task.finish', id }, ctx(T0 + 31 * MIN)).ok).toBe(false);
     const t = d.tasks[id]!;
     expect(t.status).toBe('done');
     expect(t.outcome).toBe('finished');
@@ -72,7 +72,7 @@ describe('finish, drop, reopen', () => {
     expect(apply(d, { type: 'task.drop', id: r.id, reason: 'no' }, ctx(T0 + MIN)).ok).toBe(false);
     d = run(d, [{ type: 'task.drop', id: r.id, reason: 'Blocked on data' }, T0 + 10 * MIN]).d;
     const t = d.tasks[r.id]!;
-    expect(t.status).toBe('queued');
+    expect(t.status).toBe('inbox');
     expect(t.dropCount).toBe(1);
     expect(t.workMs).toBe(10 * MIN);
     expect(live(d, 'blocks')).toHaveLength(0);
@@ -92,8 +92,8 @@ describe('finish, drop, reopen', () => {
 
   it('reopen brings a finished task back with its totals', () => {
     let { d, id } = addTask(fresh(), 'Essay');
-    d = run(d, { type: 'timer', action: 'start' }, [{ type: 'task.finish', id, phrase: 'I have finished this task' }, T0 + 5 * MIN], { type: 'task.reopen', id }).d;
-    expect(d.tasks[id]?.status).toBe('active');
+    d = run(d, { type: 'timer', action: 'start' }, [{ type: 'task.finish', id }, T0 + 5 * MIN], { type: 'task.reopen', id }).d;
+    expect(d.tasks[id]?.status).toBe('doing');
     expect(d.tasks[id]?.workMs).toBe(5 * MIN);
   });
 

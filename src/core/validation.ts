@@ -1,10 +1,13 @@
-// Field validators used by the renderer (inline errors) and main (the authority:
-// every IPC payload is re-checked here after being rebuilt). Pure.
+// Validation, the single gate (D-110): field validators for the renderer's inline
+// errors and for commands (every IPC/MCP payload is re-checked here), and whole-record
+// validators used by the store loader, the sync pull and imports. Pure.
 
 import { isValidZone } from './time/zone';
-import { PRIORITIES, SCOPES, TAG_COLORS, type DeviceSettings, type Settings } from './model/types';
+import { isSortKey } from './model/sortKey';
+import { isId } from './model/ids';
+import { SNAP_OPTIONS } from './model/defaults';
+import { COLLS, PRIORITIES, SCHEMA_V, SCOPES, TAG_COLORS, TASK_SOURCES, TASK_STATUSES, type Coll, type DeviceSettings, type Settings } from './model/types';
 
-export const FINISH_PHRASE = 'I have finished this task';
 export const MIN_FINISH_CONDITION = 8;
 const SEC = 1000;
 const MIN = 60 * SEC;
@@ -19,15 +22,6 @@ export const isStr = (v: unknown): v is string => typeof v === 'string';
 export const inRange = (v: unknown, min: number, max: number): v is number => isNum(v) && v >= min && v <= max;
 export const isDate = (v: unknown): v is string => isStr(v) && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`));
 export const isMinute = (v: unknown): v is number => Number.isInteger(v) && inRange(v, 0, 1440);
-
-/** Case-insensitive, trimmed, whitespace collapsed, one trailing period ignored. */
-export function normalizePhrase(s: string): string {
-  return s.trim().replace(/\s+/g, ' ').replace(/\.$/, '').trim().toLowerCase();
-}
-
-export function isFinishPhrase(s: unknown): boolean {
-  return isStr(s) && normalizePhrase(s) === normalizePhrase(FINISH_PHRASE);
-}
 
 export function isDropReason(s: unknown): boolean {
   return isStr(s) && s.trim().length >= 3;
@@ -59,9 +53,19 @@ export interface TaskFields {
   notes?: unknown;
   priority?: unknown;
   estimateMin?: unknown;
-  deadline?: unknown;
+  dueDate?: unknown;
+  dueTime?: unknown;
+  recurrence?: unknown;
   checkpointEveryMin?: unknown;
   timer?: unknown;
+}
+
+/** {freq, interval, weekdays?}: daily or weekly, every 1-52, weekdays 1-7. */
+export function isTaskRecurrence(r: unknown): boolean {
+  if (!isObj(r) || (r.freq !== 'daily' && r.freq !== 'weekly')) return false;
+  if (!Number.isInteger(r.interval) || !inRange(r.interval, 1, 52)) return false;
+  if (r.weekdays === undefined) return true;
+  return Array.isArray(r.weekdays) && r.weekdays.length <= 7 && r.weekdays.every((w) => Number.isInteger(w) && w >= 1 && w <= 7);
 }
 
 /** Title is required; the finish condition may be empty (inbox task) but if given must be >= 8 characters. */
@@ -75,7 +79,9 @@ export function validateTaskFields(t: TaskFields): Errors {
   if (t.notes !== undefined && (!isStr(t.notes) || t.notes.length > 5000)) e.notes = 'Notes are too long.';
   if (t.priority !== undefined && !PRIORITIES.includes(t.priority as never)) e.priority = 'Invalid priority.';
   if (t.estimateMin !== undefined && t.estimateMin !== null && !(Number.isInteger(t.estimateMin) && inRange(t.estimateMin, 1, 24 * 60))) e.estimateMin = 'Estimate must be 1 minute to 24 hours.';
-  if (t.deadline !== undefined && t.deadline !== null && !isDate(t.deadline)) e.deadline = 'Use a date like 2026-10-26.';
+  if (t.dueDate !== undefined && t.dueDate !== null && !isDate(t.dueDate)) e.dueDate = 'Use a date like 2026-10-26.';
+  if (t.dueTime !== undefined && t.dueTime !== null && !(Number.isInteger(t.dueTime) && inRange(t.dueTime, 0, 1439))) e.dueTime = 'Use a time like 14:30.';
+  if (t.recurrence !== undefined && t.recurrence !== null && !isTaskRecurrence(t.recurrence)) e.recurrence = 'Repeat daily or weekly, every 1-52.';
   if (t.checkpointEveryMin !== undefined && t.checkpointEveryMin !== null && !(Number.isInteger(t.checkpointEveryMin) && inRange(t.checkpointEveryMin, 15, 600))) e.checkpointEveryMin = 'Checkpoints every 15-600 minutes.';
   if (t.timer !== undefined) Object.assign(e, validateTimer(t.timer));
   return e;
@@ -129,6 +135,10 @@ export function validateSettings(s: Settings): Errors {
   if (s.runwayPosition !== 'top' && s.runwayPosition !== 'bottom') e.runwayPosition = 'Invalid position.';
   if (s.reduceMotion !== null && !isBool(s.reduceMotion)) e.reduceMotion = 'Invalid flag.';
   if (!isBool(s.holidaysEnabled) || !isBool(s.onboarded)) e.flags = 'Invalid flag.';
+  if (!isStr(s.themeId) || !s.themeId || s.themeId.length > 40) e.themeId = 'Unknown theme.';
+  if (s.customTheme !== null && !(isObj(s.customTheme) && Object.keys(s.customTheme).length <= 64 && Object.values(s.customTheme).every((v) => isStr(v) && v.length <= 64))) e.customTheme = 'Invalid custom theme.';
+  if (!SNAP_OPTIONS.includes(s.snapMin)) e.snapMin = 'Snap must be 5, 10, 15 or 30 minutes.';
+  if (!Array.isArray(s.parserRules) || s.parserRules.length > 200 || !s.parserRules.every((r) => isObj(r) && isStr(r.keyword) && r.keyword.trim().length > 0 && r.keyword.length <= 60 && (r.kind === 'fixed' || r.kind === 'task'))) e.parserRules = 'Invalid parser rules.';
   return e;
 }
 
@@ -153,6 +163,87 @@ export function validateDevice(s: DeviceSettings): Errors {
   if (new Set(keys.map((k) => sc[k].toLowerCase())).size !== keys.length) e.shortcuts = 'Shortcuts must differ.';
   if (s.stackFolder !== null && (!isStr(s.stackFolder) || s.stackFolder.length > 1000)) e.stackFolder = 'Invalid folder.';
   if (s.displayId !== null && !isNum(s.displayId)) e.displayId = 'Invalid display.';
+  if (!isBool(s.experimental)) e.experimental = 'Invalid flag.';
+  const m = s.mcp;
+  if (!isObj(m) || !isBool(m.enabled) || !(Number.isInteger(m.port) && inRange(m.port, 0, 65535)) || !isStr(m.token) || m.token.length > 200) e.mcp = 'Invalid MCP settings.';
+  const y = s.sync;
+  if (!isObj(y) || !(y.uid === null || isStr(y.uid)) || !isObj(y.cursors) || !Object.values(y.cursors).every(isNum) || !(y.lastSyncAt === null || isNum(y.lastSyncAt))) e.sync = 'Invalid sync state.';
+  const a = s.auth;
+  if (!isObj(a) || ![a.refreshTokenEnc, a.email, a.uid].every((v) => v === null || (isStr(v) && v.length <= 8000))) e.auth = 'Invalid sign-in state.';
   return e;
 }
+
+// ---- Whole records (loader, sync pull, imports) ----
+// Structural checks with generous bounds: they reject what would break the app
+// (wrong types, unknown enums, missing fields), not what the editor would refuse.
+
+type Check = (v: unknown) => boolean;
+const nullable = (c: Check): Check => (v) => v === null || c(v);
+const str = (max: number): Check => (v) => isStr(v) && v.length <= max;
+const int = (min: number, max: number): Check => (v) => Number.isInteger(v) && inRange(v, min, max);
+const anyNum: Check = isNum;
+const oneOf = (xs: readonly unknown[]): Check => (v) => xs.includes(v);
+const arrOf = (c: Check, max: number): Check => (v) => Array.isArray(v) && v.length <= max && v.every(c);
+const idRef = nullable(isId);
+const minute: Check = isMinute;
+const DATE: Check = isDate;
+const timerCfg: Check = (v) => Object.keys(validateTimer(v)).length === 0;
+const runtime: Check = (v) =>
+  isObj(v) && ['idle', 'running', 'paused', 'completed'].includes(v.status as string) && ['work', 'shortBreak', 'longBreak'].includes(v.phase as string) && isNum(v.phaseElapsedMs) && (v.sliceStartedAt === null || isNum(v.sliceStartedAt)) && isNum(v.cycleSessions) && isBool(v.expiredNotified);
+const recur: Check = (v) =>
+  isObj(v) && Array.isArray(v.weekdays) && v.weekdays.every((w) => Number.isInteger(w) && w >= 1 && w <= 7) && [1, 2, 3, 4].includes(v.everyNWeeks as number) && isDate(v.anchorDate) && (v.from === null || isDate(v.from)) && (v.until === null || isDate(v.until));
+const columns: Check = arrOf((c) => isObj(c) && isStr(c.id) && c.id.length > 0 && c.id.length <= 60 && isStr(c.name) && c.name.length <= 60, 30);
+
+const SHAPES: Record<Coll, Record<string, Check>> = {
+  tasks: {
+    kind: oneOf(['task', 'sprint']), title: str(500), finishCondition: str(2000), notes: str(100_000), tagId: idRef, priority: oneOf(PRIORITIES),
+    estimateMin: nullable(int(1, 24 * 60)), dueDate: nullable(DATE), dueTime: nullable(int(0, 1439)), dueEventId: idRef, projectId: idRef, columnId: nullable(str(60)),
+    recurrence: nullable(isTaskRecurrence), recurrenceParentId: idRef, source: oneOf(TASK_SOURCES), order: anyNum, sortKey: isSortKey,
+    status: oneOf(TASK_STATUSES), outcome: nullable(oneOf(['finished', 'shipped', 'killed'])), dropCount: int(0, 1e6), parkedAt: nullable(anyNum),
+    workMs: anyNum, breakMs: anyNum, pomodorosCompleted: int(0, 1e6), startedAt: nullable(anyNum), completedAt: nullable(anyNum), timer: timerCfg, runtime,
+    checkpointEveryMin: nullable(int(1, 24 * 60)), nextCheckpointMs: nullable(anyNum),
+  },
+  events: { title: str(500), tagId: idRef, scope: oneOf(SCOPES), tz: isValidZone, startMin: minute, endMin: minute, date: nullable(DATE), recur: nullable(recur), notes: str(100_000) },
+  eventExceptions: { eventId: isId, date: DATE, kind: oneOf(['skip', 'edit']), title: nullable(str(500)), startMin: nullable(minute), endMin: nullable(minute), tagId: idRef },
+  closures: { name: str(200), startDate: DATE, endDate: DATE, scopes: arrOf(oneOf(SCOPES), 4), source: oneOf(['holiday', 'break', 'custom']), confirmed: isBool },
+  blocks: { taskId: idRef, tagId: idRef, title: str(500), date: DATE, startMin: minute, endMin: minute, tz: isValidZone, kind: oneOf(['work', 'sprint', 'break']), auto: isBool },
+  sessions: { taskId: isId, blockId: idRef, startedAt: anyNum, endedAt: anyNum, phase: oneOf(['work', 'break']), overrunMs: anyNum },
+  tags: { name: str(200), color: oneOf(TAG_COLORS), kind: oneOf(['class', 'project', 'general']) },
+  ideas: { text: str(5000), body: str(100_000), taskId: idRef, reviewed: isBool, parsedTaskIds: arrOf(isId, 500) },
+  activity: { type: oneOf(['started', 'finished', 'dropped', 'killed', 'claude']), taskId: (v) => v === '' || isId(v), at: anyNum, reason: str(5000) },
+  timer: { taskId: idRef, ownerDeviceId: str(200), ownerName: str(200), takeoverAt: nullable(anyNum) },
+  settings: {},
+  projects: { name: str(200), color: oneOf(TAG_COLORS), columns, archived: isBool, sortKey: isSortKey },
+  reviews: { date: DATE, outcomes: arrOf((o) => isObj(o) && isId(o.taskId) && ['tomorrow', 'unscheduled', 'dropped', 'done'].includes(o.action as string), 1000) },
+};
+
+const BASE: Record<string, Check> = {
+  createdAt: anyNum,
+  updatedAt: anyNum,
+  deviceId: str(200),
+  deletedAt: nullable(anyNum),
+  v: (v) => Number.isInteger(v) && (v as number) >= 1,
+  fv: (v) => isObj(v) && Object.values(v).every(isNum),
+  fw: (v) => isObj(v) && Object.values(v).every(isStr),
+};
+
+/** Why this record cannot be loaded or merged, or null if it is fine. */
+export function recordProblem(coll: string, rec: unknown): string | null {
+  if (!COLLS.includes(coll as Coll)) return `unknown collection ${coll}`;
+  if (!isObj(rec)) return 'not an object';
+  if (!isId(rec.id)) return 'bad id';
+  if (rec.purged === true) return isNum(rec.updatedAt) && isNum(rec.deletedAt) && isStr(rec.deviceId) && Number.isInteger(rec.v) ? null : 'bad purge stub';
+  if (typeof rec.v === 'number' && rec.v > SCHEMA_V) return `schemaVersion ${rec.v} is newer than this app (${SCHEMA_V})`;
+  for (const [k, c] of Object.entries(BASE)) if (!c(rec[k])) return `bad ${k}`;
+  if (coll === 'settings') {
+    if (rec.id !== 'main') return 'settings must be doc main';
+    const e = validateSettings(rec as unknown as Settings);
+    const k = Object.keys(e)[0];
+    return k ? `bad ${k}` : null;
+  }
+  if (coll === 'timer' && rec.id !== 'current') return 'timer must be doc current';
+  for (const [k, c] of Object.entries(SHAPES[coll as Coll])) if (!c(rec[k])) return `bad ${k}`;
+  return null;
+}
+
 

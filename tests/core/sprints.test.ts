@@ -23,7 +23,7 @@ describe('sprints', () => {
 
   it('ship runs the finish ritual; kill needs a reason', () => {
     const { d, id } = sprint();
-    const shipped = run(d, [{ type: 'task.finish', id, phrase: 'I have finished this task' }, T0 + HOUR]).d;
+    const shipped = run(d, [{ type: 'task.finish', id }, T0 + HOUR]).d;
     expect(shipped.tasks[id]?.outcome).toBe('shipped');
     expect(apply(d, { type: 'sprint.checkpoint', id, choice: 'kill', reason: '' }, ctx(T0 + HOUR)).ok).toBe(false);
     const killed = run(d, [{ type: 'sprint.checkpoint', id, choice: 'kill', reason: 'Idea does not hold up' }, T0 + HOUR]).d;

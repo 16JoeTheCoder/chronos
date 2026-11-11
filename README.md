@@ -29,7 +29,7 @@ Windows installers are built by GitHub Actions (`.github/workflows/build-windows
 ## Docs
 
 - `docs/ARCHITECTURE.md`: layers, data flow, windows, sync
-- `docs/DECISIONS.md`: every decision and why
+- `decision.md`: every decision and why
 - `docs/SPEC_MATRIX.md`: each spec requirement and its evidence
 - `docs/WINDOWS_CHECKLIST.md`: what to test on Windows, and where
 - `docs/SYNC_V1_1.md`: the Firestore plan

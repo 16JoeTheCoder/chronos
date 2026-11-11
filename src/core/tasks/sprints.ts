@@ -8,7 +8,7 @@ import { liveWorkMs } from './tasks';
 const MIN = 60_000;
 
 export function checkpointDue(t: Task, now: number): boolean {
-  return t.kind === 'sprint' && t.status === 'active' && t.nextCheckpointMs !== null && liveWorkMs(t, now) >= t.nextCheckpointMs;
+  return t.kind === 'sprint' && t.status === 'doing' && t.nextCheckpointMs !== null && liveWorkMs(t, now) >= t.nextCheckpointMs;
 }
 
 /** Continue: the next checkpoint is a full interval from now. */

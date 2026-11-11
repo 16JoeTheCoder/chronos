@@ -94,13 +94,13 @@ check('bundle budgets', () => {
 });
 
 check('TODO/FIXME have a decision', () => {
-  const decisions = readFileSync('docs/DECISIONS.md', 'utf8');
+  const decisions = readFileSync('decision.md', 'utf8');
   const bad = [];
   for (const f of files('src')) {
     readFileSync(f, 'utf8').split('\n').forEach((line, n) => {
       if (!/\b(TODO|FIXME)\b/.test(line)) return;
       const ref = line.match(/D-\d{3}/)?.[0];
-      if (!ref || !decisions.includes(`## ${ref}`)) bad.push(`${f}:${n + 1}: ${line.trim()}`);
+      if (!ref || !decisions.includes(`## ${ref}`) || decisions.includes(`### ${ref}`)) bad.push(`${f}:${n + 1}: ${line.trim()}`);
     });
   }
   return bad;
@@ -116,7 +116,7 @@ check('every core module has a test', () => {
 });
 
 check('docs present', () =>
-  ['docs/DECISIONS.md', 'docs/ARCHITECTURE.md', 'docs/SPEC_MATRIX.md', 'docs/SYNC_V1_1.md', 'docs/WINDOWS_CHECKLIST.md', 'docs/BUILD_REPORT.md', 'README.md', '.claude/agents/reviewer.md']
+  ['decision.md', 'docs/ARCHITECTURE.md', 'docs/SPEC_MATRIX.md', 'docs/SYNC_V1_1.md', 'docs/WINDOWS_CHECKLIST.md', 'docs/BUILD_REPORT.md', 'README.md', '.claude/agents/reviewer.md']
     .filter((f) => !existsSync(f))
     .map((f) => `missing ${f}`),
 );

@@ -1,12 +1,17 @@
 // Recurrence: the event instances that appear on a local date, after scope
-// switches, confirmed closures and per-occurrence exceptions are applied.
+// switches, confirmed closures and per-occurrence exceptions are applied. An
+// exception either cancels the date ('skip') or overrides title / start / end /
+// tag for that date only ('edit'); the series itself is never touched.
 
 import { live, settingsOf } from '../repo/repo';
 import type { CalEvent, Closure, Data, Scope } from '../model/types';
 import { addDays, daysBetween, mondayOf, weekdayOf, zonedToUtc } from './zone';
 
 export interface Instance {
+  /** The event as it appears on this date (exception overrides applied). */
   event: CalEvent;
+  /** The exception applied to this date, if any. */
+  exceptionId: string | null;
   date: string;
   startMin: number;
   endMin: number;
@@ -49,9 +54,12 @@ export function expandEvents(d: Data, date: string): Instance[] {
     if (closed.has(ev.scope)) continue;
     const ex = exceptions.find((x) => x.eventId === ev.id);
     if (ex?.kind === 'skip') continue;
-    const startMin = ex?.kind === 'move' && ex.startMin !== undefined ? ex.startMin : ev.startMin;
-    const endMin = ex?.kind === 'move' && ex.endMin !== undefined ? ex.endMin : ev.endMin;
-    out.push({ event: ev, date, startMin, endMin, start: zonedToUtc(date, startMin, ev.tz), end: zonedToUtc(date, endMin, ev.tz) });
+    const edit = ex?.kind === 'edit' ? ex : null;
+    const startMin = edit?.startMin ?? ev.startMin;
+    const endMin = edit?.endMin ?? ev.endMin;
+    if (endMin <= startMin) continue;
+    const event = edit && (edit.title !== null || edit.tagId !== null) ? { ...ev, title: edit.title ?? ev.title, tagId: edit.tagId ?? ev.tagId } : ev;
+    out.push({ event, exceptionId: ex?.id ?? null, date, startMin, endMin, start: zonedToUtc(date, startMin, ev.tz), end: zonedToUtc(date, endMin, ev.tz) });
   }
   return out.sort((a, b) => a.start - b.start);
 }

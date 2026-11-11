@@ -1,6 +1,6 @@
 // The only write path for synced entities. Every create/update/recycle/restore
-// stamps updatedAt (strictly increasing per record, so a local edit always beats
-// its own previous version even if the clock stepped back), deviceId and v.
+// stamps updatedAt (strictly increasing per record), deviceId and v. Sync
+// metadata (fv, fw) is carried over untouched: only core/sync writes it.
 
 import { newId } from '../model/ids';
 import { SCHEMA_V, type ActiveTimer, type Base, type Coll, type Data, type Rec, type Settings } from '../model/types';
@@ -11,6 +11,9 @@ export interface Ctx {
 }
 
 export type Fields<C extends Coll> = Omit<Rec<C>, keyof Base>;
+
+/** Fields that describe a write rather than the record: never compared for conflicts. */
+export const META_FIELDS = new Set(['id', 'createdAt', 'updatedAt', 'deviceId', 'v', 'fv', 'fw']);
 
 function stamp<T extends Base>(rec: T, prev: Base | undefined, ctx: Ctx): T {
   return { ...rec, updatedAt: prev ? Math.max(ctx.now, prev.updatedAt + 1) : ctx.now, deviceId: ctx.deviceId, v: SCHEMA_V };
@@ -31,14 +34,14 @@ export function live<C extends Coll>(d: Data, coll: C): Rec<C>[] {
 
 export function create<C extends Coll>(d: Data, coll: C, fields: Fields<C>, ctx: Ctx, id: string = newId()): { d: Data; rec: Rec<C> } {
   const existing = get(d, coll, id);
-  const rec = stamp({ ...fields, id, createdAt: existing?.createdAt ?? ctx.now, updatedAt: 0, deviceId: '', deletedAt: null, v: SCHEMA_V } as Rec<C>, existing, ctx);
+  const rec = stamp({ ...fields, id, createdAt: existing?.createdAt ?? ctx.now, updatedAt: 0, deviceId: '', deletedAt: null, v: SCHEMA_V, fv: existing?.fv ?? {}, fw: existing?.fw ?? {} } as Rec<C>, existing, ctx);
   return { d: store(d, coll, rec), rec };
 }
 
 /** Patch a record. Unknown ids are a no-op, so callers never write a phantom record. */
 export function update<C extends Coll>(d: Data, coll: C, id: string, patch: Partial<Fields<C>>, ctx: Ctx): Data {
   const prev = get(d, coll, id);
-  return prev ? store(d, coll, stamp({ ...prev, ...patch }, prev, ctx)) : d;
+  return prev ? store(d, coll, stamp({ ...prev, ...patch, id: prev.id, fv: prev.fv, fw: prev.fw }, prev, ctx)) : d;
 }
 
 export function recycle(d: Data, coll: Coll, id: string, ctx: Ctx): Data {
