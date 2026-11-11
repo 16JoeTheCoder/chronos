@@ -12,6 +12,8 @@ export interface ChronosApi {
   onBeep(cb: () => void): () => void;
   /** Home was shown by a hotkey, tray or widget click: which view to open. */
   onShow(cb: (view: 'runway' | 'focus' | null) => void): () => void;
+  /** Main reports something the user should see once, e.g. a change Claude made (with an Undo token). */
+  onNotice(cb: (n: Notice) => void): () => void;
   command(cmd: Command): Promise<Result>;
   win: {
     hide(): void;
@@ -36,11 +38,19 @@ export interface ChronosApi {
   };
 }
 
+export interface Notice {
+  text: string;
+  /** Send { type: 'mcp.undo', token } to undo it. */
+  undoToken?: string;
+  error?: boolean;
+}
+
 export const CHANNELS = {
   getSnapshot: 'chronos:getSnapshot',
   snapshot: 'chronos:snapshot',
   beep: 'chronos:beep',
   show: 'chronos:show',
+  notice: 'chronos:notice',
   command: 'chronos:command',
   hide: 'win:hide',
   widgetClick: 'win:widgetClick',

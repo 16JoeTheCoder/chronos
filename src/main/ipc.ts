@@ -4,14 +4,15 @@
 // the same shared validators (core/validation via core/commands).
 
 import { ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
-import { RECYCLABLE, type ClosureInput, type Command, type EventInput, type Result, type SettingsPatch, type TaskInput, type TagInput } from '../core/commands';
+import { RECYCLABLE, type ClosureInput, type Command, type EventInput, type OccurrencePatch, type Result, type SettingsPatch, type TaskInput, type TagInput } from '../core/commands';
+import { isId } from '../core/model/ids';
 import { COLLS, type Coll, type DeviceSettings, type ShelfItem, type Snapshot, type TimerConfig } from '../core/model/types';
 import { CHANNELS } from '../preload/api';
 import { isObj } from '../core/validation';
 
 type Obj = Record<string, unknown>;
 const str = (v: unknown, max = 5000): string => (typeof v === 'string' ? v.slice(0, max) : '');
-const id = (v: unknown): string | null => (typeof v === 'string' && /^[\w-]{1,100}$/.test(v) ? v : null);
+const id = (v: unknown): string | null => (isId(v) ? v : null);
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);
 const optNum = (v: unknown): number | null | undefined => (v === undefined ? undefined : v === null ? null : num(v));
 const optStr = (v: unknown, max: number): string | undefined => (v === undefined ? undefined : str(v, max));
@@ -48,7 +49,14 @@ function pickTask(v: Obj): Partial<TaskInput> {
   if ('tagId' in v) out.tagId = nullableId(v.tagId);
   if ('priority' in v) out.priority = v.priority as TaskInput['priority'];
   if ('estimateMin' in v) out.estimateMin = optNum(v.estimateMin);
-  if ('deadline' in v) out.deadline = v.deadline === null ? null : str(v.deadline, 10);
+  if ('dueDate' in v) out.dueDate = v.dueDate === null ? null : str(v.dueDate, 10);
+  if ('dueTime' in v) out.dueTime = optNum(v.dueTime);
+  if ('projectId' in v) out.projectId = nullableId(v.projectId);
+  if ('columnId' in v) out.columnId = v.columnId === null ? null : str(v.columnId, 60);
+  if ('recurrence' in v) {
+    const r = isObj(v.recurrence) ? v.recurrence : null;
+    out.recurrence = r ? { freq: r.freq as 'daily', interval: num(r.interval), ...(Array.isArray(r.weekdays) ? { weekdays: r.weekdays.slice(0, 7).map(num) } : {}) } : null;
+  }
   if ('dueEventId' in v) out.dueEventId = nullableId(v.dueEventId);
   if ('checkpointEveryMin' in v) out.checkpointEveryMin = optNum(v.checkpointEveryMin);
   if ('timer' in v) out.timer = pickTimer(v.timer);
@@ -115,9 +123,10 @@ function pickSettings(v: Obj): SettingsPatch {
   return p;
 }
 
-function pickDevice(v: Obj): Partial<DeviceSettings> {
-  const p: Partial<DeviceSettings> = {};
-  for (const k of ['launchAtLogin', 'skipLaunchScreen', 'sound', 'notifications'] as const) if (k in v) p[k] = v[k] as boolean;
+function pickDevice(v: Obj): Extract<Command, { type: 'device.update' }>['patch'] {
+  const p: Extract<Command, { type: 'device.update' }>['patch'] = {};
+  for (const k of ['launchAtLogin', 'skipLaunchScreen', 'sound', 'notifications', 'experimental'] as const) if (k in v) p[k] = v[k] as boolean;
+  if (isObj(v.mcp) && typeof v.mcp.enabled === 'boolean') p.mcp = { enabled: v.mcp.enabled };
   if ('widgetDock' in v) p.widgetDock = v.widgetDock as DeviceSettings['widgetDock'];
   if (isObj(v.shortcuts)) p.shortcuts = { toggle: str(v.shortcuts.toggle, 60), startPause: str(v.shortcuts.startPause, 60), capture: str(v.shortcuts.capture, 60) };
   if ('displayId' in v) p.displayId = v.displayId === null ? null : num(v.displayId);
@@ -143,7 +152,9 @@ export function parseCommand(raw: unknown): Command | null {
       return rid && direction ? { type: 'task.reorder', id: rid, direction } : null;
     }
     case 'task.finish':
-      return rid ? { type: 'task.finish', id: rid, phrase: str(raw.phrase, 200) } : null;
+      return rid ? { type: 'task.finish', id: rid } : null;
+    case 'task.close':
+      return rid ? { type: 'task.close', id: rid, reason: str(raw.reason, 500) } : null;
     case 'task.drop':
       return rid ? { type: 'task.drop', id: rid, reason: str(raw.reason, 500) } : null;
     case 'task.reopen':
@@ -171,6 +182,16 @@ export function parseCommand(raw: unknown): Command | null {
     }
     case 'event.skip':
       return rid ? { type: 'event.skip', id: rid, date: str(raw.date, 10) } : null;
+    case 'event.editOn': {
+      if (!rid || !isObj(raw.patch)) return null;
+      const p = raw.patch;
+      const patch: OccurrencePatch = {};
+      if ('title' in p) patch.title = p.title === null ? null : str(p.title, 200);
+      if ('startMin' in p) patch.startMin = optNum(p.startMin);
+      if ('endMin' in p) patch.endMin = optNum(p.endMin);
+      if ('tagId' in p) patch.tagId = nullableId(p.tagId);
+      return { type: 'event.editOn', id: rid, date: str(raw.date, 10), patch };
+    }
     case 'closure.create':
     case 'closure.update': {
       const input = pickClosure(raw.input);
@@ -205,9 +226,24 @@ export function parseCommand(raw: unknown): Command | null {
       return bool(raw.count) !== undefined ? { type: 'gap.answer', count: raw.count as boolean } : null;
     case 'data.import':
       return raw.source === 'monolith' ? { type: 'data.import', source: 'monolith' } : null;
+    case 'diag.clear': {
+      const what = oneOf(raw.what, ['conflicts', 'quarantine'] as const);
+      return what ? { type: 'diag.clear', what } : null;
+    }
+    case 'snapshot.restore':
+      return typeof raw.name === 'string' && /^chronos-[\w-]{1,80}\.json$/.test(raw.name) ? { type: 'snapshot.restore', name: raw.name } : null;
+    case 'mcp.undo':
+      return typeof raw.token === 'string' && /^[\w-]{1,80}$/.test(raw.token) ? { type: 'mcp.undo', token: raw.token } : null;
     case 'timer.takeover':
     case 'data.export':
     case 'data.openFolder':
+    case 'sync.signIn':
+    case 'sync.signOut':
+    case 'sync.retry':
+    case 'sync.forceResync':
+    case 'diag.exportLog':
+    case 'mcp.regenerateToken':
+    case 'mcp.copyConfig':
       return { type: raw.type };
     default:
       return null;

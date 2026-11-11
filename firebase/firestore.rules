@@ -1,13 +1,32 @@
 rules_version = '2';
+// Chronos (docs/SYNC.md). One user's data lives at users/{uid}/{collection}/{docId}.
+// Only that signed-in user may read or write it. Clients never hard-delete
+// (deletes are tombstones). A trusted server using the Admin SDK (Phase 4 remote
+// MCP) bypasses these rules by design, so it needs no rule change.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{uid}/{collection}/{docId} {
-      allow read, delete: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.id == docId
-        && request.resource.data.updatedAt is number
-        && request.resource.data.deviceId is string
-        && request.resource.data.size() < 60;
+      function owner() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+      function known() {
+        return collection in ['tasks', 'events', 'eventExceptions', 'closures', 'blocks', 'sessions', 'tags', 'ideas', 'activity', 'timer', 'settings', 'projects', 'reviews'];
+      }
+      function valid() {
+        let d = request.resource.data;
+        return d.id == docId
+          && d.v is int && d.v >= 1
+          && d.serverUpdatedAt == request.time
+          && (!('fv' in d) || d.fv is map)
+          && (!('fw' in d) || d.fw is map)
+          && d.size() < 80;
+      }
+      allow read: if owner() && known();
+      allow create, update: if owner() && known() && valid();
+      allow delete: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

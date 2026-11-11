@@ -1,8 +1,9 @@
-// The Chronos data model. Pure types shared by core, main, preload and renderer.
+// The Chronos data model (schema v2). Pure types shared by core, main, preload and renderer.
 // Every synced entity extends Base and is written only through core/repo, which
 // stamps updatedAt/deviceId/v. DeviceSettings is local to one machine and never synced.
 
-export const SCHEMA_V = 1;
+/** The schema this build reads and writes. A pulled record with a higher `v` puts sync in read-only mode (D-104). */
+export const SCHEMA_V = 2;
 
 export interface Base {
   id: string;
@@ -12,7 +13,15 @@ export interface Base {
   deviceId: string;
   /** Tombstone. Recycled records stay until purge (core/repo/recycle). */
   deletedAt: number | null;
+  /** The record's schemaVersion: the schema of the app that last wrote it (D-104). */
   v: number;
+  /**
+   * Per-field versions (D-105). A field's entry is the server commit time (µs) of the
+   * last write to it that this device has seen; absent = never synced. Written only by sync.
+   */
+  fv: Record<string, number>;
+  /** Per-field last writer (deviceId), beside fv; used to tell real conflicts from our own echoes. */
+  fw: Record<string, string>;
 }
 
 /** What is left of a record 7 days after deletion; dropped after 60 days. */
@@ -90,8 +99,20 @@ export interface Tag extends Base {
   kind: 'class' | 'project' | 'general';
 }
 
-export type TaskStatus = 'queued' | 'active' | 'done';
+/** inbox: open, nothing planned · planned: has a block today or later · doing: the one task in focus · done · dropped: closed without finishing. */
+export type TaskStatus = 'inbox' | 'planned' | 'doing' | 'done' | 'dropped';
+export const TASK_STATUSES: TaskStatus[] = ['inbox', 'planned', 'doing', 'done', 'dropped'];
 export type Outcome = 'finished' | 'shipped' | 'killed';
+export type TaskSource = 'typed' | 'parsed' | 'claude' | 'import';
+export const TASK_SOURCES: TaskSource[] = ['typed', 'parsed', 'claude', 'import'];
+
+export interface TaskRecurrence {
+  freq: 'daily' | 'weekly';
+  /** Every n days / weeks, 1-52. */
+  interval: number;
+  /** Weekly only: 1 = Mon .. 7 = Sun. Empty or absent = the weekday of the due date. */
+  weekdays?: number[];
+}
 
 export interface Task extends Base {
   kind: 'task' | 'sprint';
@@ -102,10 +123,22 @@ export interface Task extends Base {
   tagId: string | null;
   priority: Priority;
   estimateMin: number | null;
-  deadline: string | null;
+  /** YYYY-MM-DD (v1 `deadline`). */
+  dueDate: string | null;
+  /** Minutes from local midnight, or null. */
+  dueTime: number | null;
   dueEventId: string | null;
-  /** Fractional queue order: a reorder is one record write. */
+  projectId: string | null;
+  /** Kanban column inside the project (Phase 3). */
+  columnId: string | null;
+  recurrence: TaskRecurrence | null;
+  /** The first task of a recurring series; instances get id `<parentId>:<date>`. */
+  recurrenceParentId: string | null;
+  source: TaskSource;
+  /** Fractional queue order (v1 semantics): a reorder is one record write. */
   order: number;
+  /** Fractional index string for manual list/board ordering (core/model/sortKey). */
+  sortKey: string;
   status: TaskStatus;
   outcome: Outcome | null;
   dropCount: number;
@@ -147,12 +180,15 @@ export interface CalEvent extends Base {
   notes: string;
 }
 
+/** One occurrence of a repeating event, changed. Id `x-<eventId>-<date>`. Override fields are null when unchanged. */
 export interface EventException extends Base {
   eventId: string;
   date: string;
-  kind: 'skip' | 'move';
-  startMin?: number;
-  endMin?: number;
+  kind: 'skip' | 'edit';
+  title: string | null;
+  startMin: number | null;
+  endMin: number | null;
+  tagId: string | null;
 }
 
 export interface Closure extends Base {
@@ -174,6 +210,8 @@ export interface Block extends Base {
   endMin: number;
   tz: string;
   kind: 'work' | 'sprint' | 'break';
+  /** Placed by auto-plan (Phase 3). Manual blocks are never moved by it. */
+  auto: boolean;
 }
 
 export interface Session extends Base {
@@ -186,15 +224,40 @@ export interface Session extends Base {
   overrunMs: number;
 }
 
+/** A note (the collection keeps its v1 name, D-109). `body` is the content; `text` is its first 1000 characters for v1 views. */
 export interface Idea extends Base {
   text: string;
+  body: string;
   taskId: string | null;
   reviewed: boolean;
+  /** Tasks the Phase 2 parser made from this note. */
+  parsedTaskIds: string[];
+}
+
+export interface ProjectColumn {
+  id: string;
+  name: string;
+}
+
+export interface Project extends Base {
+  name: string;
+  color: TagColor;
+  columns: ProjectColumn[];
+  archived: boolean;
+  sortKey: string;
+}
+
+export type ReviewAction = 'tomorrow' | 'unscheduled' | 'dropped' | 'done';
+/** End-of-day review. Id `review-<date>`: its existence means that day was reviewed (on any device). */
+export interface Review extends Base {
+  date: string;
+  outcomes: { taskId: string; action: ReviewAction }[];
 }
 
 /** Started / finished / dropped / killed log, for metrics. */
 export interface Activity extends Base {
-  type: 'started' | 'finished' | 'dropped' | 'killed';
+  /** 'claude': a change made through the MCP server; reason holds what was done. */
+  type: 'started' | 'finished' | 'dropped' | 'killed' | 'claude';
   taskId: string;
   at: number;
   reason: string;
@@ -228,6 +291,13 @@ export interface Settings extends Base {
   checkpointEveryMin: number;
   holidaysEnabled: boolean;
   theme: 'dark' | 'light' | 'system';
+  /** Phase 3 themes; unused by the UI yet. */
+  themeId: string;
+  customTheme: Record<string, string> | null;
+  /** Drag snap in minutes (5/10/15/30); unused by the UI yet. */
+  snapMin: number;
+  /** Phase 2 parser keywords; empty now. */
+  parserRules: { keyword: string; kind: 'fixed' | 'task' }[];
   accent: string | null;
   runwayPosition: 'top' | 'bottom';
   reduceMotion: boolean | null;
@@ -246,8 +316,14 @@ export interface DeviceSettings {
   stackFolder: string | null;
   sound: boolean;
   notifications: boolean;
-  /** Sync bookkeeping (§10): last pushed updatedAt and per-collection pull cursors. */
-  sync: { lastPushedAt: number; cursors: Partial<Record<Coll, number>> };
+  /** Show the Diagnostics section (per device). */
+  experimental: boolean;
+  /** Local MCP endpoint for Claude Desktop (127.0.0.1 only). */
+  mcp: { enabled: boolean; port: number; token: string };
+  /** Sync bookkeeping: whose data this is, per-collection pull cursors (server µs) and the last good sync. */
+  sync: { uid: string | null; cursors: Partial<Record<Coll, number>>; lastSyncAt: number | null };
+  /** Google sign-in: the refresh token encrypted with safeStorage (base64), and who it is. */
+  auth: { refreshTokenEnc: string | null; email: string | null; uid: string | null };
 }
 
 export interface Collections {
@@ -262,13 +338,15 @@ export interface Collections {
   activity: Activity;
   timer: ActiveTimer;
   settings: Settings;
+  projects: Project;
+  reviews: Review;
 }
 export type Coll = keyof Collections;
-export const COLLS: Coll[] = ['tasks', 'events', 'eventExceptions', 'closures', 'blocks', 'sessions', 'tags', 'ideas', 'activity', 'timer', 'settings'];
+export const COLLS: Coll[] = ['tasks', 'events', 'eventExceptions', 'closures', 'blocks', 'sessions', 'tags', 'ideas', 'activity', 'timer', 'settings', 'projects', 'reviews'];
 export type Rec<C extends Coll = Coll> = Collections[C];
 
 /** All synced state. timer and settings each hold exactly one doc ('current', 'main'). */
-export type Data = { schema: 1 } & { [C in Coll]: Record<string, Collections[C]> } & {
+export type Data = { schema: 2 } & { [C in Coll]: Record<string, Collections[C]> } & {
   /** Purge stubs, kept so an offline device cannot resurrect deleted records. */
   tombs: Partial<Record<Coll, Record<string, Stub>>>;
 };
@@ -299,4 +377,51 @@ export interface Snapshot {
   dataDir: string;
   perf: Record<string, number>;
   homeView: 'runway' | 'focus' | null;
+  sync: SyncView;
+  /** Only while Experimental is on (per device). */
+  diag: Diagnostics | null;
+}
+
+// ---- Sync (docs/SYNC.md) ----
+export type SyncStateKind = 'off' | 'signedOut' | 'syncing' | 'synced' | 'pending' | 'offline' | 'error' | 'readOnly';
+
+export interface SyncView {
+  state: SyncStateKind;
+  /** One line for the dot's popover (error / readOnly / offline). */
+  reason: string | null;
+  /** Outbox entries waiting to be acknowledged. */
+  pending: number;
+  oldestPendingAt: number | null;
+  lastSyncAt: number | null;
+  email: string | null;
+  /** firebase.config.json present and complete. */
+  configured: boolean;
+}
+
+/** Same field edited on two devices: the local pending edit won, this is what it overwrote. */
+export interface Conflict {
+  at: number;
+  coll: Coll;
+  id: string;
+  field: string;
+  overwrittenValue: unknown;
+  newValue: unknown;
+  otherDeviceId: string;
+}
+
+/** A pulled (or loaded) document that failed validation: never merged or rendered. */
+export interface QuarantineItem {
+  at: number;
+  coll: string;
+  id: string;
+  reason: string;
+  doc: unknown;
+}
+
+export interface Diagnostics {
+  cursors: Partial<Record<Coll, number>>;
+  conflicts: Conflict[];
+  quarantine: QuarantineItem[];
+  snapshots: string[];
+  mcp: { enabled: boolean; running: boolean; port: number; token: string; error: string | null; bridgePath: string; config: string };
 }

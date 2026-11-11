@@ -34,14 +34,14 @@ export function freeBetween(d: Data, now: number, until: number): number {
 }
 
 export function prepNudges(d: Data, now: number): Nudge[] {
-  const tasks = live(d, 'tasks').filter((t) => t.status !== 'done');
+  const tasks = live(d, 'tasks').filter((t) => t.status !== 'done' && t.status !== 'dropped');
   const out: Nudge[] = [];
   for (const inst of upcoming(d, now, todayOf(d, now), 24)) {
     const tag = inst.event.tagId;
     if (!tag) continue;
     for (const t of tasks) {
       const explicit = t.dueEventId === inst.event.id;
-      const implicit = !t.dueEventId && t.tagId === tag && t.deadline !== null && t.deadline <= inst.date;
+      const implicit = !t.dueEventId && t.tagId === tag && t.dueDate !== null && t.dueDate <= inst.date;
       if (!explicit && !implicit) continue;
       const needsMin = Math.max(0, Math.ceil(((t.estimateMin ?? 0) * MIN - liveWorkMs(t, now)) / MIN));
       const freeBeforeMin = Math.floor(freeBetween(d, now, inst.start) / MIN);

@@ -1,10 +1,12 @@
 // Queue derivation and the single-focus rules (§6.4). Planning is free: tasks,
 // blocks and order change at will. Execution is strict: exactly one active task,
 // the head of the derived queue that has a finish condition; once its timer has
-// run it is locked, and only Finish (typed phrase) or Drop (typed reason) end it.
+// run it is locked, and only Finish (hold to complete) or Drop (typed reason) end it.
+// Status v2: the active task is 'doing'; other open tasks are 'planned' when they
+// have a block today or later, else 'inbox' (normalize keeps this derived value right).
 
 import { sessionId } from '../model/ids';
-import type { Block, Data, Priority, Slice, Task } from '../model/types';
+import type { Block, Data, Priority, Slice, Task, TaskStatus } from '../model/types';
 import { create, get, live, settingsOf, timerOf, update, type Ctx } from '../repo/repo';
 import { hasFinishCondition } from '../validation';
 import { dateOf, zonedToUtc } from '../time/zone';
@@ -18,35 +20,43 @@ export function blocksOn(d: Data, date: string): Block[] {
   const tasks = d.tasks;
   return live(d, 'blocks')
     .filter((b) => b.date === date && (b.taskId === null || tasks[b.taskId]?.deletedAt === null))
-    .sort((a, b) => a.startMin - b.startMin);
+    .sort((a, b) => a.startMin - b.startMin || byId(a, b));
 }
 
 export const blockSpan = (b: Block): [number, number] => [zonedToUtc(b.date, b.startMin, b.tz), zonedToUtc(b.date, b.endMin, b.tz)];
 
 export function activeTask(d: Data): Task | undefined {
-  return live(d, 'tasks').find((t) => t.status === 'active');
+  return live(d, 'tasks').find((t) => t.status === 'doing');
 }
+
+/** Not done and not dropped. */
+export const isOpen = (t: Task): boolean => t.status !== 'done' && t.status !== 'dropped';
 
 /** Locked once its timer has run in the current run (Drop and Reopen start a new run). */
 export const isLocked = (t: Task): boolean => t.startedAt !== null;
 
 /** Unscheduled order: priority, then fractional order; dropped (parked) tasks go to the back. */
 function byPriority(a: Task, b: Task): number {
-  return (a.parkedAt ?? 0) - (b.parkedAt ?? 0) || PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || a.order - b.order;
+  return (a.parkedAt ?? 0) - (b.parkedAt ?? 0) || PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || a.order - b.order || byId(a, b);
 }
+
+/** Last tie-break: every device must derive the same queue from the same data (sync). */
+const byId = (a: { id: string }, b: { id: string }) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 /**
  * The execution queue: the locked active task (if any), then tasks with a block
  * today in block time order, then unscheduled tasks by priority and order.
  */
 export function deriveQueue(d: Data, now: number): Task[] {
-  const open = live(d, 'tasks').filter((t) => t.status !== 'done');
-  const locked = open.find((t) => t.status === 'active' && isLocked(t));
+  const open = live(d, 'tasks').filter(isOpen);
+  // Two locked tasks only happen after a merge: the timer's task wins, then the lower id.
+  const owned = timerOf(d).taskId;
+  const locked = open.filter((t) => t.status === 'doing' && isLocked(t)).sort((a, b) => Number(b.id === owned) - Number(a.id === owned) || byId(a, b))[0];
   const seen = new Set<string>(locked ? [locked.id] : []);
   const out: Task[] = locked ? [locked] : [];
   for (const b of blocksOn(d, todayOf(d, now))) {
     const t = b.taskId ? d.tasks[b.taskId] : undefined;
-    if (t && t.status !== 'done' && !seen.has(t.id)) {
+    if (t && isOpen(t) && !seen.has(t.id)) {
       seen.add(t.id);
       out.push(t);
     }
@@ -54,19 +64,24 @@ export function deriveQueue(d: Data, now: number): Task[] {
   return out.concat(open.filter((t) => !seen.has(t.id)).sort(byPriority));
 }
 
-/** Restore the invariant: exactly one active task (the locked one, else the first startable head). */
+/**
+ * Restore the invariants: exactly one 'doing' task (the locked one, else the first
+ * startable head); every other open task is 'planned' (a block today or later) or 'inbox'.
+ */
 export function normalize(d: Data, ctx: Ctx): Data {
   const queue = deriveQueue(d, ctx.now);
-  const head = queue.find((t) => isLocked(t) && t.status === 'active') ?? queue.find((t) => hasFinishCondition(t.finishCondition));
+  const head = queue[0] && isLocked(queue[0]) && queue[0].status === 'doing' ? queue[0] : queue.find((t) => hasFinishCondition(t.finishCondition));
+  const today = todayOf(d, ctx.now);
+  const planned = new Set(live(d, 'blocks').filter((b) => b.taskId && b.date >= today).map((b) => b.taskId as string));
   let out = d;
   for (const t of live(d, 'tasks')) {
-    if (t.status === 'done') continue;
-    const want = t.id === head?.id ? 'active' : 'queued';
+    if (!isOpen(t)) continue;
+    const want: TaskStatus = t.id === head?.id ? 'doing' : planned.has(t.id) ? 'planned' : 'inbox';
     if (t.status === want) continue;
-    if (want === 'queued' && t.runtime.status === 'running') {
+    if (want !== 'doing' && t.runtime.status === 'running') {
       // Only reachable after a sync merge produced two actives: bank the slice first.
       const s = pauseAt(t, ctx.now);
-      out = recordSlices(update(out, 'tasks', t.id, { ...s.task, status: 'queued' }, ctx), t.id, s.slices, ctx);
+      out = recordSlices(update(out, 'tasks', t.id, { ...s.task, status: want }, ctx), t.id, s.slices, ctx);
     } else {
       out = update(out, 'tasks', t.id, { status: want }, ctx);
     }

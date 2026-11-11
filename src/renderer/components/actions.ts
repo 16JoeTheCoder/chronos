@@ -19,6 +19,12 @@ export async function recycleWithUndo(coll: Coll, id: string, label: string, con
   if (r.ok) toast(`${label} deleted.`, { undo: () => void run({ type: 'restore', coll, id }) });
 }
 
+/** Skip one occurrence of a repeating event, with an Undo toast that recycles the exception. */
+export async function skipWithUndo(eventId: string, date: string, title: string): Promise<void> {
+  const r = await run({ type: 'event.skip', id: eventId, date });
+  if (r.ok && r.id) toast(`${title} skipped today.`, { undo: () => void run({ type: 'recycle', coll: 'eventExceptions', id: r.id as string, confirmed: true }) });
+}
+
 export function dropOnTrash(item: DragItem): void {
   switch (item.kind) {
     case 'task':
@@ -38,10 +44,7 @@ export function dropOnTrash(item: DragItem): void {
         actions: [
           {
             label: 'This occurrence',
-            run: async () => {
-              const r = await run({ type: 'event.skip', id: item.eventId, date: item.date });
-              if (r.ok && r.id) toast(`${item.title} skipped today.`, { undo: () => void run({ type: 'recycle', coll: 'eventExceptions', id: r.id as string, confirmed: true }) });
-            },
+            run: () => void skipWithUndo(item.eventId, item.date, item.title),
           },
           { label: 'Whole series', primary: true, run: () => void recycleWithUndo('events', item.eventId, item.title) },
         ],

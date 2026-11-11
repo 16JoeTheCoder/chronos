@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { defaultDevice, defaultSettings } from '../../src/core/model/defaults';
 import { clockOf, dateLabel, formatClock, formatHM, formatHuman, greeting, parseHM } from '../../src/core/format';
-import { isDropReason, isFinishPhrase, isValidAccelerator, validateDevice, validateSettings, validateTaskFields } from '../../src/core/validation';
+import { isDropReason, isValidAccelerator, validateDevice, validateSettings, validateTaskFields } from '../../src/core/validation';
 import { T0, TZ } from '../helpers';
 
 describe('validation', () => {
-  it('checks the finish phrase and drop reason', () => {
-    expect(isFinishPhrase('I have finished this task')).toBe(true);
-    expect(isFinishPhrase('  i HAVE finished   this task.')).toBe(true);
-    expect(isFinishPhrase('I have finished')).toBe(false);
+  it('checks the drop reason', () => {
     expect(isDropReason('ab')).toBe(false);
     expect(isDropReason(' abc ')).toBe(true);
   });

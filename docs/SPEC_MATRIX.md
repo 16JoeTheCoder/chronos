@@ -8,13 +8,13 @@ One row per MUST sentence in the build spec, plus one row per subsection of §6,
 | --- | --- | --- | --- |
 | M-6.1 | MUST handle DST correctly (Berlin, Zurich spring-forward and fall-back; Jakarta no DST) | `src/core/time/zone.ts` | `tests/core/zone.test.ts` |
 | M-6.3a | Time-left MUST be table-driven tested (empty day, event spanning now, overlaps merged, now before start / after end, buffer > window, each variant) | `src/core/time/timeLeft.ts` | `tests/core/timeLeft.test.ts` (11 table rows + identity check) |
-| M-10.1a | Two simulated devices converge after interleaved edits | `src/core/sync/engine.ts`, `memoryProvider.ts` | `tests/core/sync.test.ts` "two devices converge" |
-| M-10.1b | Concurrent edit LWW | `engine.ts` (`wins`, re-push) | `sync.test.ts` "concurrent edits" |
-| M-10.1c | Delete vs edit | `engine.ts` | `sync.test.ts` "delete vs edit" |
-| M-10.1d | Purge stub does not resurrect | `engine.ts`, `core/repo/recycle.ts` | `sync.test.ts` "a purge stub never lets..." |
-| M-10.1e | Offline device reconnects after 10 days | `engine.ts` | `sync.test.ts` "reconnecting after 10 days" |
-| M-10.1f | Timer takeover closes the right slice | `engine.ts` (`takeover`, `afterTakeover`) | `sync.test.ts` "timer takeover" |
-| M-10.1g | Running the sync twice is a no-op | `engine.ts` | `sync.test.ts` "running the sync twice" |
+| M-10.1a | Two simulated devices converge after interleaved edits | `src/core/sync/engine.ts`, `memoryProvider.ts` | `tests/sync/twoDevice.test.ts` (a), first sign-in |
+| M-10.1b | Concurrent edit LWW | `core/sync/merge.ts` (`planCommit`) | `tests/sync/twoDevice.test.ts` (c): per-field, one conflict logged (LWW replaced, D-105) |
+| M-10.1c | Delete vs edit | `engine.ts` | `tests/sync/twoDevice.test.ts` (d) |
+| M-10.1d | Purge stub does not resurrect | `engine.ts`, `core/repo/recycle.ts` | `tests/sync/twoDevice.test.ts` "a purge stub on the server is terminal" |
+| M-10.1e | Offline device reconnects after 10 days | `engine.ts` | `tests/sync/twoDevice.test.ts` (b), latency/reconnect |
+| M-10.1f | Timer takeover closes the right slice | `engine.ts` (`takeover`, `afterTakeover`) | `tests/sync/twoDevice.test.ts` "timer takeover" |
+| M-10.1g | Re-sending a write is a no-op | `core/sync/outbox.ts`, deterministic ids | `tests/sync/twoDevice.test.ts` (e) |
 | M-11.1 | Tests (vitest): Monolith timer/tasks/store/recovery ports; time-left; recurrence incl. week A/B and exceptions; zones/DST; holidays/Easter; queue derivation and locked-active; prep nudges; recycle + purge; repo stamping; persistence (atomic, .bak); IPC validation; WCAG contrast; sprint checkpoints; §10 sync | `src/core/**`, `src/main/**` | `tests/core/*.test.ts`, `tests/main/*.test.ts` (all passing; count in `docs/BUILD_REPORT.md`) |
 | M-11.4 | Reviewer subagent exists and audits | `.claude/agents/reviewer.md` | reviewer passes recorded in `docs/BUILD_REPORT.md` |
 
@@ -28,7 +28,7 @@ One row per MUST sentence in the build spec, plus one row per subsection of §6,
 | 6.3a | Time-left formula and advanced variants | `core/time/timeLeft.ts`, `renderer/runway/TimeLeft.tsx`, Settings → Advanced | `tests/core/timeLeft.test.ts`; `docs/screens/2-runway.png` |
 | 6.4 | Queue derivation and the locked active task; inbox tasks need a finish condition to become active | `core/tasks/tasks.ts`, `core/commands.ts` | `tests/core/tasks.test.ts` |
 | 6.5 | Prep nudges (P1): explicit/implicit, needs vs free, tight flag; Before-class strip, widget dot, one notification at lead time; "Do before" on tagging | `core/time/prep.ts`, `main/controller.ts` (`slowTick`), `renderer/home/Strips.tsx`, `renderer/widget/Widget.tsx`, `renderer/cards/TaskEditor.tsx` | `tests/core/prep.test.ts`; notification UNVERIFIED-ON-WINDOWS |
-| 6.6 | Timer engine ported unchanged; countdown to block end with overtime; `overrunMs`; overrun line; single owner with Take over | `core/timer/timer.ts`, `core/commands.ts` (`timer`), `core/tasks/tasks.ts` (`recordSlices`), `core/tasks/metrics.ts`, `core/sync/engine.ts` | `tests/core/timer.test.ts`, `tests/core/tasks.test.ts` "inside a block", `tests/core/sync.test.ts` takeover |
+| 6.6 | Timer engine ported unchanged; countdown to block end with overtime; `overrunMs`; overrun line; single owner with Take over | `core/timer/timer.ts`, `core/commands.ts` (`timer`), `core/tasks/tasks.ts` (`recordSlices`), `core/tasks/metrics.ts`, `core/sync/engine.ts` | `tests/core/timer.test.ts`, `tests/core/tasks.test.ts` "inside a block", `tests/sync/twoDevice.test.ts` takeover |
 | 6.7 | Sprints (P1): stopwatch default, checkpoint every N min of work, Continue/Ship/Kill, Done counts | `core/tasks/sprints.ts`, `core/commands.ts`, `renderer/focus/FocusCore.tsx`, `main/controller.ts` (notify) | `tests/core/sprints.test.ts`, `tests/main/controller.test.ts` "notifies once per sprint checkpoint" |
 | 6.8 | Focus metrics (P1): week from Monday, started/finished/dropped, focus today/week | `core/tasks/metrics.ts`, `renderer/home/DoneDrawer.tsx` | `tests/core/metrics.test.ts` |
 
@@ -63,3 +63,18 @@ One row per MUST sentence in the build spec, plus one row per subsection of §6,
 | 9.10 | About: mark, version, "Built by Josef Yang · builtbyjosef", JY monogram, Copy diagnostics with startup marks; brand assets by exact name | `renderer/settings/Settings.tsx` (`About`), `renderer/assets/builtbyjosef.svg`, `renderer/assets/jy-monogram.svg` | `docs/screens/6-about.png` |
 | 9.11 | Keyboard parity: Enter/Space, Esc, F, N, S, arrows/Shift/Alt on blocks, Delete with Undo; tab order | `renderer/home/Home.tsx`, `renderer/cards/Cards.tsx`, `renderer/runway/Runway.tsx`, `renderer/launch/launch.ts` | smoke (Enter, N, S, F, Delete, Esc) |
 | 9.12 | Accessibility: contrast ≥ 4.5:1, focus-visible rings, meaningful aria-labels, polite live region, reduced motion, zoom-safe, DPI-safe window maths | `renderer/styles/app.css`, components | `tests/main/contrast.test.ts`; DPI UNVERIFIED-ON-WINDOWS (checklist 7) |
+
+## Phase 1 rows
+
+| ID | Requirement | File(s) | Test / evidence |
+| --- | --- | --- | --- |
+| P1-A | Data model v2 + lossless, idempotent v1 migration | `core/model/types.ts`, `core/repo/migrate.ts` | `tests/core/migrateV2.test.ts`, `tests/core/migrate.test.ts` |
+| P1-A2 | Validation is the single gate (loader, pull, imports, MCP) | `core/validation.ts` (`recordProblem`), `main/controller.ts` (`splitInvalid`), `core/sync/merge.ts` | `tests/core/validationV2.test.ts`, `tests/sync/twoDevice.test.ts` (g) |
+| P1-B | Outbox, per-field merge, tombstones, version gate, reconnect, quarantine | `core/sync/*`, `main/sync/*`, `main/controller.ts` | `tests/sync/*.test.ts` (a)-(h); real Firestore UNVERIFIED (docs/SYNC.md) |
+| P1-B2 | Daily snapshots, force resync, restore, conflict log, quarantine, log export | `main/store.ts`, `main/controller.ts`, `main/main.ts` | `tests/main/controllerSync.test.ts`; UI `WINDOWS_CHECKLIST.md` 23 |
+| P1-C | Google sign-in (system browser, loopback, PKCE, safeStorage) | `main/sync/auth.ts`, `main/sync/manager.ts` | UNVERIFIED: `WINDOWS_CHECKLIST.md` 17 |
+| P1-D | Experimental mode, Diagnostics, quiet sync dot | `renderer/settings/Settings.tsx`, `renderer/home` | smoke + `WINDOWS_CHECKLIST.md` 15 |
+| P1-E | Search index, incremental, < 10 ms per query at 5,000 records | `core/search/index.ts` | `tests/core/search.test.ts` (benchmark) |
+| P1-F | Local MCP server: tools, undo, rate limit, not-running path | `core/mcp/*`, `main/mcp/server.ts`, `src/bridge/*` | `tests/mcp/*.test.ts`, `tests/main/mcpServer.test.ts`; Claude Desktop UNVERIFIED: checklist 19 |
+| P1-G4 | Hold-to-complete replaces the typed phrase | `renderer/focus/hold.ts`, `FocusCore.tsx`, `core/commands.ts` | `tests/renderer/hold.test.ts`, audit "typed finish phrase is gone", smoke |
+| P1-G1-3 | Now-line label, visible buffer, per-day event override | `renderer/runway/*`, `core/commands.ts` (`event.editOn`) | `tests/core/eventExceptions.test.ts`, smoke screenshots, checklist 21-22 |

@@ -1,7 +1,8 @@
 // npm run audit (§11.2): the mechanical backstop. Typecheck, tests, build, then
-// the standing rules: core purity, dependency allowlist, no network code, bundle
-// budgets, no fast intervals in main, no unexplained TODOs, every core module
-// covered by a test. Prints one line per check and exits non-zero on any failure.
+// the standing rules: core purity (and core/mcp free of Node/Electron), dependency
+// allowlist, network code only where it belongs (Firebase only in src/main/sync),
+// the typed finish phrase gone, bundle budgets, no fast intervals in main, no
+// unexplained TODOs, every core module covered by a test. Prints one line per check and exits non-zero on any failure.
 import { execSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -32,14 +33,28 @@ check('tests', () => {
 });
 check('build', () => void sh('node scripts/build.mjs'));
 
-check('core imports only core', () => {
+check('core imports only core (minisearch in core/search only)', () => {
   const bad = [];
   for (const f of files('src/core')) {
     const src = readFileSync(f, 'utf8');
-    for (const i of imports(src)) if (!i.startsWith('.')) bad.push(`${f}: imports ${i}`);
+    for (const i of imports(src)) if (!i.startsWith('.') && !(i === 'minisearch' && f === 'src/core/search/index.ts')) bad.push(`${f}: imports ${i}`);
     if (/\b(document|window|localStorage|navigator)\./.test(src)) bad.push(`${f}: touches the DOM`);
   }
   return bad;
+});
+
+check('core/mcp is free of Electron and Node APIs', () =>
+  files('src/core/mcp').flatMap((f) => {
+    const src = readFileSync(f, 'utf8');
+    return /\b(process\.|Buffer\b|require\(|__dirname|globalThis\.process)/.test(src) ? [`${f}: uses a Node API`] : [];
+  }),
+);
+
+check('the typed finish phrase is gone', () => {
+  const phrase = ['i have', 'finished this task'].join(' ');
+  const roots = ['src', 'tests', 'scripts', 'docs', 'README.md', 'decision.md', 'log.md'];
+  const all = roots.flatMap((r) => (existsSync(r) ? (statSync(r).isDirectory() ? files(r, /\.(ts|tsx|mjs|md|json|html|css)$/) : [r]) : []));
+  return all.filter((f) => readFileSync(f, 'utf8').toLowerCase().includes(phrase)).map((f) => `${f}: still mentions the typed phrase`);
 });
 
 check('renderer never imports main', () =>
@@ -47,18 +62,26 @@ check('renderer never imports main', () =>
 );
 
 check('dependency allowlist', () => {
-  const allow = new Set(['electron', 'react', 'react-dom', 'typescript', 'vite', '@vitejs/plugin-react', 'esbuild', 'electron-builder', 'vitest', 'playwright-core', '@types/node', '@types/react', '@types/react-dom']);
+  const allow = new Set(['electron', 'react', 'react-dom', 'typescript', 'vite', '@vitejs/plugin-react', 'esbuild', 'electron-builder', 'vitest', 'playwright-core', '@types/node', '@types/react', '@types/react-dom', 'firebase', 'minisearch', '@modelcontextprotocol/sdk']);
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
   return Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter((d) => !allow.has(d)).map((d) => `not allowed: ${d}`);
 });
 
-check('no network code in src', () => {
+// Network code lives in exactly these files: sync (Firestore, Google sign-in), the
+// loopback MCP endpoint and the stdio bridge. Firebase only in src/main/sync.
+const NETWORK_FILES = new Set(['src/main/sync/firestore.ts', 'src/main/sync/auth.ts', 'src/main/sync/remote.ts', 'src/main/mcp/server.ts', 'src/bridge/client.ts', 'src/bridge/chronos-mcp.ts']);
+const FIREBASE_FILES = new Set(['src/main/sync/firestore.ts', 'src/main/sync/auth.ts', 'src/main/sync/remote.ts']);
+check('network code only in the sync, MCP endpoint and bridge modules', () => {
   const bad = [];
   for (const f of files('src')) {
     const src = readFileSync(f, 'utf8');
-    if (/\bfetch\(|new WebSocket|XMLHttpRequest|EventSource\(/.test(src)) bad.push(`${f}: network API`);
-    if (/https?:\/\//.test(src)) bad.push(`${f}: URL literal`);
-    for (const i of imports(src)) if (/^(node:)?(http|https|net|tls|dgram)$|firebase/.test(i)) bad.push(`${f}: imports ${i}`);
+    const allowed = NETWORK_FILES.has(f);
+    if (!allowed && /\bfetch\(|new WebSocket|XMLHttpRequest|EventSource\(/.test(src)) bad.push(`${f}: network API`);
+    if (!allowed && /https?:\/\//.test(src)) bad.push(`${f}: URL literal`);
+    for (const i of imports(src)) {
+      if (/firebase/.test(i) && !FIREBASE_FILES.has(f)) bad.push(`${f}: imports ${i} (Firebase belongs in src/main/sync)`);
+      else if (/^(node:)?(http|https|net|tls|dgram)$/.test(i) && !allowed) bad.push(`${f}: imports ${i}`);
+    }
   }
   return bad;
 });
@@ -84,8 +107,12 @@ check('bundle budgets', () => {
   const js = all.filter((f) => f.endsWith('.js')).reduce((s, f) => s + gz(f), 0);
   const css = all.filter((f) => f.endsWith('.css')).reduce((s, f) => s + gz(f), 0);
   const main = statSync('dist/main.js').size;
+  const sync = statSync('dist/sync.js').size;
+  const bridge = statSync('dist/chronos-mcp.js').size;
   const launch = statSync(join(r, 'launch.css')).size;
-  console.log(`   renderer JS ${(js / 1024).toFixed(1)} KB gz, CSS ${(css / 1024).toFixed(1)} KB gz, main ${(main / 1024).toFixed(1)} KB, launch.css ${(launch / 1024).toFixed(1)} KB`);
+  console.log(`   renderer JS ${(js / 1024).toFixed(1)} KB gz, CSS ${(css / 1024).toFixed(1)} KB gz, main ${(main / 1024).toFixed(1)} KB, sync ${(sync / 1024).toFixed(0)} KB (on demand), MCP bridge ${(bridge / 1024).toFixed(0)} KB, launch.css ${(launch / 1024).toFixed(1)} KB`);
+  if (sync > 1600 * 1024) bad.push('sync bundle over 1.6 MB');
+  if (bridge > 700 * 1024) bad.push('MCP bridge over 700 KB');
   if (js > 220 * 1024) bad.push('renderer JS over 220 KB gzipped');
   if (css > 30 * 1024) bad.push('CSS over 30 KB gzipped');
   if (main > 150 * 1024) bad.push('main bundle over 150 KB');
@@ -94,7 +121,7 @@ check('bundle budgets', () => {
 });
 
 check('TODO/FIXME have a decision', () => {
-  const decisions = readFileSync('docs/DECISIONS.md', 'utf8');
+  const decisions = readFileSync('decision.md', 'utf8');
   const bad = [];
   for (const f of files('src')) {
     readFileSync(f, 'utf8').split('\n').forEach((line, n) => {
@@ -116,7 +143,7 @@ check('every core module has a test', () => {
 });
 
 check('docs present', () =>
-  ['docs/DECISIONS.md', 'docs/ARCHITECTURE.md', 'docs/SPEC_MATRIX.md', 'docs/SYNC_V1_1.md', 'docs/WINDOWS_CHECKLIST.md', 'docs/BUILD_REPORT.md', 'README.md', '.claude/agents/reviewer.md']
+  ['decision.md', 'log.md', 'docs/ARCHITECTURE.md', 'docs/SPEC_MATRIX.md', 'docs/SYNC.md', 'docs/SETUP_FIREBASE.md', 'docs/MCP.md', 'docs/WINDOWS_CHECKLIST.md', 'docs/BUILD_REPORT.md', 'README.md', '.claude/agents/reviewer.md', 'firebase/firestore.rules']
     .filter((f) => !existsSync(f))
     .map((f) => `missing ${f}`),
 );

@@ -15,6 +15,7 @@ const api: ChronosApi = {
   onSnapshot: (cb) => subscribe(CHANNELS.snapshot, cb),
   onBeep: (cb) => subscribe<void>(CHANNELS.beep, () => cb()),
   onShow: (cb) => subscribe(CHANNELS.show, cb),
+  onNotice: (cb) => subscribe(CHANNELS.notice, cb),
   command: (cmd) => ipcRenderer.invoke(CHANNELS.command, cmd),
   win: {
     hide: () => ipcRenderer.send(CHANNELS.hide),

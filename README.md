@@ -2,7 +2,7 @@
 
 **Own your time.** A Windows 11 desktop layer for Josef Yang: a day runway (schedule plus time-left maths), a task queue, and a single-focus timer, with a taskbar widget, a Desktop shelf and a Trash. It replaces [Monolith](https://github.com/16JoeTheCoder/monolith).
 
-Planning is free; execution is strict. One task is in focus at a time, it needs a finish condition, and it ends only with the typed phrase *I have finished this task* or a typed reason to drop it. Everything is local-first: no network in v1.
+Planning is free; execution is strict. One task is in focus at a time, it needs a finish condition, and it ends only by holding **Enter** (or the Finish button) for 2 seconds, or with a typed reason to drop it. Everything is local-first; optional live sync between your PCs runs through Firebase (`docs/SETUP_FIREBASE.md`), and Claude Desktop can read and change your data through a local MCP server (`docs/MCP.md`).
 
 ## Run, test, build
 
@@ -24,15 +24,17 @@ Windows installers are built by GitHub Actions (`.github/workflows/build-windows
 
 ## Where your data lives
 
-`%APPDATA%\Chronos\`: `chronos-data.json` (+ `.bak`), `device.json` (this PC only), `heartbeat`, and `logs\chronos.log`. Settings → Data can export everything as JSON, open the folder, and import from Monolith (read-only, from `%APPDATA%\Monolith\`).
+`%APPDATA%\Chronos\`: `chronos-data.json` (+ `.bak`), `device.json` (this PC only), `outbox.json` (edits waiting to sync), `conflicts.json`, `quarantine.json`, `snapshots\` (one per day, 7 kept), `heartbeat`, and `logs\chronos.log`. Settings → Data can export everything as JSON, open the folder, and import from Monolith (read-only, from `%APPDATA%\Monolith\`).
 
 ## Docs
 
 - `docs/ARCHITECTURE.md`: layers, data flow, windows, sync
-- `docs/DECISIONS.md`: every decision and why
+- `decision.md`: every decision and why; `log.md`: build log (status, next steps)
 - `docs/SPEC_MATRIX.md`: each spec requirement and its evidence
 - `docs/WINDOWS_CHECKLIST.md`: what to test on Windows, and where
-- `docs/SYNC_V1_1.md`: the Firestore plan
+- `docs/SYNC.md`: live sync, its rules, failure modes and cost
+- `docs/SETUP_FIREBASE.md`: one-time Firebase / Google sign-in setup
+- `docs/MCP.md`: the Claude Desktop integration
 - `docs/BUILD_REPORT.md`: status, sizes, what is unverified
 
 Built by Josef Yang · builtbyjosef. Code MIT. Fonts (Space Grotesk, JetBrains Mono) SIL OFL 1.1. The builtbyjosef name, logo and JY monogram are all rights reserved.

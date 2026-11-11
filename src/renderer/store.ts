@@ -53,6 +53,39 @@ export function useNow(ms: number): number {
   return now;
 }
 
+/**
+ * Date.now(), refreshed on every `ms` boundary of the wall clock (so a 15 s tick lands
+ * on :00, :15, :30, :45 and the minute label flips exactly at the start of a minute).
+ * Stops while the page is hidden and catches up when it shows again.
+ */
+export function useAlignedNow(ms: number): number {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    let id: ReturnType<typeof setTimeout> | null = null;
+    const arm = () => {
+      // +10 ms so the timer never fires just before the boundary.
+      id = setTimeout(() => {
+        setNow(Date.now());
+        arm();
+      }, ms - (Date.now() % ms) + 10);
+    };
+    const sync = () => {
+      if (id) clearTimeout(id);
+      id = null;
+      if (document.hidden) return;
+      setNow(Date.now());
+      arm();
+    };
+    sync();
+    document.addEventListener('visibilitychange', sync);
+    return () => {
+      if (id) clearTimeout(id);
+      document.removeEventListener('visibilitychange', sync);
+    };
+  }, [ms]);
+  return now;
+}
+
 /** Resolve 'system' to light/dark (and follow OS changes) so tokens.css holds each palette once. */
 export function useTheme(theme: 'dark' | 'light' | 'system'): void {
   useEffect(() => {

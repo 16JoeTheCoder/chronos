@@ -6,7 +6,7 @@ import { addTask, at, fresh, MIN, run } from '../helpers';
 describe('metrics', () => {
   it('counts the week from Monday and focus including the live slice', () => {
     let a = addTask(fresh(), 'A', { estimateMin: 10 });
-    let d = run(a.d, [{ type: 'timer', action: 'start' }, at(540)], [{ type: 'task.finish', id: a.id, phrase: 'I have finished this task' }, at(560)]).d;
+    let d = run(a.d, [{ type: 'timer', action: 'start' }, at(540)], [{ type: 'task.finish', id: a.id }, at(560)]).d;
     const b = addTask(d, 'B');
     d = run(b.d, [{ type: 'timer', action: 'start' }, at(600)]).d;
     const m = metrics(d, at(630));

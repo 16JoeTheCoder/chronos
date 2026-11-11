@@ -20,12 +20,16 @@ import { run } from '../store';
 const SNAP = 15;
 const PX_PER_MIN = 0.8;
 type Draft = EventInput & { id: string | null };
+const draftOf = (ev: CalEvent): Draft => ({ id: ev.id, title: ev.title, tagId: ev.tagId, scope: ev.scope, tz: ev.tz, startMin: ev.startMin, endMin: ev.endMin, date: ev.date, recur: ev.recur, notes: ev.notes });
 
-export function ScheduleEditor({ d, now, guided, onClose }: { d: Data; now: number; guided: boolean; onClose: () => void }) {
+export function ScheduleEditor({ d, now, guided, editEventId, onClose }: { d: Data; now: number; guided: boolean; editEventId?: string | null; onClose: () => void }) {
   const s = settingsOf(d);
   const monday = mondayOf(todayOf(d, now));
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(() => {
+    const ev = editEventId ? d.events[editEventId] : undefined;
+    return ev && ev.deletedAt === null && !('purged' in ev) ? draftOf(ev) : null;
+  });
   const [holidays, setHolidays] = useState(false);
   const [drag, setDrag] = useState<{ day: number; a: number; b: number } | null>(null);
   const grid = useRef<HTMLDivElement>(null);
@@ -43,7 +47,7 @@ export function ScheduleEditor({ d, now, guided, onClose }: { d: Data; now: numb
     recur: { weekdays: [weekday], everyNWeeks: 1, anchorDate: monday, from: null, until: null },
     notes: '',
   });
-  const edit = (ev: CalEvent) => setDraft({ id: ev.id, title: ev.title, tagId: ev.tagId, scope: ev.scope, tz: ev.tz, startMin: ev.startMin, endMin: ev.endMin, date: ev.date, recur: ev.recur, notes: ev.notes });
+  const edit = (ev: CalEvent) => setDraft(draftOf(ev));
   const minuteAt = (y: number, el: HTMLElement) => {
     const r = el.getBoundingClientRect();
     return Math.max(s.dayStartMin, Math.min(s.dayEndMin, s.dayStartMin + Math.round(((y - r.top) / r.height) * span / SNAP) * SNAP));

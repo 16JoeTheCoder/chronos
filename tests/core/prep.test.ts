@@ -8,8 +8,8 @@ describe('prepNudges', () => {
     const tag = run(fresh(), { type: 'tag.create', input: { name: 'Physics', color: 'tag1', kind: 'class' } });
     let { d, id: evId } = run(tag.d, { type: 'event.create', input: { title: 'Physics', tagId: tag.id, scope: 'school', tz: TZ, startMin: 640, endMin: 700, date: '2026-10-26', recur: null, notes: '' } });
     const explicit = addTask(d, 'Worksheet', { estimateMin: 25, dueEventId: evId });
-    const implicit = addTask(explicit.d, 'Read chapter', { estimateMin: 120, tagId: tag.id, deadline: '2026-10-26' });
-    d = addTask(implicit.d, 'Unrelated', { estimateMin: 30, tagId: tag.id }).d; // no deadline: not implicit
+    const implicit = addTask(explicit.d, 'Read chapter', { estimateMin: 120, tagId: tag.id, dueDate: '2026-10-26' });
+    d = addTask(implicit.d, 'Unrelated', { estimateMin: 30, tagId: tag.id }).d; // no due date: not implicit
     const n = prepNudges(d, at(600));
     expect(n.map((x) => x.task.title).sort()).toEqual(['Read chapter', 'Worksheet']);
     const ws = n.find((x) => x.task.title === 'Worksheet')!;

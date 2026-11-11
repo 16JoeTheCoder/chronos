@@ -1,6 +1,6 @@
 // Defaults and empty state. Every new install and every migrated file starts here.
 
-import { SCHEMA_V, type ActiveTimer, type Data, type DeviceSettings, type Runtime, type Settings, type TimerConfig } from './types';
+import { SCHEMA_V, type ActiveTimer, type Data, type DeviceSettings, type ProjectColumn, type Runtime, type Settings, type TimerConfig } from './types';
 
 const MIN = 60_000;
 
@@ -16,7 +16,17 @@ export function idleRuntime(): Runtime {
   return { status: 'idle', phase: 'work', phaseElapsedMs: 0, sliceStartedAt: null, cycleSessions: 0, expiredNotified: false };
 }
 
-const base = (id: string) => ({ id, createdAt: 0, updatedAt: 0, deviceId: '', deletedAt: null, v: SCHEMA_V });
+const base = (id: string) => ({ id, createdAt: 0, updatedAt: 0, deviceId: '', deletedAt: null, v: SCHEMA_V, fv: {}, fw: {} });
+
+export const SNAP_OPTIONS = [5, 10, 15, 30];
+
+export function defaultColumns(): ProjectColumn[] {
+  return [
+    { id: 'todo', name: 'To do' },
+    { id: 'doing', name: 'Doing' },
+    { id: 'done', name: 'Done' },
+  ];
+}
 
 export function defaultSettings(): Settings {
   return {
@@ -34,6 +44,10 @@ export function defaultSettings(): Settings {
     checkpointEveryMin: 120,
     holidaysEnabled: true,
     theme: 'dark',
+    themeId: 'default',
+    customTheme: null,
+    snapMin: 5,
+    parserRules: [],
     accent: null,
     runwayPosition: 'top',
     reduceMotion: null,
@@ -47,7 +61,7 @@ export function defaultActiveTimer(): ActiveTimer {
 
 export function emptyData(): Data {
   return {
-    schema: 1,
+    schema: 2,
     tasks: {},
     events: {},
     eventExceptions: {},
@@ -59,6 +73,8 @@ export function emptyData(): Data {
     activity: {},
     timer: { current: defaultActiveTimer() },
     settings: { main: defaultSettings() },
+    projects: {},
+    reviews: {},
     tombs: {},
   };
 }
@@ -76,6 +92,9 @@ export function defaultDevice(deviceId: string, deviceName: string): DeviceSetti
     stackFolder: null,
     sound: true,
     notifications: true,
-    sync: { lastPushedAt: 0, cursors: {} },
+    experimental: false,
+    mcp: { enabled: false, port: 0, token: '' },
+    sync: { uid: null, cursors: {}, lastSyncAt: null },
+    auth: { refreshTokenEnc: null, email: null, uid: null },
   };
 }

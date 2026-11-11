@@ -1,6 +1,8 @@
 {
   "apiKey": "",
-  "authDomain": "",
-  "projectId": "",
-  "appId": ""
+  "authDomain": "chronos-jy.firebaseapp.com",
+  "projectId": "chronos-jy",
+  "appId": "",
+  "googleClientId": "",
+  "googleClientSecret": ""
 }
