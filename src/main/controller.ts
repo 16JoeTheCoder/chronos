@@ -173,6 +173,10 @@ export class Controller {
     this.hooks.onChange();
   }
 
+  snapshots(): string[] {
+    return this.store.listSnapshots();
+  }
+
   clearConflicts(): void {
     this.conflicts = [];
     this.store.conflicts.save([]);

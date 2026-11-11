@@ -22,6 +22,19 @@ export function log(message: string): void {
   }
 }
 
+/** The current log text (and the rotated backup before it), for Diagnostics → Export log. */
+export function readLog(): string {
+  if (!file) return '';
+  const read = (f: string) => {
+    try {
+      return fs.readFileSync(f, 'utf8');
+    } catch {
+      return '';
+    }
+  };
+  return read(`${file}.1`) + read(file);
+}
+
 export function describeError(e: unknown): string {
   return e instanceof Error ? `${e.name}: ${e.message}\n${e.stack ?? ''}` : String(e);
 }

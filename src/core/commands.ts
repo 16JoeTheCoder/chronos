@@ -3,12 +3,12 @@
 // that touch the machine (gap answer, device settings, takeover, import/export)
 // and routes everything else through apply(), then persists and broadcasts.
 
-import type { Block, CalEvent, Closure, Coll, Data, Priority, ProjectColumn, Rec, Scope, Settings, Tag, TagColor, Task, TaskRecurrence, TaskSource, TimerConfig, TimerEvent } from './model/types';
+import type { Block, CalEvent, Closure, Coll, Data, Priority, ProjectColumn, Scope, Settings, Tag, TagColor, Task, TaskRecurrence, TaskSource, TimerConfig, TimerEvent } from './model/types';
 import { TAG_COLORS } from './model/types';
 import { defaultColumns } from './model/defaults';
 import { exceptionId, newId } from './model/ids';
 import { keyBetween } from './model/sortKey';
-import { create, get, live, putRaw, recycle, restore, settingsOf, timerOf, update, updateSettings, type Ctx, type Fields } from './repo/repo';
+import { create, get, live, recycle, restore, settingsOf, timerOf, update, updateSettings, type Ctx, type Fields } from './repo/repo';
 import { spawnNext } from './tasks/recurrence';
 import { checkpointDue, nextCheckpoint } from './tasks/sprints';
 import { activeTask, blockSpan, blocksOn, deriveQueue, isLocked, isOpen, maxOrder, minOrder, normalize, ownsTimer, recordSlices, stopTask, todayOf, trackedMs } from './tasks/tasks';
@@ -48,7 +48,7 @@ export interface OccurrencePatch {
   tagId?: string | null;
 }
 
-/** One record put back the way it was (undo). `prev` null = the record did not exist: recycle it. */
+/** One record put back the way it was (undo): `prev` holds the previous values of the fields that changed; null = the record did not exist, so it is recycled. */
 export interface RevertOp {
   coll: Coll;
   id: string;
@@ -89,6 +89,8 @@ export type Command =
   | { type: 'idea.add'; text: string; taskId: string | null }
   /** Internal (MCP undo, snapshot restore): never parsed from IPC. */
   | { type: 'records.revert'; ops: RevertOp[] }
+  /** Internal (MCP): log a change Claude made. */
+  | { type: 'activity.claude'; taskId: string; reason: string }
   | { type: 'idea.review'; id: string; reviewed: boolean }
   | { type: 'idea.toTask'; id: string }
   | { type: 'recycle'; coll: Coll; id: string; confirmed: boolean }
@@ -425,6 +427,9 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
       return ok(r.d, [], r.rec.id);
     }
 
+    case 'activity.claude':
+      return ok(create(d, 'activity', { type: 'claude', taskId: cmd.taskId, at: ctx.now, reason: cmd.reason.slice(0, 500) }, ctx).d);
+
     case 'records.revert': {
       let out = d;
       for (const op of cmd.ops) {
@@ -433,8 +438,9 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
           if (cur && cur.deletedAt === null) out = recycle(out, op.coll, op.id, ctx);
           continue;
         }
-        const { id: _id, fv: _fv, fw: _fw, updatedAt: _u, deviceId: _dv, v: _v, ...fields } = op.prev;
-        out = cur ? update(out, op.coll, op.id, fields as never, ctx) : putRaw(out, op.coll, { ...(op.prev as unknown as Rec), fv: {}, fw: {} } as never);
+        if (!cur) continue;
+        const { id: _id, fv: _fv, fw: _fw, updatedAt: _u, deviceId: _dv, v: _v, createdAt: _c, ...fields } = op.prev;
+        out = update(out, op.coll, op.id, fields as never, ctx);
       }
       return ok(out);
     }

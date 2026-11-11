@@ -4,3 +4,4 @@ release/
 *.log
 firebase/firebase.config.json
 firebase.config.json
+.claude/worktrees/

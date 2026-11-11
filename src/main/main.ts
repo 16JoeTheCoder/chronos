@@ -4,15 +4,18 @@
 
 import os from 'node:os';
 import path from 'node:path';
-import { Menu, app, dialog, powerMonitor, session, shell, type WebContents } from 'electron';
+import { Menu, app, clipboard, dialog, net, powerMonitor, safeStorage, session, shell, type WebContents } from 'electron';
 import fs from 'node:fs';
-import type { Snapshot } from '../core/model/types';
+import { Mcp } from '../core/mcp/handlers';
+import type { Diagnostics, Snapshot, SyncView } from '../core/model/types';
 import { activeTask } from '../core/tasks/tasks';
 import { CHANNELS } from '../preload/api';
 import { readFirebaseConfig } from './config';
 import { Controller } from './controller';
 import { registerIpc } from './ipc';
-import { describeError, initLog, log } from './log';
+import { describeError, initLog, log, readLog } from './log';
+import { McpServer, newToken } from './mcp/server';
+import { SyncManager } from './sync/manager';
 import { notify } from './notify';
 import { mark, perfMarks } from './perf';
 import { Shelf } from './shelf';
@@ -53,9 +56,11 @@ function boot(): void {
   let quitting = false;
   let shortcutError: string | null = null;
   const dataDir = app.getPath('userData');
-  const syncConfig = readFirebaseConfig(dataDir) ? 'present' : 'absent';
+  const firebaseConfig = readFirebaseConfig([dataDir, path.join(app.getAppPath(), 'firebase')]);
+  const syncConfig = firebaseConfig ? 'present' : 'absent';
 
-  // v1 makes no network requests: block anything that is not our own files or the dev server.
+  // Renderers make no network requests: block anything that is not our own files or the dev server.
+  // Sync (Firestore, Google sign-in) runs in the main process with Node networking, not here (D-116).
   const devUrl = process.env.CHRONOS_DEV_URL;
   session.defaultSession.webRequest.onBeforeRequest((details, cb) => {
     const allowed = details.url.startsWith('file:') || details.url.startsWith('data:') || details.url.startsWith('devtools:') || (!!devUrl && details.url.startsWith(devUrl.replace(/\/$/, '')));
@@ -70,10 +75,59 @@ function boot(): void {
       onNotify: (n) => notify(n, controller.device, () => widget.win.webContents.send(CHANNELS.beep)),
       onGap: () => home.show(activeTask(controller.data) ? 'focus' : null),
       onDeviceChanged: (prev, next) => applyDevice(next, prev),
+      log: (m) => log(m),
     },
     { deviceName: os.hostname(), monolithFile: path.join(app.getPath('appData'), 'Monolith', 'monolith-data.json') },
   );
   controller.init(Date.now());
+
+  const sync = new SyncManager(
+    controller,
+    firebaseConfig,
+    () => require(path.join(__dirname, 'sync.js')),
+    {
+      available: () => safeStorage.isEncryptionAvailable(),
+      encrypt: (s) => safeStorage.encryptString(s).toString('base64'),
+      decrypt: (b) => safeStorage.decryptString(Buffer.from(b, 'base64')),
+    },
+    (url) => shell.openExternal(url),
+    log,
+    () => broadcast(),
+  );
+
+  // Claude (MCP): the handlers run against the live controller, like any UI edit.
+  const mcp = new Mcp({
+    data: () => controller.data,
+    now: () => Date.now(),
+    run: (cmd) => controller.command(cmd, Date.now()),
+    notify: (n) => notice({ text: n.text, undoToken: n.undoToken }),
+  });
+  const mcpServer = new McpServer(() => mcp, log);
+  const bridgePath = app.isPackaged ? path.join(process.resourcesPath, 'chronos-mcp.js') : path.join(app.getAppPath(), 'dist', 'chronos-mcp.js');
+  async function applyMcp(): Promise<void> {
+    const m = controller.device.mcp;
+    if (!m.enabled) {
+      await mcpServer.stop();
+      broadcast();
+      return;
+    }
+    const token = m.token || newToken();
+    try {
+      const port = await mcpServer.start(m.port, () => controller.device.mcp.token);
+      if (port !== m.port || token !== m.token) controller.setDeviceFields({ mcp: { enabled: true, port, token } });
+    } catch {
+      // error kept on mcpServer for Diagnostics
+    }
+    broadcast();
+  }
+  function claudeConfig(): string {
+    const env: Record<string, string> = { ELECTRON_RUN_AS_NODE: '1' };
+    if (process.env.CHRONOS_USER_DATA) env.CHRONOS_USER_DATA = dataDir;
+    return JSON.stringify({ mcpServers: { chronos: { command: process.execPath, args: [bridgePath], env } } }, null, 2);
+  }
+  function notice(n: { text: string; undoToken?: string; error?: boolean }): void {
+    for (const wc of [home.win.webContents]) if (!wc.isDestroyed()) wc.send(CHANNELS.notice, n);
+  }
 
   const home = new HomeWindow(
     () => controller.device.displayId,
@@ -118,6 +172,39 @@ function boot(): void {
     app.isPackaged,
   );
 
+  function syncView(): SyncView {
+    const st = !sync.configured ? 'off' : !sync.signedIn ? (sync.busy ? 'syncing' : 'signedOut') : controller.sync.state;
+    return {
+      state: st,
+      reason: st === 'signedOut' || st === 'off' ? sync.lastError : controller.sync.reason,
+      pending: controller.outbox.length,
+      oldestPendingAt: controller.outbox[0]?.createdAt ?? null,
+      lastSyncAt: controller.device.sync.lastSyncAt,
+      email: sync.signedIn ? controller.device.auth.email : null,
+      configured: sync.configured,
+    };
+  }
+
+  function diag(): Diagnostics | null {
+    if (!controller.device.experimental) return null;
+    const m = controller.device.mcp;
+    return {
+      cursors: controller.device.sync.cursors,
+      conflicts: controller.conflicts.slice(-100).reverse(),
+      quarantine: controller.quarantine.slice(-100).reverse(),
+      snapshots: controller.snapshots(),
+      mcp: { enabled: m.enabled, running: mcpServer.running, port: mcpServer.port || m.port, token: m.token, error: mcpServer.error, bridgePath, config: claudeConfig() },
+    };
+  }
+
+  async function exportLog(): Promise<{ ok: true } | { ok: false; error: string }> {
+    const res = await dialog.showSaveDialog(home.win, { defaultPath: `chronos-log-${new Date().toISOString().slice(0, 10)}.txt`, filters: [{ name: 'Text', extensions: ['txt'] }] });
+    if (res.canceled || !res.filePath) return { ok: false, error: 'Export cancelled.' };
+    const state = { version: app.getVersion(), platform: `${process.platform} ${os.release()}`, sync: syncView(), deviceId: controller.device.deviceId, cursors: controller.device.sync.cursors, outbox: controller.outbox.map((e) => ({ opId: e.opId, coll: e.coll, id: e.id, fields: Object.keys(e.fields), createdAt: new Date(e.createdAt).toISOString(), seed: !!e.seed })), conflicts: controller.conflicts, quarantine: controller.quarantine.map((q) => ({ ...q, doc: undefined })), mcp: { enabled: controller.device.mcp.enabled, running: mcpServer.running, port: mcpServer.port, error: mcpServer.error } };
+    await fs.promises.writeFile(res.filePath, `Chronos diagnostics\n\n## State\n${JSON.stringify(state, null, 2)}\n\n## logs/chronos.log\n${readLog()}`);
+    return { ok: true };
+  }
+
   function snapshot(): Snapshot {
     return {
       data: controller.data,
@@ -130,8 +217,8 @@ function boot(): void {
       dataDir,
       perf: perfMarks(),
       homeView: null,
-      sync: { state: controller.sync.state, reason: controller.sync.reason, pending: controller.outbox.length, oldestPendingAt: controller.outbox[0]?.createdAt ?? null, lastSyncAt: controller.device.sync.lastSyncAt, email: controller.device.auth.email, configured: syncConfig === 'present' },
-      diag: null,
+      sync: syncView(),
+      diag: diag(),
     };
   }
 
@@ -157,6 +244,7 @@ function boot(): void {
     if (!prev || prev.launchAtLogin !== next.launchAtLogin) applyLoginItem(next.launchAtLogin);
     if (prev && (prev.widgetDock !== next.widgetDock || (next.widgetDock !== 'free' && prev.widgetPos !== next.widgetPos))) widget.dock();
     if (prev && prev.displayId !== next.displayId) home.fit();
+    if (prev && prev.mcp.enabled !== next.mcp.enabled) void applyMcp();
   }
 
   function widgetMenu(): void {
@@ -175,6 +263,41 @@ function boot(): void {
       if (cmd.type === 'data.openFolder') {
         const err = await shell.openPath(dataDir);
         return err ? { ok: false, error: err } : { ok: true };
+      }
+      switch (cmd.type) {
+        case 'sync.signIn':
+          return sync.signIn();
+        case 'sync.signOut':
+          await sync.signOut();
+          return { ok: true };
+        case 'sync.retry':
+          if (!sync.signedIn) void sync.resume();
+          controller.engine.reconnect();
+          return { ok: true };
+        case 'sync.forceResync':
+          if (!sync.signedIn) return { ok: false, error: 'Sign in first.' };
+          controller.forceResync(Date.now());
+          return { ok: true };
+        case 'diag.clear':
+          if (cmd.what === 'conflicts') controller.clearConflicts();
+          else controller.clearQuarantine();
+          return { ok: true };
+        case 'diag.exportLog':
+          return exportLog();
+        case 'snapshot.restore':
+          return controller.restoreSnapshot(cmd.name, Date.now());
+        case 'mcp.regenerateToken':
+          controller.setDeviceFields({ mcp: { ...controller.device.mcp, token: newToken() } });
+          return { ok: true };
+        case 'mcp.copyConfig':
+          clipboard.writeText(claudeConfig());
+          return { ok: true };
+        case 'mcp.undo': {
+          const r = mcp.undoToken(cmd.token);
+          return r.ok ? { ok: true } : { ok: false, error: r.error };
+        }
+        default:
+          break;
       }
       if (cmd.type === 'data.export') {
         const res = await dialog.showSaveDialog(home.win, { defaultPath: `chronos-export-${new Date().toISOString().slice(0, 10)}.json`, filters: [{ name: 'JSON', extensions: ['json'] }] });
@@ -205,9 +328,27 @@ function boot(): void {
 
   applyDevice(controller.device);
   broadcast();
-  const slowTick = setInterval(() => controller.slowTick(Date.now()), SLOW_TICK_MS);
+  void applyMcp();
+  void sync.resume();
+  let online = net.isOnline();
+  const slowTick = setInterval(() => {
+    const now = Date.now();
+    controller.slowTick(now);
+    sync.tick(now);
+    // Network regained / lost (rule 7). The engine also reconnects on its own errors.
+    const isOnline = net.isOnline();
+    if (isOnline !== online) {
+      online = isOnline;
+      log(`network ${online ? 'online' : 'offline'}`);
+      controller.engine.setOffline(!online);
+    }
+  }, SLOW_TICK_MS);
   powerMonitor.on('suspend', () => controller.suspend(Date.now()));
-  powerMonitor.on('resume', () => controller.resume(Date.now()));
+  powerMonitor.on('resume', () => {
+    controller.resume(Date.now());
+    controller.engine.reconnect();
+  });
+  powerMonitor.on('unlock-screen', () => controller.engine.reconnect());
   powerMonitor.on('shutdown', () => controller.shutdown(Date.now()));
 
   app.on('second-instance', () => home.show(null));
@@ -216,6 +357,8 @@ function boot(): void {
     clearInterval(slowTick);
     if (fastTick) clearInterval(fastTick);
     controller.shutdown(Date.now());
+    controller.stopSync();
+    void mcpServer.stop();
     unregisterShortcuts();
     shelf.stop();
     widget.destroy();
