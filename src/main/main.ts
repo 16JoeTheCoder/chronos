@@ -130,6 +130,8 @@ function boot(): void {
       dataDir,
       perf: perfMarks(),
       homeView: null,
+      sync: { state: controller.sync.state, reason: controller.sync.reason, pending: controller.outbox.length, oldestPendingAt: controller.outbox[0]?.createdAt ?? null, lastSyncAt: controller.device.sync.lastSyncAt, email: controller.device.auth.email, configured: syncConfig === 'present' },
+      diag: null,
     };
   }
 
