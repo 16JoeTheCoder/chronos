@@ -28,9 +28,11 @@ describe('readFirebaseConfig', () => {
   it('reads the git-ignored file or env vars, else null', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chronos-cfg-'));
     expect(readFirebaseConfig(dir, {})).toBeNull();
-    const env = { CHRONOS_FIREBASE_API_KEY: 'k', CHRONOS_FIREBASE_AUTH_DOMAIN: 'chronos-jy.firebaseapp.com', CHRONOS_FIREBASE_PROJECT_ID: 'chronos-jy', CHRONOS_FIREBASE_APP_ID: 'a' };
+    const env = { CHRONOS_FIREBASE_API_KEY: 'k', CHRONOS_FIREBASE_AUTH_DOMAIN: 'chronos-jy.firebaseapp.com', CHRONOS_FIREBASE_PROJECT_ID: 'chronos-jy', CHRONOS_FIREBASE_APP_ID: 'a', CHRONOS_FIREBASE_GOOGLE_CLIENT_ID: 'c', CHRONOS_FIREBASE_GOOGLE_CLIENT_SECRET: 's' };
+    // Without the Desktop OAuth client the config is incomplete: local-only.
+    expect(readFirebaseConfig(dir, { ...env, CHRONOS_FIREBASE_GOOGLE_CLIENT_SECRET: '' })).toBeNull();
     expect(readFirebaseConfig(dir, env)?.projectId).toBe('chronos-jy');
-    fs.writeFileSync(path.join(dir, 'firebase.config.json'), JSON.stringify({ apiKey: 'f', authDomain: 'd', projectId: 'p', appId: 'x' }));
+    fs.writeFileSync(path.join(dir, 'firebase.config.json'), JSON.stringify({ apiKey: 'f', authDomain: 'd', projectId: 'p', appId: 'x', googleClientId: 'c', googleClientSecret: 's' }));
     expect(readFirebaseConfig(dir, {})?.apiKey).toBe('f');
     fs.rmSync(dir, { recursive: true, force: true });
   });

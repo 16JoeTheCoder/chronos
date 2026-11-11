@@ -9,7 +9,7 @@
 
 import fs from 'node:fs';
 import { apply, type Command, type Result } from '../core/commands';
-import { defaultDevice, emptyData } from '../core/model/defaults';
+import { defaultActiveTimer, defaultDevice, defaultSettings, emptyData } from '../core/model/defaults';
 import { newId } from '../core/model/ids';
 import { COLLS, type Coll, type Conflict, type Data, type DeviceSettings, type Gap, type QuarantineItem, type Rec, type Slice, type SyncStateKind, type Task, type TimerEvent } from '../core/model/types';
 import { fromMonolith, migrate } from '../core/repo/migrate';
@@ -231,6 +231,9 @@ export class Controller {
         delete kept[id];
         bad.push({ at: now, coll: c, id, reason: problem, doc: r });
       }
+      // The singletons must exist: an invalid one falls back to its defaults.
+      if (kept && c === 'settings' && !kept.main) kept.main = defaultSettings();
+      if (kept && c === 'timer' && !kept.current) kept.current = defaultActiveTimer();
       if (kept) (out as Record<string, unknown>)[c] = kept;
     }
     return { d: bad.length ? out : d, bad };
