@@ -1,4 +1,25 @@
-# Build report: Chronos 1.0.0
+# Build report: Chronos (Phase 1)
+
+## Phase 1 status (2026-11-11)
+
+| Area | Status |
+| --- | --- |
+| A Data model v2 + migration | Done, tested (lossless, idempotent, realistic v1 fixture) |
+| B Sync (outbox, per-field merge, tombstones, version gate, reconnect, quarantine, snapshots) | Done; engine tested against a fake Firestore (scenarios a-h). **Real Firestore provider and rules never run** (emulator blocked, D-124) |
+| C Google sign-in | Built; **unverified** (needs the real OAuth client, Windows checklist 17) |
+| D Experimental mode / sync dot | Done; smoke-tested; diagnostics need a signed-in PC |
+| E Search | Done; 1.4 ms per query at 5,000 records (target 10 ms) |
+| F Local MCP | Done; handlers, endpoint, bridge tested; bridge verified over stdio by hand; **Claude Desktop + ELECTRON_RUN_AS_NODE unverified on Windows** |
+| G Visible fixes | Done; smoke-tested with screenshots (now label, buffer, event menu, hold ring) |
+| H Tests / docs | 447 vitest tests in 33 files, audit green, smoke green |
+
+Numbers (from `npm run audit`): renderer JS 76.7 KB gz (budget 220), CSS 8.4 KB gz (30), main 138.3 KB (150), `dist/sync.js` 1012 KB loaded on demand (1.6 MB), MCP bridge 382 KB (700), launch.css 2.8 KB (8).
+
+Manual steps for Josef: `docs/SETUP_FIREBASE.md`, the Rules Playground checks in `docs/SYNC.md`, then `docs/WINDOWS_CHECKLIST.md` 13-23.
+
+---
+
+# v1.0.0 report (historical)
 
 Built on Linux in one session, 2026-10-26. Nothing below has run on Windows.
 
@@ -22,7 +43,6 @@ Implemented, never run on Windows: always-on-top over the taskbar and re-asserti
 
 ## Known issues
 
-- Sync dirty tracking can miss edits if the clock steps back between pushes (D-021); sync is off in v1.
 - Notification dedupe resets on restart (D-030).
 - The schedule editor's week grid shows the current week only; past/future weeks are edited through the same series.
 - Keyboard resize changes a block's end only (D-035); drag resizes both edges.

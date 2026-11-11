@@ -189,3 +189,6 @@ Downloading and running the emulator JAR was refused by the session's permission
 
 ### D-125 Invalid singletons fall back to defaults
 If `settings/main` or `timer/current` fails validation at load, it is quarantined and replaced by its defaults; the app never starts without them.
+
+### D-126 Fixes from the Phase 1 test pass
+The test suite found four bugs, all fixed with regression tests: (1) appended sortKeys grew a character every ~6 appends and failed validation after ~385 tasks: appending now bumps the first bumpable digit (one character per ~61 appends), migration/import keys are balanced and equal-length, and the length limit is 512; (2) `SyncEngine.start()` did not reset seeding, so switching account in one run never uploaded existing data; (3) restoring a snapshot dropped records made after it without syncing that: they are now recycled, so the restore reaches every device; (4) the MCP bridge said "not running" instead of "the integration is off" on a fresh install.
