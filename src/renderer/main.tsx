@@ -7,7 +7,7 @@ import './styles/app.css';
 import { api } from './api';
 import { Home } from './home/Home';
 import { awaitLaunch, fillLaunch } from './launch/launch';
-import { initStore, useSnap } from './store';
+import { initStore, run, toast, useSnap } from './store';
 
 api.win.mark('launch.script', performance.now());
 let reveal: () => void = () => undefined;
@@ -46,6 +46,9 @@ createRoot(document.getElementById('root') as HTMLElement).render(
     </Boundary>
   </StrictMode>,
 );
+
+// Things main wants the user to see once (e.g. a change Claude made, with Undo).
+api.onNotice((n) => toast(n.text, { error: n.error, undo: n.undoToken ? () => void run({ type: 'mcp.undo', token: n.undoToken as string }) : undefined }));
 
 initStore((snap) => {
   fillLaunch(snap);

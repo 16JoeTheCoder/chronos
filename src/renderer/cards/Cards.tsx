@@ -63,10 +63,10 @@ function TaskCard({ d, t, index, rest, onEdit, onSchedule }: { d: Data; t: Task;
   };
   return (
     <li
-      className={`card rv-card${t.status === 'active' ? ' card-active' : ''}${t.kind === 'sprint' ? ' card-sprint' : ''}`}
+      className={`card rv-card${t.status === 'doing' ? ' card-active' : ''}${t.kind === 'sprint' ? ' card-sprint' : ''}`}
       style={{ '--c': `var(--${tag?.color ?? 'tag7'})`, '--i': index } as CSSProperties}
       tabIndex={0}
-      aria-label={`${t.title}${t.status === 'active' ? ', in focus' : ''}, ${t.priority}. S schedules, Enter edits, Delete removes, Alt and arrows reorder.`}
+      aria-label={`${t.title}${t.status === 'doing' ? ', in focus' : ''}, ${t.priority}. S schedules, Enter edits, Delete removes, Alt and arrows reorder.`}
       onKeyDown={keys}
       onPointerDown={(e) => (e.target as HTMLElement).closest('button') || beginDrag(e, { kind: 'task', taskId: t.id, title: t.title, dur }, () => onEdit(t))}
     >

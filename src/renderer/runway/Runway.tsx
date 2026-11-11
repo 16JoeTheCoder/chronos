@@ -1,20 +1,23 @@
 // The runway (§9.3): one time axis, two lanes. Fixed: events as hatched,
 // locked obstacles. Plan: blocks, free stretches and the drag ghost. The now-line
-// moves once per 30 s. Every drag has a keyboard path: arrows move a focused
+// moves with the clock
+// (15 s ticks, and always labelled with the exact minute). Every drag has a keyboard path: arrows move a focused
 // block 5 min (Shift 15), Alt+arrows resize it, Delete recycles it.
 
-import { useEffect, useRef, type CSSProperties, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { blockFits } from '../../core/commands';
 import { clockOf, formatHM, formatHuman } from '../../core/format';
 import { SPRINTABLE_MIN } from '../../core/time/timeLeft';
 import type { Block, Data } from '../../core/model/types';
 import { blockSpan } from '../../core/tasks/tasks';
-import { zonedToUtc } from '../../core/time/zone';
+import { settingsOf } from '../../core/repo/repo';
+import { localParts, zonedToUtc } from '../../core/time/zone';
 import { Icon } from '../components/Icon';
 import { beginDrag, registerTarget, useDrag, type DragItem } from '../components/drag';
 import { dropOnTrash, recycleWithUndo } from '../components/actions';
 import { Segmented } from '../components/ui';
 import { run } from '../store';
+import { EventMenu, type MenuState } from './EventMenu';
 import { freeGaps, minuteOf, place, snap, type DayModel } from './model';
 
 export interface Preview {
@@ -25,9 +28,18 @@ export interface Preview {
 
 const MIN = 60_000;
 
-export function Runway({ d, m, now, range, setRange }: { d: Data; m: DayModel; now: number; range: 'full' | 'next6'; setRange: (r: 'full' | 'next6') => void }) {
+export function Runway({ d, m, now, range, setRange, onEditEvent }: { d: Data; m: DayModel; now: number; range: 'full' | 'next6'; setRange: (r: 'full' | 'next6') => void; onEditEvent: (eventId: string) => void }) {
   const lane = useRef<HTMLDivElement>(null);
   const drag = useDrag();
+  const [menu, setMenu] = useState<MenuState | null>(null);
+  const closeMenu = useCallback((restore: boolean) => {
+    setMenu((cur) => {
+      if (restore) cur?.returnTo?.focus();
+      return null;
+    });
+  }, []);
+  const bufferMin = settingsOf(d).bufferMin;
+  const dayEndMin = settingsOf(d).dayEndMin;
   const span = m.to - m.from;
   const pct = (ts: number) => `${Math.min(100, Math.max(0, ((ts - m.from) / span) * 100))}%`;
   const width = (a: number, b: number) => `${Math.max(0, ((Math.min(b, m.to) - Math.max(a, m.from)) / span) * 100)}%`;
@@ -50,10 +62,20 @@ export function Runway({ d, m, now, range, setRange }: { d: Data; m: DayModel; n
     [d, m, now],
   );
 
+  // Ticks sit on real instants (whole local hours between from and to), so they
+  // are right for any window, including one that crosses midnight.
   const ticks: number[] = [];
-  const firstHour = Math.ceil(minuteOf(m, m.from) / 60) * 60;
-  const step = span > 8 * 3_600_000 ? 120 : 60;
-  for (let h = firstHour; h <= minuteOf(m, m.to); h += step) ticks.push(h);
+  const wide = span > 8 * 3_600_000;
+  const lp = localParts(m.from, m.tz);
+  for (let ts = m.from + ((60 - (lp.minutes % 60)) % 60) * MIN; ts <= m.to; ts += 60 * MIN) {
+    if (wide && Math.round(localParts(ts, m.tz).minutes / 60) % 2 !== 0) continue;
+    if (Math.abs(ts - now) < span * 0.035) continue; // the now label takes this spot
+    ticks.push(ts);
+  }
+  const bufStart = at(dayEndMin - bufferMin);
+  const bufEnd = at(dayEndMin);
+  const showBuffer = bufferMin > 0 && bufEnd > m.from && bufStart < m.to;
+  const bufferLabel = bufferMin >= 60 ? formatHuman(bufferMin * MIN) : `${bufferMin}m`;
 
   const preview = drag?.target === 'plan' ? (drag.preview as Preview | null) : null;
   const done = (b: Block) => (b.taskId ? d.tasks[b.taskId]?.status === 'done' : false);
@@ -85,8 +107,8 @@ export function Runway({ d, m, now, range, setRange }: { d: Data; m: DayModel; n
       <div className="rw">
         <div className="rw-axis" aria-hidden="true">
           {ticks.map((t) => (
-            <span key={t} style={{ left: pct(at(t)) }}>
-              {formatHM(t)}
+            <span key={t} style={{ left: pct(t) }}>
+              {clockOf(t, m.tz)}
             </span>
           ))}
         </div>
@@ -103,8 +125,18 @@ export function Runway({ d, m, now, range, setRange }: { d: Data; m: DayModel; n
                 aria-label={`${i.event.title}, fixed, ${clockOf(i.start, m.tz)} to ${clockOf(i.end, m.tz)}`}
                 title={`${i.event.title} · ${clockOf(i.start, m.tz)}-${clockOf(i.end, m.tz)}`}
                 onPointerDown={(e) => beginDrag(e, item)}
+                aria-haspopup="menu"
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setMenu({ inst: i, x: e.clientX, y: e.clientY, returnTo: e.currentTarget });
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Delete') dropOnTrash(item);
+                  else if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+                    e.preventDefault();
+                    const r = e.currentTarget.getBoundingClientRect();
+                    setMenu({ inst: i, x: r.left, y: r.bottom + 4, returnTo: e.currentTarget });
+                  }
                 }}
               >
                 <Icon name="lock" size={12} />
@@ -115,6 +147,11 @@ export function Runway({ d, m, now, range, setRange }: { d: Data; m: DayModel; n
         </div>
         <div className="rw-lane rw-plan" ref={lane}>
           <span className="lane-label">Plan</span>
+          {showBuffer && (
+            <div className="buf" style={{ left: pct(bufStart), width: width(bufStart, bufEnd) }} title={`Buffer ${bufferLabel}: kept free at the end of the day`} role="img" aria-label={`Buffer, ${bufferLabel}, kept free at the end of the day`}>
+              <span aria-hidden="true">Buffer {bufferLabel}</span>
+            </div>
+          )}
           {m.tl.free.map(([a, b]) => (
             <div key={a} className="free" style={{ left: pct(a), width: width(a, b) }} aria-hidden={b - a < SPRINTABLE_MIN * MIN}>
               {b - a >= SPRINTABLE_MIN * MIN && <span>{formatHuman(b - a)} open</span>}
@@ -153,8 +190,15 @@ export function Runway({ d, m, now, range, setRange }: { d: Data; m: DayModel; n
             </div>
           )}
         </div>
-        {now >= m.from && now <= m.to && <div className="now rv-now" style={{ left: pct(now) }} aria-label={`Now, ${clockOf(now, m.tz)}`} role="img" />}
+        {now >= m.from && now <= m.to && (
+          <div className="now rv-now" style={{ left: pct(now) }} aria-label={`Now, ${clockOf(now, m.tz)}`} role="img">
+            <span className="now-label" aria-hidden="true">
+              {clockOf(now, m.tz)}
+            </span>
+          </div>
+        )}
       </div>
+      {menu && <EventMenu menu={menu} onClose={closeMenu} onEditEvent={onEditEvent} />}
     </section>
   );
 }

@@ -23,20 +23,22 @@ import { TimeLeft } from '../runway/TimeLeft';
 import { ScheduleEditor } from '../schedule/ScheduleEditor';
 import { Settings } from '../settings/Settings';
 import { RecentlyDeleted, ShelfPanel, TrashButton } from '../shelf/Shelf';
-import { useNow, useTheme } from '../store';
+import { useAlignedNow, useTheme } from '../store';
 import { DoneDrawer } from './DoneDrawer';
 import { BeforeClass, HeadsUp } from './Strips';
+import { SyncDot } from './SyncDot';
 
 type Layer = 'drawer' | 'shelf' | 'trash' | 'settings' | 'schedule' | 'editor';
 
 export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) {
   const d = snap.data;
   const s = settingsOf(d);
-  const now = useNow(30_000);
+  const now = useAlignedNow(15_000);
   const [view, setView] = useState<'runway' | 'focus'>(() => (activeTask(d)?.runtime.status === 'running' ? 'focus' : 'runway'));
   const [layers, setLayers] = useState<Layer[]>([]);
   const [editing, setEditing] = useState<Task | null>(null);
   const [guided, setGuided] = useState(false);
+  const [editEventId, setEditEventId] = useState<string | null>(null);
   const [range, setRange] = useState<'full' | 'next6'>('full');
   const m = dayModel(d, now, range);
   const top = layers.at(-1);
@@ -80,7 +82,18 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
   const full = top === 'settings' || top === 'schedule';
   const planSections = [
     <TimeLeft key="tl" tl={m.tl} />,
-    <Runway key="rw" d={d} m={m} now={now} range={range} setRange={setRange} />,
+    <Runway
+      key="rw"
+      d={d}
+      m={m}
+      now={now}
+      range={range}
+      setRange={setRange}
+      onEditEvent={(id) => {
+        setEditEventId(id);
+        open('schedule');
+      }}
+    />,
     <HeadsUp key="hu" d={d} now={now} />,
     <BeforeClass key="bc" d={d} now={now} />,
     <Unscheduled key="un" d={d} m={m} now={now} onEdit={editTask} onNew={() => editTask(null)} />,
@@ -90,9 +103,12 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
   return (
     <div className={`home${revealed ? ' revealed' : ''}`}>
       <header className="top">
-        <p className="brand">
-          <span className="wordmark">CHRONOS</span> · {dateLabel(todayOf(d, now))}
-        </p>
+        <div className="brand-row">
+          <p className="brand">
+            <span className="wordmark">CHRONOS</span> · {dateLabel(todayOf(d, now))}
+          </p>
+          <SyncDot sync={snap.sync} />
+        </div>
         <Segmented label="View (F)" value={view} options={[['runway', 'Plan'], ['focus', 'Focus']]} onChange={setView} />
         <nav className="top-nav" aria-label="Home">
           <button className="btn btn-ghost btn-s" onClick={() => open('drawer')}>
@@ -114,8 +130,10 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
           d={d}
           now={now}
           guided={guided}
+          editEventId={editEventId}
           onClose={() => {
             setGuided(false);
+            setEditEventId(null);
             close('schedule');
           }}
         />

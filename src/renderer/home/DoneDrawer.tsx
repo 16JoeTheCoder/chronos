@@ -11,7 +11,7 @@ import { run } from '../store';
 
 export function DoneDrawer({ d, now, onClose }: { d: Data; now: number; onClose: () => void }) {
   const m = metrics(d, now);
-  const done = live(d, 'tasks').filter((t) => t.status === 'done').sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0)).slice(0, 30);
+  const done = live(d, 'tasks').filter((t) => (t.status === 'done' || t.status === 'dropped')).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0)).slice(0, 30);
   const drops = live(d, 'activity').filter((a) => a.type === 'dropped').sort((a, b) => b.at - a.at).slice(0, 10);
   const ideas = live(d, 'ideas').sort((a, b) => Number(a.reviewed) - Number(b.reviewed) || b.createdAt - a.createdAt);
   return (
@@ -34,13 +34,13 @@ export function DoneDrawer({ d, now, onClose }: { d: Data; now: number; onClose:
         {m.overrun !== null && ` · your estimates run ${m.overrun.toFixed(1)}× ${m.overrun >= 1 ? 'long' : 'short'}`}
       </p>
 
-      <h3 className="eyebrow">Finished</h3>
+      <h3 className="eyebrow">Finished and closed</h3>
       {done.length === 0 && <p className="muted">Nothing finished yet this week. The first one is the hardest.</p>}
       <ul className="list">
         {done.map((t) => (
           <li key={t.id}>
             <span>
-              {t.outcome === 'killed' ? <span className="badge badge-bad">Killed</span> : t.outcome === 'shipped' ? <span className="badge badge-ok">Shipped</span> : <span className="badge badge-ok">Done</span>} {t.title}{' '}
+              {t.status === 'dropped' ? <span className="badge badge-warn">Closed</span> : t.outcome === 'killed' ? <span className="badge badge-bad">Killed</span> : t.outcome === 'shipped' ? <span className="badge badge-ok">Shipped</span> : <span className="badge badge-ok">Done</span>} {t.title}{' '}
               <span className="muted">{formatHuman(t.workMs)}</span>
             </span>
             <span className="row gap">
