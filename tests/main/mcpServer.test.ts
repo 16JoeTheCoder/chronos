@@ -252,14 +252,10 @@ describe('routes and bodies', () => {
     expect(r.json).toMatchObject({ ok: true });
   });
 
-  it('a body over the size cap is refused with 413 (or the connection is cut) and nothing runs', async () => {
+  it('a body over the size cap is refused with 413 (never a reset, which Windows surfaced) and nothing runs', async () => {
     const port = await server.start(0, () => token);
     const big = JSON.stringify({ tool: 'add_note', args: { body: 'x'.repeat(MAX_BODY + 10) } });
-    const outcome = await raw(port, { body: big }).then(
-      (r) => r.status,
-      () => 'closed',
-    );
-    expect([413, 'closed']).toContain(outcome);
+    expect((await raw(port, { body: big })).status).toBe(413);
     expect(live(state.d, 'ideas')).toHaveLength(0);
     // the server is still healthy afterwards
     expect((await raw(port, { method: 'GET', path: '/health' })).status).toBe(200);

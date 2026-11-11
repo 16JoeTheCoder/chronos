@@ -76,15 +76,18 @@ export class McpServer {
     if (req.method !== 'POST' || req.url !== '/call') return reply(404, { ok: false, error: 'Not found.' });
     let size = 0;
     const chunks: Buffer[] = [];
+    // Over the cap: keep reading but drop the bytes, then answer 413. Destroying the
+    // socket mid-upload makes Windows reset it before the client reads the reply.
     req.on('data', (c: Buffer) => {
       size += c.length;
-      if (size > MAX_BODY) {
-        reply(413, { ok: false, error: 'Request too large.' });
-        req.destroy();
-      } else chunks.push(c);
+      if (size <= MAX_BODY) chunks.push(c);
+      else chunks.length = 0;
     });
     req.on('end', () => {
-      if (size > MAX_BODY) return;
+      if (size > MAX_BODY) {
+        res.setHeader('connection', 'close');
+        return reply(413, { ok: false, error: 'Request too large.' });
+      }
       let body: { tool?: unknown; args?: unknown };
       try {
         body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
