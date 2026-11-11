@@ -1,24 +1,25 @@
 // Focus Core (§9.4): one stage. Tag, title, finish condition, the huge timer,
 // Start/Pause (the one accent button), Skip phase in Pomodoro, mode switchable
-// only before the first start, Finish (typed phrase) and a quiet Drop (typed
+// only before the first start, Finish (hold Enter for 2 s) and a quiet Drop (typed
 // reason). A right rail shows what is next and the time left. A stray-thought
 // input at the bottom saves an Idea without leaving focus.
 
-import { useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { clockOf, formatHuman, modeLabel } from '../../core/format';
 import type { Data, Task, TimerMode } from '../../core/model/types';
 import { checkpointDue } from '../../core/tasks/sprints';
 import { activeTask, isLocked, ownsTimer, todayOf } from '../../core/tasks/tasks';
 import { upcoming } from '../../core/time/schedule';
-import { FINISH_PHRASE, isDropReason, isFinishPhrase } from '../../core/validation';
-import { timerOf } from '../../core/repo/repo';
+import { isDropReason } from '../../core/validation';
+import { settingsOf, timerOf } from '../../core/repo/repo';
 import { Icon } from '../components/Icon';
 import { Segmented } from '../components/ui';
 import { run, toast } from '../store';
 import type { DayModel } from '../runway/model';
+import { HoldButton, useHold } from './HoldButton';
 import { TimerDigits, useTimer } from './TimerDigits';
 
-type Ritual = { kind: 'finish' } | { kind: 'drop' } | { kind: 'kill' } | null;
+type Ritual = { kind: 'drop' } | { kind: 'kill' } | null;
 
 export function FocusCore({ d, m, now, deviceId, onPlan }: { d: Data; m: DayModel; now: number; deviceId: string; onPlan: () => void }) {
   const task = activeTask(d);
@@ -48,24 +49,30 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
   const next = upcoming(d, now, todayOf(d, now), 24)[0];
   const due = checkpointDue(task, now);
 
+  const reduce = useReduceMotion(settingsOf(d).reduceMotion);
+
+  async function finish() {
+    const r = await run({ type: 'task.finish', id: task.id });
+    if (!r.ok) return;
+    const done = Object.values(d.tasks).filter((x) => x.status === 'done' && x.outcome !== 'killed' && (x.completedAt ?? 0) >= m.from).length + 1;
+    toast(`Done. ${done} finished today.`);
+  }
+  const finishHold = useHold(() => void finish());
+  const shipHold = useHold(() => void finish());
+
   async function submitRitual() {
     if (!ritual) return;
     const r =
-      ritual.kind === 'finish'
-        ? await run({ type: 'task.finish', id: task.id, phrase: text })
-        : ritual.kind === 'drop'
-          ? await run({ type: 'task.drop', id: task.id, reason: text })
-          : await run({ type: 'sprint.checkpoint', id: task.id, choice: 'kill', reason: text });
+      ritual.kind === 'drop'
+        ? await run({ type: 'task.drop', id: task.id, reason: text })
+        : await run({ type: 'sprint.checkpoint', id: task.id, choice: 'kill', reason: text });
     if (!r.ok) return;
     setRitual(null);
     setText('');
-    if (ritual.kind === 'finish') {
-      const done = Object.values(d.tasks).filter((x) => x.status === 'done' && x.outcome !== 'killed' && (x.completedAt ?? 0) >= m.from).length + 1;
-      toast(`Done. ${done} finished today.`);
-    } else toast(ritual.kind === 'drop' ? 'Dropped to the back of the queue. Time kept.' : 'Sprint killed. Reason logged.');
+    toast(ritual.kind === 'drop' ? 'Dropped to the back of the queue. Time kept.' : 'Sprint killed. Reason logged.');
   }
 
-  const ritualOk = ritual?.kind === 'finish' ? isFinishPhrase(text) : isDropReason(text);
+  const ritualOk = isDropReason(text);
   return (
     <section className="focus" aria-label="Focus" style={{ '--c': `var(--${tag?.color ?? 'tag7'})` } as CSSProperties}>
       <div className="stage">
@@ -74,7 +81,21 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
           {task.kind === 'sprint' && <span className="prio">sprint</span>}
           {task.timer.mode === 'pomodoro' && t && <span className="muted">Pomodoro {t.cycle} of {task.timer.pomodoro.sessionsBeforeLongBreak}</span>}
         </div>
-        <h2 className="focus-title">{task.title}</h2>
+        <h2
+          className="focus-title"
+          tabIndex={0}
+          aria-describedby="hold-hint"
+          {...finishHold.handlers}
+          onKeyDown={(e) => {
+            if (e.key === ' ') {
+              // Space is tap to start or pause, and never completes.
+              e.preventDefault();
+              if (owner && !e.repeat) void run({ type: 'timer', action: running ? 'pause' : 'start' });
+            } else finishHold.handlers.onKeyDown(e);
+          }}
+        >
+          {task.title}
+        </h2>
         <p className="focus-fc">{task.finishCondition}</p>
         <TimerDigits task={task} size="hero" />
         {!owner ? (
@@ -94,11 +115,13 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
                 <Icon name="skip" /> Skip phase
               </button>
             )}
-            <button className="btn" onClick={() => setRitual({ kind: 'finish' })}>
-              <Icon name="check" /> Finish
-            </button>
+            <HoldButton hold={finishHold} reduce={reduce} label="Finish" hintId="hold-hint" />
           </div>
         )}
+        <p id="hold-hint" className="muted hold-hint">
+          Hold Enter for 2 s to finish. Space starts or pauses.
+        </p>
+
         {!isLocked(task) && <ModePicker task={task} />}
         {owner && (
           <button className="link" onClick={() => setRitual({ kind: 'drop' })}>
@@ -115,9 +138,7 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
               <button className="btn btn-ghost" onClick={() => void run({ type: 'sprint.checkpoint', id: task.id, choice: 'continue' })}>
                 Continue
               </button>
-              <button className="btn" onClick={() => setRitual({ kind: 'finish' })}>
-                Ship
-              </button>
+              <HoldButton hold={shipHold} reduce={reduce} label="Ship" hintId="hold-hint" />
               <button className="btn btn-ghost" onClick={() => setRitual({ kind: 'kill' })}>
                 Kill
               </button>
@@ -134,16 +155,15 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
             }}
           >
             <label className="field">
-              <span className="eyebrow">{ritual.kind === 'finish' ? `Type: ${FINISH_PHRASE}` : ritual.kind === 'drop' ? 'Why drop it? (at least 3 characters)' : 'Why kill it? (at least 3 characters)'}</span>
-              {ritual.kind === 'finish' && <span className="muted">Finished means: {task.finishCondition}</span>}
-              <input autoFocus value={text} onChange={(e) => setText(e.target.value)} aria-label={ritual.kind === 'finish' ? 'Finish phrase' : 'Reason'} />
+              <span className="eyebrow">{ritual.kind === 'drop' ? 'Why drop it? (at least 3 characters)' : 'Why kill it? (at least 3 characters)'}</span>
+              <input autoFocus value={text} onChange={(e) => setText(e.target.value)} aria-label="Reason" />
             </label>
             <div className="row gap">
               <button type="button" className="btn btn-ghost" onClick={() => (setRitual(null), setText(''))}>
                 Cancel
               </button>
               <button type="submit" className="btn" disabled={!ritualOk}>
-                {ritual.kind === 'finish' ? (task.kind === 'sprint' ? 'Ship it' : 'Finish task') : ritual.kind === 'drop' ? 'Drop task' : 'Kill sprint'}
+                {ritual.kind === 'drop' ? 'Drop task' : 'Kill sprint'}
               </button>
             </div>
           </form>
@@ -198,4 +218,16 @@ function ModePicker({ task }: { task: Task }) {
       )}
     </div>
   );
+}
+
+/** The Motion setting, or the OS preference when it follows Windows. */
+function useReduceMotion(setting: boolean | null): boolean {
+  const [os, setOs] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const on = () => setOs(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return setting ?? os;
 }

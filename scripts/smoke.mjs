@@ -60,7 +60,34 @@ try {
   await home.waitForTimeout(300);
   await home.screenshot({ path: `${shots}/2-runway.png` });
 
-  step('Focus Core: start, then finish with the phrase');
+  step('now-line label in both ranges, buffer block');
+  await home.waitForSelector('.now-label');
+  if (!/^\d\d:\d\d$/.test((await home.locator('.now-label').textContent()) ?? '')) throw new Error('now label is not HH:MM');
+  await home.waitForSelector('.buf');
+  await home.getByRole('radio', { name: 'Next 6 h' }).click();
+  await home.waitForSelector('.now-label');
+  await home.waitForTimeout(300);
+  await home.screenshot({ path: `${shots}/2b-next6.png` });
+  await home.getByRole('radio', { name: 'Full day' }).click();
+
+  step('per-day event menu: Shift+F10, Escape, Skip today, Undo');
+  const fb = home.locator('.ev:has-text("Football")');
+  await fb.focus();
+  await home.keyboard.press('Shift+F10');
+  await home.waitForSelector('[role="menu"] [role="menuitem"]');
+  await home.keyboard.press('ArrowDown');
+  await home.screenshot({ path: `${shots}/2c-event-menu.png` });
+  await home.keyboard.press('Escape');
+  await home.waitForSelector('[role="menu"]', { state: 'detached' });
+  if (!(await fb.evaluate((el) => el === document.activeElement))) throw new Error('focus did not return to the event');
+  await home.keyboard.press('ContextMenu');
+  await home.getByRole('menuitem', { name: 'Skip today' }).click();
+  await home.waitForSelector('.toast:has-text("skipped today")');
+  await home.waitForSelector('.ev:has-text("Football")', { state: 'detached' });
+  await home.locator('.toast button:has-text("Undo")').click();
+  await home.waitForSelector('.ev:has-text("Football")');
+
+  step('Focus Core: start, then finish by holding Enter');
   await home.keyboard.press('f');
   await home.waitForSelector('.focus .digits-hero');
   const title = await home.locator('.focus-title').textContent();
@@ -70,9 +97,21 @@ try {
   await home.keyboard.press('Enter');
   await home.waitForTimeout(1200);
   await home.screenshot({ path: `${shots}/3-focus.png` });
-  await home.getByRole('button', { name: 'Finish', exact: true }).click();
-  await home.getByLabel('Finish phrase').fill('I have finished this task');
-  await home.getByRole('button', { name: /Finish task|Ship it/ }).click();
+  const finishBtn = home.getByRole('button', { name: 'Finish', exact: true });
+  await finishBtn.focus();
+  // Space and a short Enter hold must not finish the task.
+  await home.keyboard.press('Space');
+  await home.keyboard.down('Enter');
+  await home.waitForTimeout(500);
+  await home.keyboard.up('Enter');
+  await home.waitForTimeout(500);
+  if ((await home.locator('.toast:has-text("Done.")').count()) > 0) throw new Error('an early release finished the task');
+  // Holding Enter for about 2 s finishes it.
+  await home.keyboard.down('Enter');
+  await home.waitForTimeout(1000);
+  await home.screenshot({ path: `${shots}/3b-hold.png` });
+  await home.waitForTimeout(1200);
+  await home.keyboard.up('Enter');
   await home.waitForSelector(`.toast:has-text("Done.")`);
   if ((await home.locator('.focus-title').textContent()) === title) throw new Error('finished task is still in focus');
 
@@ -102,6 +141,18 @@ try {
   await home.getByRole('button', { name: 'Settings' }).click();
   await home.waitForSelector('.settings');
   await home.screenshot({ path: `${shots}/5-settings.png` });
+  for (const name of ['Sync', 'Integrations']) {
+    await home.getByRole('button', { name, exact: true }).click();
+    await home.waitForSelector('.settings-body .form');
+  }
+  await home.screenshot({ path: `${shots}/5b-integrations.png` });
+  await home.getByRole('button', { name: 'Advanced', exact: true }).click();
+  await home.locator('label.switch:has-text("Experimental")').click();
+  await home.getByRole('button', { name: 'Diagnostics', exact: true }).click();
+  await home.waitForSelector('h3.h:has-text("Diagnostics")'); // the body fills once main sends snap.diag
+  await home.screenshot({ path: `${shots}/5c-diagnostics.png` });
+  await home.getByRole('button', { name: 'Advanced', exact: true }).click();
+  await home.locator('label.switch:has-text("Experimental")').click();
   await home.getByRole('button', { name: 'About' }).click();
   await home.waitForSelector('.about');
   await home.screenshot({ path: `${shots}/6-about.png` });

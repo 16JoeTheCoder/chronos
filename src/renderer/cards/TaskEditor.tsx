@@ -21,7 +21,7 @@ export function TaskEditor({ d, task, now, onClose }: { d: Data; task: Task | nu
     tagId: task?.tagId ?? null,
     priority: task?.priority ?? 'should',
     estimateMin: task?.estimateMin ?? null,
-    deadline: task?.deadline ?? null,
+    dueDate: task?.dueDate ?? null,
     dueEventId: task?.dueEventId ?? null,
     checkpointEveryMin: task?.checkpointEveryMin ?? settingsOf(d).checkpointEveryMin,
   }));
@@ -116,8 +116,8 @@ export function TaskEditor({ d, task, now, onClose }: { d: Data; task: Task | nu
           <Field label="Estimate (minutes)" error={errors.estimateMin}>
             <input type="number" min={1} max={1440} value={f.estimateMin ?? ''} onChange={(e) => set({ estimateMin: e.target.value ? Number(e.target.value) : null })} />
           </Field>
-          <Field label="Deadline" error={errors.deadline}>
-            <input type="date" value={f.deadline ?? ''} onChange={(e) => set({ deadline: e.target.value || null })} />
+          <Field label="Due date" error={errors.dueDate}>
+            <input type="date" value={f.dueDate ?? ''} onChange={(e) => set({ dueDate: e.target.value || null })} />
           </Field>
         </div>
         {f.kind === 'sprint' && (

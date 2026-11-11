@@ -53,7 +53,7 @@ export function Holidays({ d, today, onClose }: { d: Data; today: string; onClos
         </div>
       ) : (
         <>
-          <button className="btn btn-s" onClick={() => setEdit({ id: null, name: '', startDate: today, endDate: today, scopes: ['school'], source: 'custom', confirmed: true, createdAt: 0, updatedAt: 0, deviceId: '', deletedAt: null, v: 1 })}>
+          <button className="btn btn-s" onClick={() => setEdit({ id: null, name: '', startDate: today, endDate: today, scopes: ['school'], source: 'custom', confirmed: true, createdAt: 0, updatedAt: 0, deviceId: '', deletedAt: null, v: 1, fv: {}, fw: {} })}>
             <Icon name="plus" size={14} /> Add holiday or break
           </button>
           <ul className="list">
