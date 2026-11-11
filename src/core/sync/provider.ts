@@ -14,7 +14,7 @@ export interface OutboxEntry {
   /** fv of each changed field when the edit was made (absent = never synced). */
   baseFv: Record<string, number>;
   createdAt: number;
-  /** A purge stub: replace the whole document. */
+  /** A purge stub: the whole doc is replaced. */
   replace?: boolean;
   /** First-sync upload of never-synced fields: fills gaps only, never overwrites the server. */
   seed?: boolean;
