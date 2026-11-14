@@ -78,3 +78,5 @@ Keeps the AI on track. Update at the end of every work session.
 
 ## Log
 - 2026-11-14: design finished, corpus confirmed, handoff exported.
+
+- 2026-11-14 (Checkpoint D, Log feed): `src/core/log/*` (lines, links, query, search, calendar/feed/windowing), `src/renderer/log/*` (`Log` with `{ projectId?, focusPostId? }`, Composer, Note, Calendar, log.css), tests in `tests/log`, new `idea.edit` command, `search_log` shares `core/log/search`. Decisions D-139..D-142. Checked visually at 1440 and 390 px in tactile-instrument and stark-workshop (harness removed). Next: ipc.ts must parse `idea.edit`; navigation mounts `Log` and Ctrl+L. Known: Plan-style heading lines can show an "Add as task?" chip (parser reads "Plan" as a verb).

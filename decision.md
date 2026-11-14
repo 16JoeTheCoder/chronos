@@ -283,3 +283,15 @@ What was decided mid-design. Each item overrides the matching line in CHRONOS_PA
 ## Not decided / out of scope here
 - The schedule importer (PDF or image to LLM to JSON). Separate feature, built after the parser. The AI runs once at import time; the parser only reads the resulting JSON, so "no AI in the parse path" still holds.
 - "yesterday" handling, bare-hour rules (1-6 = pm, 7-11 next occurrence, 12 = noon), `half 5`, `quarter past 4`, `noon/midnight`, `1700`, `5.30`: no corpus lines yet. See `tests/parser/corpus.known-gaps.txt`.
+
+### D-139 Log: which lines become tasks
+Clear task lines are queued automatically on posting, with one Undo toast: an explicit prefix (`- `, `* `, `[] `, `[ ] `, `- [ ] `, `task `), or a high-confidence parse that has a task/fixed keyword and a date or time. Task/fixed parses that are less clear (no date/time, or medium confidence) get a faint "Add as task?" chip; note-kind and low-confidence lines stay text. At most 20 lines are auto-added per post (`core/log/lines.ts`). Fixed-event lines become tasks with due date/time, not events. Edits never auto-add (a half-typed `- c` must not become a task); unlinked task lines in an edited post show the chip.
+
+### D-140 Log: how a line links to its task (no schema change)
+`Idea.parsedTaskIds` (existing, validated by `isId`) holds `L<lineIndex>:<taskId>` per linked line; plain ids stay as unlinked tasks. Ticking never writes the note: a line is ticked exactly when its task is `done`, so card, Focus and Board cannot disagree. A checkbox click sends `task.finish` / `task.reopen`. When a post is edited, links are re-aligned by line text (`relink`); a link whose line stopped being a task line is dropped (the task stays). A recycled or dropped task shows the line without a checkbox and offers the chip again.
+
+### D-141 New command `idea.edit`
+`{ type: 'idea.edit', id, body?, projectId?, parsedTaskIds? }` in `core/commands.ts` (body trimmed, 1..20000 chars, `text` follows; unknown project and bad ids rejected). `src/main/ipc.ts` must parse it (not done by the Log owner): `case 'idea.edit'`: rid, optional `str(raw.body, 20_000)`, `nullableId(raw.projectId)`, `parsedTaskIds` as an array of up to 500 `isId` strings.
+
+### D-142 Log: search, edited flag, windowing
+`core/log/search.ts` runs MiniSearch on the words, then applies "phrases" (substring), `project:` (name prefix or id), `before:`/`after:` (exclusive, YYYY-MM-DD, `today`, `yesterday`, user zone) and `is:task`. The MCP `search_log` tool now calls the same function. "edited" shows when `updatedAt - createdAt > 60 s`; edits save 700 ms after typing stops (one `idea.edit`), and on blur, Done or Esc. The feed renders a window of rows from measured heights (no dependency). The composer project is the device's `composerProjectId`, set by the picker (`/p`, `/project`, Ctrl+Shift+P) and by the focused task's project; a project view fixes it.

@@ -46,7 +46,7 @@
 .composer-proj { font: 500 13px/1 var(--font-text); color: var(--c-text-2); padding: 0 14px; }
 
 /* ---- feed ---- */
-.feed { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 6px 48px 0; scrollbar-width: thin; scrollbar-color: var(--c-line-strong) transparent; }
+.feed { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 0 48px 0; scrollbar-width: thin; scrollbar-color: var(--c-line-strong) transparent; }
 .feed:focus { outline: none; }
 .feed-spacer { position: relative; }
 .feed-window { position: absolute; left: 0; right: 0; top: 0; }
@@ -130,3 +130,5 @@ button.tick:hover .tick-box { border-color: var(--c-accent); }
   :root:not([data-motion="off"]) .tick-box,
   :root:not([data-motion="off"]) .chip-ask { transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), box-shadow var(--dur-base) var(--ease), color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
 }
+
+.search-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }

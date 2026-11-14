@@ -15,6 +15,7 @@ export function Onboarding({ s, onTimetable, onDone }: { s: Settings; onTimetabl
 
   const finish = async (then: () => void) => {
     const r = await run({ type: 'settings.update', patch: { onboarded: true } });
+    await run({ type: 'device.update', patch: { onboarded: true } }, true);
     if (r.ok) then();
   };
 

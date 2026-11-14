@@ -24,7 +24,7 @@ function rig(withParser = true) {
     ...(withParser ? { parse: (t: string, c: Parameters<typeof parse>[1]) => (seen.push(c.source ?? ''), parse(t, c)) } : {}),
   };
   const mcp = new Mcp(port);
-  const call = (args: Any) => {
+  const call = (args: Any): Any => {
     const r = mcp.call('add_task', args);
     return r.ok ? { ok: true as const, ...(r.result as Any) } : { ok: false as const, error: r.error };
   };
