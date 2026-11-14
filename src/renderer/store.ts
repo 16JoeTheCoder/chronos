@@ -5,9 +5,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { Command, Result } from '../core/commands';
 import type { Snapshot } from '../core/model/types';
-import { themeToCssVars } from '../core/theme';
 import { api } from './api';
-import { findTheme } from './themes';
 
 let snap: Snapshot | null = null;
 const listeners = new Set<() => void>();
@@ -86,26 +84,6 @@ export function useAlignedNow(ms: number): number {
     };
   }, [ms]);
   return now;
-}
-
-/**
- * Legacy hook for the small windows (taskbar widget, quick capture), which have no ThemeProvider:
- * applies a launch theme's tokens ('light' = Tactile, 'dark' = Stark, 'system' follows the OS).
- */
-export function useTheme(theme: 'dark' | 'light' | 'system'): void {
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: light)');
-    const apply = () => {
-      const light = theme === 'system' ? mq.matches : theme === 'light';
-      const t = findTheme(light ? 'tactile-instrument' : 'stark-workshop');
-      const root = document.documentElement;
-      for (const [k, v] of Object.entries(themeToCssVars(t))) root.style.setProperty(k, v);
-      root.dataset.mode = t.mode;
-    };
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, [theme]);
 }
 
 // ---- Toasts (bottom-centre, polite live region) ----

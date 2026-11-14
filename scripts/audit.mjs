@@ -161,11 +161,22 @@ check('TODO/FIXME have a decision', () => {
 
 check('every core module has a test', () => {
   const tests = files('tests').map((f) => readFileSync(f, 'utf8')).join('\n');
-  return files('src/core')
+  const mods = files('src/core')
     .filter((f) => !f.endsWith('model/types.ts'))
-    .map((f) => relative('src', f).replace(/\\/g, '/').replace(/\.tsx?$/, ''))
-    .filter((m) => !tests.includes(`src/${m}'`))
-    .map((m) => `no test imports src/${m}`);
+    .map((f) => relative('src', f).replace(/\\/g, '/').replace(/\.tsx?$/, ''));
+  // A test that imports a folder (src/core/theme) imports its index, and so every module the index re-exports.
+  const covered = new Set();
+  const reexports = (m) => {
+    const src = readFileSync(`src/${m}.ts`, 'utf8');
+    const dir = m.replace(/\/[^/]+$/, '');
+    return [...src.matchAll(/export[^'"]*?from\s+['"]\.\/([^'"]+)['"]/g)].map((x) => `${dir}/${x[1]}`.replace(/\.\w+$/, ''));
+  };
+  for (const m of mods) {
+    if (tests.includes(`src/${m}'`)) covered.add(m);
+    if (m.endsWith('/index') && tests.includes(`src/${m.slice(0, -6)}'`)) covered.add(m);
+  }
+  for (const m of [...covered]) if (m.endsWith('/index')) for (const r of reexports(m)) covered.add(r);
+  return mods.filter((m) => !covered.has(m)).map((m) => `no test imports src/${m}`);
 });
 
 check('docs present', () =>

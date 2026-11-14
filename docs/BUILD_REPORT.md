@@ -1,4 +1,55 @@
-# Build report: Chronos (Phase 1)
+# Build report: Chronos (Phase 2+3)
+
+## Status (2026-11-14)
+
+Checks at the end of this build: `npm run typecheck` clean, `npm test` 779 passed in 55 files, `npm run audit` passed (every check ok), smoke run (`npm run build` then `xvfb-run -a node scripts/smoke.mjs`) passed.
+
+**Read this first: the desktop layer ships OFF.** "Live on the desktop" (Home behind the icons, Win+D) is implemented with koffi and a WorkerW attach, but it has never run on Windows. Its Settings switch is labelled experimental and defaults to off; the fallback (a normal window) is the active path and any attach failure returns to it. Everything in `docs/WINDOWS_CHECKLIST.md` (24-26 and 33-42) is unverified on Windows.
+
+| Area | Status |
+| --- | --- |
+| Schema v3 and migration | Done, tested on a realistic v2 fixture (lossless, idempotent); Firestore rules for v3 **not run on the emulator** |
+| Parser | Done: corpus at 100 % (known gaps listed in `tests/parser/corpus.known-gaps.txt`), property tests, benchmark |
+| Planning (estimates, auto-plan, re-plan, review, wellness) | Done, unit-tested |
+| Desktop layer | Built, **OFF by default, unverified on Windows** |
+| Overlay, notepad, palette windows | Built; smoke screenshots on Xvfb; focus, z-order and full-screen hiding **unverified on Windows** |
+| Theme engine and four launch themes | Done; contrast and schema tested; checked visually at 1440 and 390 px |
+| Focus, Home, Board, Log, Settings | Done; smoke-driven (Space, hold-Enter, Ctrl+K, Log edit through `idea.edit`) |
+| Sound | Synthesised; **audio never heard in this build** (checklist 39) |
+| Claude MCP additions | Done, unit-tested; Claude Desktop path unverified (checklist 19) |
+| Sync of Log posts between two PCs | Uses the Phase 1 path (fake-Firestore tested); the real ~2 s figure is unverified (checklist 40) |
+
+## Unverified
+
+- Everything Windows-specific above, plus DPI 125/150 % and two monitors for the new windows (checklist 42).
+- Real Firestore provider and rules (D-124, D-138); Google sign-in; MCP through Claude Desktop with `ELECTRON_RUN_AS_NODE`.
+- Not finished (D-151): `pickSettings` in `main/ipc.ts` does not yet accept `snapMin`, the parser rule shape or `parserReports`, so the snap control, rule delete/import and "Clear reports" are wired but refused or ignored.
+- Ctrl+Z undoes only toast-backed actions.
+- Cross-midnight flag from the spec is not implemented (D-127).
+
+## Visual state (docs/screens, 1440x900 and 390 wide, four themes)
+
+Fixed this pass: Stark hero no longer overflows; one shared Focus layout (grid areas, ring sized from its container); Gargantua Focus and Home no longer clip; Home side column fits and scrolls with a themed scrollbar when needed; Tactile hero sizes to content; the 390 px tab bar has a quiet active state. Remaining: Gargantua Focus ring is modest in size at 900 px height (the layout gives room to the title, actions and thinking space first); TARS Home leaves a gap between the criterion and the slabs; at 390 px the active tab keeps a thin focus outline after keyboard use (intended, focus-visible); the Focus screen at 390 px scrolls.
+
+## Numbers (from `npm run audit`)
+
+| Item | Size | Budget |
+| --- | --- | --- |
+| Renderer JS (gzip) | 154.8 KB | 220 KB |
+| Renderer CSS (gzip) | 21.5 KB | 30 KB |
+| `dist/main.js` | 174.1 KB | 180 KB (D-147) |
+| `dist/parser.js` (lazy, chrono-node) | 77.9 KB | n/a |
+| `dist/sync.js` (lazy) | 1012 KB | 1.6 MB |
+| `dist/chronos-mcp.js` (bridge) | 383 KB | 700 KB |
+| `launch.css` | 2.8 KB | 8 KB |
+
+New dependency this phase: `koffi@3.3.8` (pinned, D-144); `chrono-node` for the parser; `@fontsource/*` for fonts (no CDNs).
+
+Manual steps for Josef: `docs/SETUP_FIREBASE.md`, then `docs/WINDOWS_CHECKLIST.md` (13-23 for sync and Claude, 24-42 for Phase 2+3).
+
+---
+
+# Phase 1 report (historical)
 
 ## Phase 1 status (2026-11-11)
 

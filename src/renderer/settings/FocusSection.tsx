@@ -25,7 +25,7 @@ export function FocusSection({ snap }: { snap: Snapshot }) {
       </Group>
 
       <Group title="Overlay" note="The small timer pill at the bottom left of your screen. Hover it for the title, timer and Hold to finish.">
-        <Toggle label="Hide in full-screen apps" hint="Games, video and presentations stay clean." checked={dev.overlayHideInFullscreen} onChange={(overlayHideInFullscreen) => D({ overlayHideInFullscreen })} />
+        <Toggle label="Hide the overlay in full-screen apps" hint="Games, video and presentations stay clean. Needs Windows to report a full-screen app (see the Windows checklist)." checked={dev.overlayHideInFullscreen} onChange={(overlayHideInFullscreen) => D({ overlayHideInFullscreen })} />
         <Toggle label="Notifications" hint="Upcoming fixed events and the end-of-day review." checked={dev.notifications} onChange={(notifications) => D({ notifications })} />
       </Group>
 
@@ -51,7 +51,7 @@ export function FocusSection({ snap }: { snap: Snapshot }) {
 
       <Group title="Shortcuts" note={snap.shortcutError ?? 'Global shortcuts work from any app. Format: Ctrl+Alt+Space.'}>
         {(['toggle', 'startPause', 'capture'] as const).map((k) => (
-          <TextField key={k} label={k === 'toggle' ? 'Show or hide Chronos' : k === 'startPause' ? 'Start or pause' : 'Quick capture and notepad'} value={dev.shortcuts[k]} wide mono onCommit={(v) => D({ shortcuts: { ...dev.shortcuts, [k]: v.trim() } }).then((r) => r.ok)} />
+          <TextField key={k} label={k === 'toggle' ? 'Show or hide Chronos' : k === 'startPause' ? 'Start or pause' : 'Notepad'} value={dev.shortcuts[k]} wide mono onCommit={(v) => D({ shortcuts: { ...dev.shortcuts, [k]: v.trim() } }).then((r) => r.ok)} />
         ))}
       </Group>
     </>

@@ -1,88 +1,45 @@
-# Build log (Phase 1)
+# Chronos build log
 
-Terse, for a fresh session to resume from.
+A fresh session can resume from this file alone. Newest state first. Decisions: `decision.md` (D-001..D-157, unique and ascending). Spec for this build: `docs/PHASE23_PROMPT.md`. Evidence per requirement: `docs/SPEC_MATRIX.md`.
+
+## State (2026-11-14, end of the Phase 2+3 build)
+
+Branch `claude/sweet-maxwell-h63n40` (the prompt said `phase-2-3`; the hub commits and opens the PR). Electron 33 + Vite + React 18 + TS. Checks: `npm run typecheck` clean; `npm test` 779 passed (55 files); `npm run audit` passed; smoke run passed.
+
+**The desktop layer ships OFF with the fallback active, and is unverified on Windows.** So are the overlay, notepad and palette windows (focus return, z-order, full-screen hiding), sound, DPI and two monitors. Run `docs/WINDOWS_CHECKLIST.md` items 24-26 and 33-42 on Windows, then flip the `liveOnDesktop` default in `src/core/model/defaults.ts` only if they pass.
 
 ## Done
-- A: model v2, `migrate` v1->v2 (lossless, idempotent), sortKey, deterministic ids, `recordProblem` validators; recurring tasks; `task.finish` without phrase, `task.close`, `task.moveCard`, `event.editOn`, `project.create`, `records.revert`, `activity.claude`.
-- B: outbox (diff/coalesce/replay/seed), per-field merge, `SyncEngine`, fake Firestore; controller `commit()` single write path, outbox.json, conflicts.json, quarantine.json, daily snapshots, restore, force resync; Firestore provider + Google PKCE sign-in in `src/main/sync` (lazy `dist/sync.js`); `SyncManager` (silent sign-in, revoke, offline retry); reconnect on resume/unlock/network.
-- E: `core/search` (MiniSearch, incremental).
-- F: `core/mcp` tools + handlers (undo, rate limit, strict args), `main/mcp/server.ts`, `src/bridge` -> `dist/chronos-mcp.js` (stdio verified by hand: lists tools, "not running" error).
-- Docs: SYNC.md, SETUP_FIREBASE.md, MCP.md, ARCHITECTURE, WINDOWS_CHECKLIST 13-23, SPEC_MATRIX Phase 1 rows, README; firestore.rules; audit rules.
-- Tests: tests/sync (23, scenarios a-h).
 
-## Phase 1 PR
-- 16JoeTheCoder/chronos#2 merged (with red audit: missing tests). Follow-up on this branch: 232 tests from the test agent, four bugs fixed (D-126), audit green.
+- Phase 1 (sync with outbox, Google sign-in, local Claude MCP, diagnostics): see `docs/SYNC.md`, `docs/MCP.md`. Real Firestore and rules never run (D-124).
+- Checkpoint A: schema v3 and migration, planning (estimates, auto-plan, re-plan, review, wellness), parser (corpus 100 %, learning, packs, misparse loop), MCP additions.
+- Checkpoint B: undo tokens in main, overlay / notepad / palette windows (`windows.html`, hash routed), desktop layer (koffi, off), `add_task text`, lazy `dist/parser.js`.
+- Checkpoint C: theme engine and four launch themes, signature timers, rail + Home (Now) + Focus + Plan, runway drag and drop, planning UI, widgets, moments, energy layers, sound, Settings (six sections + Experimental), School timetable, project Board.
+- Checkpoint D: Log feed (composer, auto-add vs chip, ticks, edited flag, search filters, calendar, project view), `idea.edit`.
+- Integration pass (this session): audit green (rAF in Log replaced by timeouts, `audit-allow` on one computed colour string, barrel-aware "every core module has a test" plus `tests/parser/calendarLexicon.test.ts`); one shared Focus grid and container-sized timers (D-157) fixing the Stark hero overflow, the Gargantua Focus and Home clipping, the Home side column (themed scrollbar), the Tactile dead space and the 390 px tab-bar active state; `useCustomThemes()` into ThemeProvider; Settings switches for Live on the desktop (experimental) and overlay hide-in-full-screen; shortcut relabelled Notepad; taskbar-widget row removed; dead files removed (`styles/widget.css`, legacy `useTheme` in `store.ts`); smoke rewritten for overlay / notepad / palette, Ctrl+K in Home, Log edit through `idea.edit`, and Board / Log / Settings screenshots in tactile and stark at 1440; docs updated.
 
-## In progress (superseded)
-- Renderer (G1-G5, Settings sync/integrations/experimental/diagnostics, notices): Sonnet agent in a worktree; merge when it reports.
-- Test suite (migration fixtures, validation, exceptions, recurrence, sortKey, search+bench, MCP handlers, bridge/server, controllerSync): Sonnet agent in a worktree; merge and fix any BUGs it reports.
+## Doing
+
+Nothing in flight. The tree is uncommitted at the time of writing (the hub commits).
 
 ## Next
-- Merge both branches, `npm run audit`, smoke under xvfb, reviewer agent pass, BUILD_REPORT, PR.
 
-## Known failures / unverified
-- Renderer build fails until the UI branch is merged (FocusCore imports the removed phrase helpers).
-- Real Firestore provider and rules never run (emulator blocked, D-124). Google sign-in, MCP via Claude Desktop, ELECTRON_RUN_AS_NODE: Windows checklist.
+1. Hub: commit, open the PR (include the "desktop layer OFF, unverified on Windows" sentence).
+2. Josef: `docs/SETUP_FIREBASE.md`, then `docs/WINDOWS_CHECKLIST.md` 13-23 and 24-42 on Windows. Report results; flip `liveOnDesktop` default only after 24-26 and 33-34 pass.
+3. Main-side gaps (D-151): make `pickSettings`/`validateSettings` in `src/main/ipc.ts` and `src/core/validation.ts` accept `snapMin`, the parser's `ParserRule` shape and `parserReports`, so the snap control, rule delete/import and "Clear reports" take effect.
+4. Optional: a `task.swapCard` command so a Board swap is one commit (D-150); a cross-midnight flag (D-127); timetable for MCP `add_task text` (D-145).
+5. Phase 4 (out of scope here): web app, phone app, remote MCP, Pit wall and Flight plan themes, WebGL, PDF timetable importer.
 
+## Known failures and unverified
 
-# Phase 2+3 build log
+- Windows-only behaviour is unverified (above). Firestore rules `shape()` and the real provider were not run on the emulator (D-124, D-138). Google sign-in and Claude Desktop via `ELECTRON_RUN_AS_NODE` are unverified.
+- Snap setting, parser rule edits and "Clear reports" are refused or ignored by main until D-151 is done.
+- Ctrl+Z undoes only toast-backed actions. Plan-style heading lines in the Log can show an "Add as task?" chip (the parser reads "Plan" as a verb).
+- Visual: Gargantua Focus ring is modest at 900 px height; TARS Home leaves a gap between criterion and slabs; Focus at 390 px scrolls; Tactile Focus has empty space below the mode controls.
+- Smoke only runs on Linux/Xvfb: `npm run build` then `xvfb-run -a node scripts/smoke.mjs`. It sets `CHRONOS_SMOKE=1` so main exposes `openNotepad`/`openPalette` (global shortcuts cannot be pressed under Xvfb).
+- No cross-midnight flag exists (D-127).
 
-## Checkpoint A: schema v3 and planning logic (core only, no UI)
+## How to resume
 
-### Done
-- Schema v3 (D-127 to D-129, D-138): `SCHEMA_V` 3; `migrate` v1/v2/v3 -> v3, lossless and idempotent, tested on `tests/fixtures/v2-josef.json`; Phase 1 clients go read-only on v3 records; v2 docs pulled by a v3 client are upgraded, not quarantined. Unplaced events (`startMin`/`endMin` null, `durationMin`), `event.place`, `unplacedOn`; `Idea.projectId`; new Settings fields and device `composerProjectId`/`onboarded`; `parser.report` (cap 200); validation, ipc pickers and Firestore rules updated.
-- Planning (D-131 to D-136) in `src/core/planning/` (estimates, plan, review, wellness) with commands `plan.auto`, `plan.replan`, `review.submit`; undo ops via `src/core/undo.ts`.
-- MCP (D-130): `post_log`, `search_log`, `list_unplaced`, `place_event`, `get_day.unplaced`; docs/MCP.md updated.
-- Audit: parser purity rule, chrono-node and @fontsource allowances, PHASE23 wording fixed (D-137).
-- Tests: tests/core/migrateV3, schemaV3, tests/planning/*, tests/mcp/logTools.
-
-### Doing
-- Nothing in core. The parser agent works in `src/core/parser` and `tests/parser`.
-
-### Next
-- Hub: wire the parser into quick-add and into MCP `add_task` (`TODO(D-130)` in `src/core/mcp/handlers.ts`); wire the UI to `plan.auto` (morning start), `plan.replan`, `review.submit` (pending via `pendingReview`), `breakDue`, the "to place" tray (`unplacedOn`, `event.place`) and "Report misparse" (`parser.report`).
-- UI undo for planning commands: keep `Result.undo` in main behind a token (D-136).
-- Checkpoint B: desktop layer and overlay windows.
-
-### Known failures / unverified
-- Firestore rules `shape()` (D-138) and the real provider were not run against the emulator (D-124).
-- No cross-midnight flag exists, so the PHASE23 clause "unless the cross-midnight flag is set" is not implemented (D-127).
-- `npm test` here excludes `tests/parser` (owned by the parser agent).
-
-## Parser handoff log (imported)
-
-# log.md (parser)
-
-Keeps the AI on track. Update at the end of every work session.
-
-## Status (2026-11-14)
-- Requirements: `CHRONOS_PARSER_REQUIREMENTS.md` (Josef's spec). Overrides: `decision.md`.
-- Nothing is built yet. This folder is the design handoff.
-- Corpus: `tests/parser/corpus.txt`, 117 lines, all confirmed by Josef. Fixture: `tests/parser/fixture.json`.
-- Data: `src/core/parser/builtin.chronos-parser.json` (rules) and `lexicon.en.json` (words, shorthand, thresholds).
-
-## Rules for the build
-1. Read `src/core/model/types.ts`, `src/core/validation.ts`, `src/core/commands.ts` first. Check D8 (fixed event with no time).
-2. Write the corpus runner FIRST (reads corpus.txt + fixture.json, calls `parse`), watch it fail, then implement.
-3. Pin chrono-node's version. Override it in our layer for our cases; never fork it.
-4. Keep the code lean. Skip anything costly that does not raise accuracy on the corpus. Everything tunable stays in the JSON files.
-5. Tell Josef where to run every command (VS Code terminal at the repo root, or PowerShell).
-6. Every misparse Josef reports becomes a corpus line BEFORE it is fixed.
-7. Do not mark done until 100% of the corpus passes or the failure is moved to `corpus.known-gaps.txt` with a reason.
-
-## Next steps
-1. Read the three core files; settle D8 and D13 with Josef.
-2. Scaffold `src/core/parser/` (types, index.ts exports: parse, applyCorrection, validatePack, mergePacks), the runner, the property tests and the benchmark.
-3. Implement in layers: tokenizer + fuzzy, chrono-node dates/times, durations, recurrence, keyword/kind classifier (D3-D10), project/priority, title cleanup (D12).
-4. Add the "Report misparse" action and the Ctrl+K preview wiring last.
-
-## Log
-- 2026-11-14: design finished, corpus confirmed, handoff exported.
-
-- 2026-11-14 (Checkpoint D, Log feed): `src/core/log/*` (lines, links, query, search, calendar/feed/windowing), `src/renderer/log/*` (`Log` with `{ projectId?, focusPostId? }`, Composer, Note, Calendar, log.css), tests in `tests/log`, new `idea.edit` command, `search_log` shares `core/log/search`. Decisions D-139..D-142. Checked visually at 1440 and 390 px in tactile-instrument and stark-workshop (harness removed). Next: ipc.ts must parse `idea.edit`; navigation mounts `Log` and Ctrl+L. Known: Plan-style heading lines can show an "Add as task?" chip (parser reads "Plan" as a verb).
-
-- 2026-11-14 (Checkpoint B, main side): DONE undo tokens (`window.chronos.undo`), overlay/notepad/palette windows (`windows.html`; widget + capture removed), `<Palette open onClose/>`, global Ctrl+Alt+K, `add_task text`, `idea.edit` IPC, lazy `dist/parser.js`, desktop layer (koffi) SHIPPED OFF (D-143..D-147). NEXT: Home mounts Palette on Ctrl+K; run `docs/WINDOWS_CHECKLIST.md` "Checkpoint B" then flip `liveOnDesktop` default. KNOWN: scripts/smoke.mjs still looks for `widget.html`; `styles/widget.css` is orphaned; Settings still labels the capture shortcut "Quick capture" (it opens the notepad) and has no switches for liveOnDesktop / overlayHideInFullscreen.
-
-- 2026-11-14 (Checkpoint C, Settings + Board): DONE `src/renderer/settings/*` (six sections + Experimental), `schedule/Timetable.tsx` (+ timetable.ts, seed), `src/core/board` + `tests/board` (11 tests), `src/renderer/board/Board.tsx`. Verified in a throwaway http harness at 1440 and 390 px in tactile and stark (deleted). PARTIAL: snapMin, parser rule edits and report clearing need main/ipc.ts + validation changes (D-above). Next: hub mounts `Settings`, `Board`, passes `useCustomThemes()` to ThemeProvider and `loadBells()`/`timetableFor()` to the parser context.
-
-- 2026-11-14 (Checkpoint C, UI rebuild): DONE ThemeProvider wiring (main.tsx, boot.js), rail + Home/Now + Focus + Plan screens, runway drag and drop (dnd.ts, dropActions.ts, To place tray, recurring chooser, keyboard nudge), planning UI (morning card, review dialog, break card, Re-plan), widgets (Day, Momentum, Notes, Wellness), moments + energy layers, tests (tests/renderer: dnd, widgetStats, focusKeys; contrast.test.ts now checks the tag palette), audit rule for hard-coded colours, smoke.mjs rewritten (screenshots in docs/screens/theme-*). Next: review pass on moments in a real run, Windows checks. Known: LookSection.tsx and log/Log.tsx trip the new audit rules (not mine); Ctrl+Z only undoes toast-backed actions.
+1. Read this file, `decision.md` (tail), `docs/ARCHITECTURE.md`.
+2. `npm ci`, `npm run typecheck`, `npm test`, `npm run audit` (VS Code terminal at the repo root). All three must be green before and after any change.
+3. UI changes: `npm run build`, run the smoke script, open `docs/screens/theme-*` and look. Only theme tokens colour components; never change a theme palette to fix layout.

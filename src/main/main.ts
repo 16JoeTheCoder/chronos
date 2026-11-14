@@ -167,6 +167,8 @@ function boot(): void {
   const popupOpts = { backgroundColor: '#00000000', transparent: true, hasShadow: false } as const;
   const notepad = new PopupWindow('#notepad', notepadBounds, { ...popupOpts, ...NOTEPAD, title: 'Chronos notepad' }, false);
   const palette = new PopupWindow('#palette', paletteBounds, { ...popupOpts, ...PALETTE, title: 'Chronos palette' }, true);
+  // Smoke test only (scripts/smoke.mjs): global shortcuts cannot be pressed under Xvfb, so the script opens the popups here.
+  if (process.env.CHRONOS_SMOKE) (globalThis as Record<string, unknown>).__chronosSmoke = { openNotepad: () => notepad.open(), openPalette: () => palette.open() };
   const shelf = new Shelf(
     () => Shelf.defaultFolder(controller.device.stackFolder),
     () => home.win.webContents.send(CHANNELS.stackChanged),

@@ -12,7 +12,7 @@ const dataDir = mkdtempSync(join(tmpdir(), 'chronos-smoke-'));
 const errors = [];
 const step = (s) => console.log(`-> ${s}`);
 
-const app = await electron.launch({ args: ['.', '--no-sandbox'], env: { ...process.env, CHRONOS_USER_DATA: dataDir } });
+const app = await electron.launch({ args: ['.', '--no-sandbox'], env: { ...process.env, CHRONOS_USER_DATA: dataDir, CHRONOS_SMOKE: '1' } });
 try {
   const home = await waitForWindow(app, 'index.html');
   home.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
@@ -53,6 +53,12 @@ try {
   await home.waitForSelector('button:has-text("Pause")');
   await home.waitForTimeout(1500);
   await home.screenshot({ path: `${shots}/3-focus.png` });
+
+  step('overlay (windows.html#overlay): the timer pill shows while a task runs');
+  const overlay = await waitForWindow(app, 'windows.html#overlay');
+  await overlay.waitForSelector('.sig, .ov, #root > *', { timeout: 8000 });
+  await overlay.waitForTimeout(600);
+  await overlay.screenshot({ path: `${shots}/7-overlay.png` });
   await home.keyboard.press('Space');
   await home.waitForSelector('button:has-text("Resume")');
   const title = await home.locator('.focus-title').textContent();
@@ -101,12 +107,44 @@ try {
   }
   await home.keyboard.press('Escape');
 
-  step('Settings and Log from the rail');
+  step('Ctrl+K in Home opens the palette (verified), Esc closes it');
+  await home.keyboard.press('Escape');
+  await home.keyboard.press('Control+k');
+  await home.waitForSelector('[role="dialog"][aria-label="Palette"]');
+  await home.screenshot({ path: `${shots}/8-palette-in-home.png` });
+  await home.keyboard.press('Escape');
+  await home.waitForSelector('[role="dialog"][aria-label="Palette"]', { state: 'detached' });
+
+  step('notepad and palette windows (windows.html#notepad, #palette)');
+  await app.evaluate(() => globalThis.__chronosSmoke.openNotepad());
+  const notepad = await waitForWindow(app, 'windows.html#notepad');
+  await notepad.waitForSelector('textarea');
+  await notepad.waitForTimeout(500);
+  await notepad.screenshot({ path: `${shots}/9-notepad.png` });
+  await app.evaluate(() => globalThis.__chronosSmoke.openPalette());
+  const palette = await waitForWindow(app, 'windows.html#palette');
+  await palette.waitForSelector('.pal-input');
+  await palette.waitForTimeout(500);
+  await palette.screenshot({ path: `${shots}/10-palette.png` });
+  await palette.keyboard.press('Escape');
+  await home.bringToFront();
+
+  step('Settings, Board and Log from the rail; a Log post edit is saved through idea.edit');
   await home.getByRole('button', { name: 'Settings', exact: true }).first().click();
   await home.getByRole('heading', { name: 'Settings' }).first().waitFor();
   await home.screenshot({ path: `${shots}/5-settings.png` });
+  await home.getByRole('button', { name: 'Board', exact: true }).click();
+  await home.waitForTimeout(700);
+  await home.getByRole('button', { name: 'Home', exact: true }).click();
   await home.keyboard.press('Control+l');
-  await home.waitForTimeout(600);
+  await home.waitForSelector('textarea[aria-label="Write a post"]');
+  await home.getByRole('button', { name: /^Edit post from/ }).first().click();
+  const editBox = home.locator('textarea[aria-label="Edit post"]');
+  await editBox.fill('Edited in the smoke test: the Log saves through idea.edit.');
+  await home.waitForTimeout(1500);
+  const saved = await home.evaluate(async () => Object.values((await window.chronos.getSnapshot()).data.ideas).some((i) => i.body.startsWith('Edited in the smoke test')));
+  if (!saved) throw new Error('Log post edit was not saved (idea.edit)');
+  await home.locator('.note-head').getByRole('button', { name: 'Done' }).first().click();
   await home.getByRole('button', { name: 'Home', exact: true }).click();
 
   step('theme matrix: 1440 and 390 px in every launch theme');
@@ -133,6 +171,23 @@ try {
     }
   }
   await home.setViewportSize({ width: 1440, height: 900 });
+
+  step('Board, Log and Settings at 1440 in tactile-instrument and stark-workshop');
+  for (const themeId of ['tactile-instrument', 'stark-workshop']) {
+    await home.evaluate((id) => window.chronos.command({ type: 'settings.update', patch: { themeId: id } }), themeId);
+    await home.waitForFunction((id) => document.documentElement.dataset.themeId === id, themeId);
+    await home.waitForTimeout(800);
+    await home.getByRole('button', { name: 'Board', exact: true }).click();
+    await home.waitForTimeout(900);
+    await home.screenshot({ path: `${shots}/theme-${themeId}-1440-board.png` });
+    await home.keyboard.press('Control+l');
+    await home.waitForTimeout(900);
+    await home.screenshot({ path: `${shots}/theme-${themeId}-1440-log.png` });
+    await home.getByRole('button', { name: 'Settings', exact: true }).first().click();
+    await home.waitForTimeout(900);
+    await home.screenshot({ path: `${shots}/theme-${themeId}-1440-settings.png` });
+    await home.getByRole('button', { name: 'Home', exact: true }).click();
+  }
 
   if (errors.length) throw new Error(`console errors:\n${errors.join('\n')}`);
   console.log('ok smoke test passed');

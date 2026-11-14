@@ -140,14 +140,16 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
         </h2>
         <p className="focus-fc">{task.finishCondition}</p>
         <div className="timer-row">
-          <SignatureTimer
-            progress={t?.progress ?? 0}
-            remainingSec={main / 1000}
-            running={running}
-            overrun={over > 0}
-            size={sigSize}
-            onComplete={finishHold.pulse}
-          />
+          <div className="sig-slot">
+            <SignatureTimer
+              progress={t?.progress ?? 0}
+              remainingSec={main / 1000}
+              running={running}
+              overrun={over > 0}
+              size={sigSize}
+              onComplete={finishHold.pulse}
+            />
+          </div>
           <div className="controls">
             {!owner ? (
               <>
@@ -175,7 +177,29 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
         <p id="hold-hint" className="muted hold-hint">
           Hold Enter for 2 s to finish. Space starts or pauses.
         </p>
+      </div>
 
+      <aside className="focus-side" aria-label="Thinking space">
+        <h3 className="eyebrow">Thinking space</h3>
+        {notes.map((n, i) => (
+          <p key={n.id} className={i === 0 ? 'note first' : 'note'}>
+            {n.text}
+          </p>
+        ))}
+        <form
+          className="stray"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!thought.trim()) return;
+            void run({ type: 'idea.add', text: thought, taskId: task.id }).then((r) => r.ok && setThought(''));
+          }}
+        >
+          <Icon name="idea" />
+          <input value={thought} onChange={(e) => setThought(e.target.value)} placeholder="Stray thought? Type it, press Enter, keep going." aria-label="Stray thought" maxLength={1000} />
+        </form>
+        <Widgets d={d} m={m} now={now} task={task} dim />
+      </aside>
+      <div className="focus-more">
         <div className="stage-more">
           {!isLocked(task) && <ModePicker task={task} />}
           {owner && (
@@ -225,27 +249,6 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
           </form>
         )}
       </div>
-
-      <aside className="focus-side" aria-label="Thinking space">
-        <h3 className="eyebrow">Thinking space</h3>
-        {notes.map((n, i) => (
-          <p key={n.id} className={i === 0 ? 'note first' : 'note'}>
-            {n.text}
-          </p>
-        ))}
-        <form
-          className="stray"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!thought.trim()) return;
-            void run({ type: 'idea.add', text: thought, taskId: task.id }).then((r) => r.ok && setThought(''));
-          }}
-        >
-          <Icon name="idea" />
-          <input value={thought} onChange={(e) => setThought(e.target.value)} placeholder="Stray thought? Type it, press Enter, keep going." aria-label="Stray thought" maxLength={1000} />
-        </form>
-        <Widgets d={d} m={m} now={now} task={task} dim />
-      </aside>
       <p className="focus-foot">No other tasks are shown here. Esc returns to the desktop.</p>
     </section>
   );

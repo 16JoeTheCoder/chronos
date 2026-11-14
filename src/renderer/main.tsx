@@ -8,7 +8,8 @@ import './styles/screens.css';
 import { api } from './api';
 import { Home } from './home/Home';
 import { settingsOf } from '../core/repo/repo';
-import { themeToCssVars, type ChronosTheme } from '../core/theme';
+import { themeToCssVars } from '../core/theme';
+import { useCustomThemes } from './settings/customThemes';
 import { ThemeProvider, useTheme as useActiveTheme } from './theme/ThemeProvider';
 import { awaitLaunch, fillLaunch } from './launch/launch';
 import { initStore, toast, useSnap } from './store';
@@ -18,6 +19,7 @@ let reveal: () => void = () => undefined;
 
 function App() {
   const snap = useSnap();
+  const custom = useCustomThemes();
   const [revealed, setRevealed] = useState(false);
   reveal = () => {
     setRevealed(true);
@@ -26,7 +28,6 @@ function App() {
   };
   if (!snap) return null;
   const s = settingsOf(snap.data);
-  const custom = ((s as unknown as { customThemes?: ChronosTheme[] }).customThemes ?? []) as ChronosTheme[];
   return (
     <ThemeProvider themeId={s.themeId} themeSchedule={s.themeSchedule} customThemes={custom} energy={s.energy}>
       <ThemeBoot />

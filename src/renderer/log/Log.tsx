@@ -53,12 +53,12 @@ function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnTyp
   const allNotes = useMemo(() => Object.values(d.ideas), [d.ideas]);
   const heights = useRef(new Map<string, number>());
   const [, bump] = useReducer((x: number) => x + 1, 0);
-  const raf = useRef(0);
+  const raf = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const onHeight = useCallback((id: string, h: number) => {
     if (heights.current.get(id) === h) return;
     heights.current.set(id, h);
-    cancelAnimationFrame(raf.current);
-    raf.current = requestAnimationFrame(() => bump());
+    clearTimeout(raf.current);
+    raf.current = setTimeout(() => bump(), 16);
   }, []);
   const hs = feed.map((n) => heights.current.get(n.id) ?? EST_HEIGHT);
   const scroller = useRef<HTMLDivElement>(null);
@@ -83,14 +83,14 @@ function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnTyp
       el.scrollTop = offsetOf(hs, i);
       setScrollTop(el.scrollTop);
       // Row heights are estimates until measured: settle once after layout.
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
+      setTimeout(() => {
+        setTimeout(() => {
           const hh = feed.map((n) => heights.current.get(n.id) ?? EST_HEIGHT);
           el.scrollTop = offsetOf(hh, i);
           setScrollTop(el.scrollTop);
           if (id) document.getElementById(`log-post-${id}`)?.focus({ preventScroll: true });
-        }),
-      );
+        }, 16);
+      }, 16);
       if (id) {
         setFlash(id);
         if (flashTimer.current) clearTimeout(flashTimer.current);

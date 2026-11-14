@@ -26,7 +26,7 @@ function contrastLines(t: ChronosTheme): string[] {
   const ground = parseColor(c.ground);
   const panel = parseColor(c.panel);
   const panelOver = ground && panel ? composite(panel, ground) : null;
-  const hex = (rgba: number[]) => `rgb(${rgba.slice(0, 3).map(Math.round).join(',')})`;
+  const hex = (rgba: number[]) => `rgb(${rgba.slice(0, 3).map(Math.round).join(',')})`; // audit-allow: builds a computed contrast sample from theme values
   const worst = (keys: ('text' | 'text2' | 'text3' | 'muted')[]) =>
     Math.min(...keys.flatMap((k) => [ratio(c[k], c.ground), panelOver ? ratio(c[k], hex(panelOver)) : null]).filter((n): n is number => n !== null));
   const f = (n: number | null) => (n === null || !Number.isFinite(n) ? 'n/a' : `${n.toFixed(1)}:1`);
@@ -216,12 +216,9 @@ export function LookSection({ snap }: { snap: Snapshot }) {
       </Group>
 
       <Group title="Desktop and layout">
-        <Toggle label="Live on the desktop" hint="Home sits behind your desktop icons, so Win+D shows it. Windows only; if it cannot attach it runs as a normal window." checked={dev.liveOnDesktop} onChange={(liveOnDesktop) => run({ type: 'device.update', patch: { liveOnDesktop } })} />
+        <Toggle label="Live on the desktop (experimental, off by default)" hint="Home sits behind your desktop icons, so Win+D shows it. Not yet verified on Windows: run the Desktop layer part of docs/WINDOWS_CHECKLIST.md first. If it cannot attach it runs as a normal window." checked={dev.liveOnDesktop} onChange={(liveOnDesktop) => run({ type: 'device.update', patch: { liveOnDesktop } })} />
         <Row label="Runway position">
           <Seg label="Runway position" value={s.runwayPosition} options={[['top', 'Top'], ['bottom', 'Bottom']]} onChange={(runwayPosition) => void saveSettings({ runwayPosition })} />
-        </Row>
-        <Row label="Taskbar widget" hint="For the left slot, turn off Widgets in Windows Settings, Personalization, Taskbar.">
-          <Seg label="Taskbar widget" value={dev.widgetDock} options={[['taskbar-left', 'Left'], ['taskbar-right', 'Right'], ['free', 'Free']]} onChange={(widgetDock) => void run({ type: 'device.update', patch: { widgetDock } })} />
         </Row>
       </Group>
     </>
