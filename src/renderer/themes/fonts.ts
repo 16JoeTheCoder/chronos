@@ -1,0 +1,21 @@
+// Bundled web fonts (latin subset). Imported once by ThemeProvider; Vite emits the woff2 files. Never a CDN.
+import '@fontsource/hanken-grotesk/latin-400.css';
+import '@fontsource/hanken-grotesk/latin-600.css';
+import '@fontsource/hanken-grotesk/latin-700.css';
+import '@fontsource/martian-mono/latin-400.css';
+import '@fontsource/martian-mono/latin-500.css';
+import '@fontsource/chakra-petch/latin-500.css';
+import '@fontsource/chakra-petch/latin-600.css';
+import '@fontsource/sora/latin-300.css';
+import '@fontsource/sora/latin-400.css';
+import '@fontsource/sora/latin-500.css';
+import '@fontsource/red-hat-display/latin-400.css';
+import '@fontsource/red-hat-display/latin-500.css';
+import '@fontsource/red-hat-display/latin-700.css';
+import '@fontsource/red-hat-display/latin-900.css';
+import '@fontsource/red-hat-mono/latin-400.css';
+import '@fontsource/red-hat-mono/latin-600.css';
+import '@fontsource/michroma/latin-400.css';
+import '@fontsource/red-hat-text/latin-300.css';
+import '@fontsource/red-hat-text/latin-400.css';
+import '@fontsource/red-hat-text/latin-500.css';

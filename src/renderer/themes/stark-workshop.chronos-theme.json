@@ -10,7 +10,7 @@
         500,
         600
       ],
-      "source": "google"
+      "source": "fontsource"
     },
     "text": {
       "family": "Sora",
@@ -19,7 +19,7 @@
         400,
         500
       ],
-      "source": "google"
+      "source": "fontsource"
     },
     "numerals": "display",
     "tabularNumbers": true
