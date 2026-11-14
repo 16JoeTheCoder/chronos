@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cushion, overrunMs } from '../../src/renderer/focus/cushion';
+import { cushion, overrunMs } from '../../src/renderer/focus/cushionModel';
 import { keyAction, type KeyInput } from '../../src/renderer/focus/keys';
 import { createHold, type HoldSchedule } from '../../src/renderer/focus/hold';
 

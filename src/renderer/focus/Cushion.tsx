@@ -1,7 +1,7 @@
 // The buffer cushion (PHASE23 §5.5): a visible reserve that shrinks as the task overruns,
 // then shows the overrun. Colour comes from theme tokens only; the fill is a transform.
 import { formatHuman } from '../../core/format';
-import type { Cushion as C } from './cushion';
+import type { Cushion as C } from './cushionModel';
 
 export function Cushion({ c }: { c: C }) {
   const text =

@@ -13,7 +13,7 @@ import { mondayOf, weekdayOf } from '../../core/time/zone';
 import { Icon } from '../components/Icon';
 import { Btn, Group, Toggle, saveSettings } from '../settings/rows';
 import { run, toast } from '../store';
-import { periodsOf, saveBells, useBells, type Period } from './timetable';
+import { periodsOf, saveBells, useBells, type Period } from './timetableData';
 import { SEED_BELLS, SEED_TIMETABLE } from './timetableSeed';
 
 const ASKED = 'chronos.timetableSeedAsked';

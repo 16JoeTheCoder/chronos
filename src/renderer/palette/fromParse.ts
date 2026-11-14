@@ -7,7 +7,7 @@ import { buildParseContext } from '../../core/parseContext';
 import { parse, type ParseContext, type ParseResult } from '../../core/parser';
 import { settingsOf } from '../../core/repo/repo';
 import { todayOf } from '../../core/tasks/tasks';
-import { loadBells, timetableFor } from '../schedule/timetable';
+import { loadBells, timetableFor } from '../schedule/timetableData';
 
 const PRIORITY: Record<1 | 2 | 3, Priority> = { 1: 'must', 2: 'should', 3: 'nice' };
 

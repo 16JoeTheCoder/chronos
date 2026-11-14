@@ -20,7 +20,7 @@ import { SignatureTimer } from '../signature/SignatureTimer';
 import { useOptionalTheme } from '../theme/ThemeProvider';
 import { Widgets } from '../widgets/Widgets';
 import { Cushion } from './Cushion';
-import { cushion, overrunMs } from './cushion';
+import { cushion, overrunMs } from './cushionModel';
 import { HoldButton, useHold } from './HoldButton';
 import { keyAction, targetOf } from './keys';
 import { useTimer } from './TimerDigits';
