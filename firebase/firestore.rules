@@ -21,8 +21,26 @@ service cloud.firestore {
           && (!('fw' in d) || d.fw is map)
           && d.size() < 80;
       }
+      // Schema v3 fields (docs/SYNC.md). Absent fields pass (documents written by v2 devices);
+      // the app's own validators are the real gate, these keep a bad client from storing junk.
+      function shape() {
+        let d = request.resource.data;
+        return (collection != 'events'
+            || ((!('durationMin' in d) || (d.durationMin is int && d.durationMin >= 1 && d.durationMin <= 1440))
+              && (d.get('startMin', null) == null) == (d.get('endMin', null) == null)))
+          && (collection != 'ideas' || d.get('projectId', null) == null || d.projectId is string)
+          && (collection != 'blocks' || !('auto' in d) || d.auto is bool)
+          && (collection != 'settings'
+            || ((!('themeSchedule' in d) || (d.themeSchedule is list && d.themeSchedule.size() <= 24))
+              && (!('weeklyFocusTargetH' in d) || (d.weeklyFocusTargetH is number && d.weeklyFocusTargetH >= 0 && d.weeklyFocusTargetH <= 168))
+              && (!('sound' in d) || d.sound is map)
+              && (!('energy' in d) || d.energy is map)
+              && (!('widgets' in d) || d.widgets is map)
+              && (!('planning' in d) || d.planning is map)
+              && (!('parserReports' in d) || (d.parserReports is list && d.parserReports.size() <= 200))));
+      }
       allow read: if owner() && known();
-      allow create, update: if owner() && known() && valid();
+      allow create, update: if owner() && known() && valid() && shape();
       allow delete: if false;
     }
     match /{document=**} {

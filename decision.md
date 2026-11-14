@@ -194,6 +194,44 @@ If `settings/main` or `timer/current` fails validation at load, it is quarantine
 The test suite found four bugs, all fixed with regression tests: (1) appended sortKeys grew a character every ~6 appends and failed validation after ~385 tasks: appending now bumps the first bumpable digit (one character per ~61 appends), migration/import keys are balanced and equal-length, and the length limit is 512; (2) `SyncEngine.start()` did not reset seeding, so switching account in one run never uploaded existing data; (3) restoring a snapshot dropped records made after it without syncing that: they are now recycled, so the restore reaches every device; (4) the MCP bridge said "not running" instead of "the integration is off" on a fresh install.
 
 
+## Phase 2+3, checkpoint A (schema v3 and planning)
+
+### D-127 Schema v3 reuses the Phase 1 version gate
+`SCHEMA_V` is 3 and `Data.schema` is 3. `migrate()` accepts schema 1, 2 and 3 and runs v1 -> v2 -> v3 per record (`upgradeRecord`): it only adds missing v3 fields (event `durationMin`, note `projectId`, block `auto`, the new settings, filled deep from defaults) and never rewrites a value that is there, so it is lossless and idempotent (tests/core/migrateV3.test.ts on `tests/fixtures/v2-josef.json`). Every record is stamped `v: 3`, so a Phase 1 client (accepts `v <= 2`) sees a newer record and goes read-only (D-104) instead of writing v2 shapes over v3 data. A record pulled from a v2 device (a new event without `durationMin`) is upgraded in `mergeRemote` before validation rather than quarantined. A newer file (schema 4) is refused (`migrate` returns null). There is no cross-midnight flag in the model, so `endMin > startMin` still always holds for placed events; the PHASE23 wording "unless the cross-midnight flag is set" is not implemented (nothing can create such an event).
+
+### D-128 Unplaced events ("to place")
+`CalEvent.startMin` and `endMin` are both null or both set (validators and `recordProblem`); only a one-off event (`date` not null) may be unplaced. `durationMin` (default 60) is the length: a placed event keeps it equal to `endMin - startMin` (event.create/update set it), an unplaced one uses it. `expandEvents` skips events without times, so gaps, time left, prep nudges and `upcoming` ignore them; `unplacedOn(d, date)` is the tray. Command `event.place {id, startMin}` sets `startMin` and `endMin = startMin + durationMin` (refuses past midnight and an event that already has a time). An edit exception cannot make a recurring event unplaced.
+
+### D-129 New settings and device fields
+Synced settings: `themeSchedule`, `weeklyFocusTargetH`, `sound`, `energy`, `widgets`, `parserReports`, `planning` (defaults as in the prompt), all validated in `validateSettings`. `parserReports` is newest-last, capped at 200 by the `parser.report` command and by `migrate`; each string is cut to 300/500/500 characters (input/expected/actual) so 200 reports stay far below Firestore's 1 MiB document limit. Device settings gain `composerProjectId` and `onboarded`. The synced `Settings.onboarded` from v2 is kept as is (the schedule setup guide still uses it); the device flag is the per-machine onboarding.
+
+### D-130 MCP: Log tools, and the parser hook for add_task is left open
+Added `post_log {body, projectId?}` (a note via `idea.add`, now with `projectId`), `search_log {query}` (notes only), `list_unplaced {date?}` (omitted date = every unplaced event from today on) and `place_event {eventId, startMin}` (refused with the reason on overlap, like `place_block`). `get_day` also returns `unplaced`. Safety rules unchanged: no hard deletes, 30 writes a minute, undo tokens. The parser-backed `text` argument of `add_task` is not wired yet: there is a TODO(D-130) at the top of the `add_task` handler. The hub adds the argument to the tool schema, calls `parse` with `source: 'claude'` and, if confidence is not high, returns the parse for Claude to confirm.
+
+### D-131 Estimates
+`estimateFor(d, task)`: the task's own estimate; else, with `planning.learnEstimates`, the median actual focus time (the larger of `workMs` and its work sessions) of the last 5 finished tasks (not killed, with a measured time above 0) that share the project or the tag, when there are at least 3, rounded to 5 minutes and kept within 5-480; else `planning.defaultBlockMin`. Tasks without a project and tag never learn.
+
+### D-132 Auto-plan
+Free time comes from `timeLeft` (fixed events padded by the transition variant, the meal reserve, the gap filter, the end-of-day buffer, every existing block), starting at `now` snapped up to `snapMin` for today and at the day start for later days. "Prep" in the prompt is read as that padding, not as prep nudges. Candidates: open tasks that were not started and have no block on that date or later, ordered by priority, due date (none last), `sortKey`, id. First fit, no splitting: a task longer than every remaining gap is reported as unplaced and a shorter one behind it may still fit. Blocks are `auto: true` with the deterministic id `ab-<taskId>-<date>`, so two devices planning the same morning write one block and running it twice adds nothing. It never reads or touches a manual block.
+
+### D-133 Re-plan
+Movable = auto blocks of today that have already ended, whose task is open and was never started. They are lifted out, then placed again in their original order into the gaps from now on; a block that finds no room stays where it is (the end-of-day review still sees its task). In-progress, started, finished and future auto blocks and every manual block are untouched.
+
+### D-134 End-of-day review
+Asked: open tasks with a block on the day, or due on or before it, except the task being timed right now and overdue tasks already answered "unscheduled" in an earlier review. Due at `dayEndMin - bufferMin`, or on demand. `review.submit {date, outcomes}` applies the answers (done = finish, dropped = close with a fixed reason, unscheduled = remove the day's blocks, tomorrow = remove them and place the task as an auto block next day if it fits, else it stays unscheduled), then writes `reviews/review-<date>`; its existence on any device means reviewed, so nobody is asked twice and a second submit is refused. Answering a subset is allowed; the rest are not asked again. A finished task keeps its block as history.
+
+### D-135 Wellness
+`breakDue(d, now, shown)`: continuous focus = work sessions plus the slice running now, merged across gaps shorter than 5 minutes (a 5-minute gap counts as a break taken). The prompt is for a block that ended at most 10 minutes ago, whose chain was at least `breakAfterMin` long at the block's end, only while no block is in progress (back-to-back blocks suppress it) and not after 5 quiet minutes. Which prompts were shown is device-local, passed in by the caller.
+
+### D-136 Planning commands are one commit and one undo
+`plan.auto`, `plan.replan`, `review.submit` return `undo: RevertOp[]` (the previous values of exactly the fields they changed, from `core/undo.revertOpsBetween`, the same function the MCP undo tokens use). Passing it to `records.revert` undoes the whole command as one action. `records.revert` is internal and is not parsed from IPC (it would let a renderer write arbitrary fields), so the UI must keep the ops in main behind a token like the MCP does, or main exposes a `plan.undo`. `Result.id` carries the count placed/moved (`plan.*`) or the review id.
+
+### D-137 Audit changes
+New rule: no Electron or Node imports or APIs in `src/core/parser`. `chrono-node` is allowed as an import inside `src/core/parser` only and in the dependency allowlist (pinned, D13 of the parser notes), and `@fontsource/*` packages are allowed (fonts are never loaded from a CDN). The "typed finish phrase is gone" check is unchanged; `docs/PHASE23_PROMPT.md` was reworded so it no longer quotes the old sentence.
+
+### D-138 Firestore rules for v3
+Rules stay generic per collection, plus a `shape()` check for the v3 fields: event `durationMin` an int 1-1440 and times both null or both set, note `projectId` a string or null, block `auto` a bool, settings lists/maps for `themeSchedule` (<= 24), `parserReports` (<= 200), `sound`, `energy`, `widgets`, `planning`, and `weeklyFocusTargetH` a number 0-168. Absent fields pass, so documents from v2 devices are still writable. Not run against the emulator (D-124); the manual rule checks in docs/SYNC.md still apply.
+
 # Parser
 
 # decision.md (parser)

@@ -3,7 +3,7 @@
 ## Layers
 
 ```
-src/core      pure TypeScript: model, repo, time, timer, tasks, sync engine, search, MCP handlers, commands, validation, format
+src/core      pure TypeScript: model, repo, time, timer, tasks, planning, sync engine, search, MCP handlers, commands, validation, format, undo
 src/main      Electron shell: controller, store, windows, tray, shortcuts, IPC, shelf, notifications,
               sync/ (Firestore provider, Google sign-in, manager), mcp/ (loopback endpoint)
 src/bridge    the stdio MCP server Claude Desktop runs (dist/chronos-mcp.js)
@@ -46,7 +46,7 @@ Timer ticks are never records. Main runs a 250 ms tick only while a timer runs (
 
 ## Persistence
 
-`%APPDATA%\Chronos\chronos-data.json` holds all synced data (`Data`, schema 2: one record map per collection plus `tombs` for purge stubs). Beside it: `outbox.json` (writes waiting for Firestore), `conflicts.json`, `quarantine.json`, `snapshots\` (daily, 7 kept) and `device.json`. Loading runs `migrate()` (v1 → v2, lossless) and moves records that fail validation to quarantine. Writes use Monolith's procedure: `.tmp` + fsync, previous file to `.bak`, atomic rename. A corrupt file falls back to `.bak`. `device.json` holds the device-local settings (never synced) and sync cursors; `heartbeat` holds the last time a running timer was seen alive. The store sits behind a `Persistence` interface so SQLite can replace it (D-004).
+`%APPDATA%\Chronos\chronos-data.json` holds all synced data (`Data`, schema 3: one record map per collection plus `tombs` for purge stubs). Beside it: `outbox.json` (writes waiting for Firestore), `conflicts.json`, `quarantine.json`, `snapshots\` (daily, 7 kept) and `device.json`. Loading runs `migrate()` (v1 → v2 → v3, lossless and idempotent) and moves records that fail validation to quarantine. Writes use Monolith's procedure: `.tmp` + fsync, previous file to `.bak`, atomic rename. A corrupt file falls back to `.bak`. `device.json` holds the device-local settings (never synced) and sync cursors; `heartbeat` holds the last time a running timer was seen alive. The store sits behind a `Persistence` interface so SQLite can replace it (D-004).
 
 ## Window model
 
@@ -69,3 +69,7 @@ A local MCP server: Claude Desktop runs the bridge, which forwards to a loopback
 ## Search
 
 `core/search` keeps one MiniSearch index over tasks, notes, projects and events, updated incrementally from Data (only changed record objects are re-indexed). It serves the MCP `search` tool now and the Ctrl+K palette later.
+
+## Planning (schema v3, Checkpoint A)
+
+`core/planning/`: `estimates.ts` (default block, learned median), `plan.ts` (free gaps, auto-plan, re-plan), `review.ts` (who is asked at the end of the day, once across devices), `wellness.ts` (break prompt). All pure. Effects go through the single commit path as commands `plan.auto`, `plan.replan`, `review.submit`; each returns `undo` ops (`core/undo.ts`, shared with the MCP undo tokens) that `records.revert` applies as one action. Unplaced events (no time yet) are skipped by `expandEvents` and listed by `unplacedOn`. Rules and edge cases: decision.md D-127 to D-136.

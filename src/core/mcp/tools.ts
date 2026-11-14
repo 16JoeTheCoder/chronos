@@ -69,6 +69,8 @@ export const TOOLS: ToolDef[] = [
   { name: 'get_stats', write: false, description: 'Focus time per tag and per project, estimate vs actual for tasks finished, and counts of finished and dropped tasks, between two dates (inclusive).', inputSchema: obj({ from: DATE, to: DATE }, ['from', 'to']) },
   { name: 'get_review', write: false, description: 'The end-of-day review of a date, if that day was reviewed.', inputSchema: obj({ date: DATE }, ['date']) },
   { name: 'list_notes', write: false, description: 'Notes, newest first.', inputSchema: obj({ limit: { type: 'integer', minimum: 1, maximum: 100 } }) },
+  { name: 'search_log', write: false, description: 'Search Log posts (notes) by text, with their project.', inputSchema: obj({ query: { type: 'string', minLength: 1, maxLength: 200 } }, ['query']) },
+  { name: 'list_unplaced', write: false, description: 'Fixed events with a date and length but no time yet ("to place"): that day, or all from today on. See place_event.', inputSchema: obj({ date: DATE }) },
   // ---- Write (each returns the changed record and an undoToken) ----
   { name: 'add_task', write: true, description: 'Add a task (structured fields only). It lands in the inbox; give a finishCondition so it can be focused.', inputSchema: obj({ ...TASK_FIELDS, kind: { type: 'string', enum: ['task', 'sprint'] } }, ['title']) },
   { name: 'update_task', write: true, description: 'Change fields of a task. Only the fields given change.', inputSchema: obj({ id: ID, patch: obj(TASK_FIELDS) }, ['id', 'patch']) },
@@ -85,6 +87,8 @@ export const TOOLS: ToolDef[] = [
     inputSchema: obj({ eventId: ID, date: DATE, patch: obj({ title: { type: 'string', minLength: 1, maxLength: 120 }, startMin: MINUTE('Start'), endMin: MINUTE('End') }) }, ['eventId', 'date', 'patch']),
   },
   { name: 'add_note', write: true, description: 'Save a note.', inputSchema: obj({ body: { type: 'string', minLength: 1, maxLength: 20000 } }, ['body']) },
+  { name: 'post_log', write: true, description: 'Post a note to the Log feed, optionally under a project. Use add_task for work to do.', inputSchema: obj({ body: { type: 'string', minLength: 1, maxLength: 20000 }, projectId: ID }, ['body']) },
+  { name: 'place_event', write: true, description: 'Give an unplaced event its time (keeps its length). Refused, with the reason, on overlap.', inputSchema: obj({ eventId: ID, startMin: MINUTE('Start') }, ['eventId', 'startMin']) },
   { name: 'add_project', write: true, description: 'Create a project (default columns: To do, Doing, Done).', inputSchema: obj({ name: { type: 'string', minLength: 1, maxLength: 80 }, color: COLOR, columns: { type: 'array', items: { type: 'string', minLength: 1, maxLength: 40 }, maxItems: 12 } }, ['name']) },
   { name: 'move_card', write: true, description: 'Move a project task to a column, before another card (or to the end).', inputSchema: obj({ taskId: ID, columnId: { type: 'string', minLength: 1, maxLength: 60 }, beforeTaskId: ID }, ['taskId', 'columnId']) },
   { name: 'undo', write: true, description: 'Undo an earlier write by its undoToken.', inputSchema: obj({ undoToken: { type: 'string', pattern: '^[\\w-]{1,80}$' } }, ['undoToken']) },

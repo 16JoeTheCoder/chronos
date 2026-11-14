@@ -3,18 +3,23 @@
 // that touch the machine (gap answer, device settings, takeover, import/export)
 // and routes everything else through apply(), then persists and broadcasts.
 
-import type { Block, CalEvent, Closure, Coll, Data, Priority, ProjectColumn, Scope, Settings, Tag, TagColor, Task, TaskRecurrence, TaskSource, TimerConfig, TimerEvent } from './model/types';
-import { TAG_COLORS } from './model/types';
+import type { Block, CalEvent, Closure, Coll, Data, Priority, ProjectColumn, ReviewAction, Scope, Settings, Tag, TagColor, Task, TaskRecurrence, TaskSource, TimerConfig, TimerEvent } from './model/types';
+import { PARSER_REPORTS_MAX, TAG_COLORS } from './model/types';
 import { defaultColumns } from './model/defaults';
-import { exceptionId, newId } from './model/ids';
+import { exceptionId, isId, newId, reviewId } from './model/ids';
 import { keyBetween } from './model/sortKey';
+import { REPORT_MAX } from './validation';
+import { autoPlan, byPlanOrder, placeTasks, replan } from './planning/plan';
+import { isReviewed } from './planning/review';
+import { revertOpsBetween } from './undo';
 import { create, get, live, recycle, restore, settingsOf, timerOf, update, updateSettings, type Ctx, type Fields } from './repo/repo';
 import { spawnNext } from './tasks/recurrence';
 import { checkpointDue, nextCheckpoint } from './tasks/sprints';
 import { activeTask, blockSpan, blocksOn, deriveQueue, isLocked, isOpen, maxOrder, minOrder, normalize, ownsTimer, recordSlices, stopTask, todayOf, trackedMs } from './tasks/tasks';
 import { expandEvents } from './time/schedule';
+import { addDays, zonedToUtc } from './time/zone';
 import { overlaps } from './time/intervals';
-import { zonedToUtc } from './time/zone';
+
 import { advance, pauseAt, skipPhase, start, reset } from './timer/timer';
 import {
   isDate, isDropReason, isMinute, validateEventFields, validateSettings, validateTag, validateTaskFields, type Errors,
@@ -55,7 +60,8 @@ export interface RevertOp {
   prev: Record<string, unknown> | null;
 }
 
-export type EventInput = Pick<CalEvent, 'title' | 'tagId' | 'scope' | 'tz' | 'startMin' | 'endMin' | 'date' | 'recur' | 'notes'>;
+/** startMin and endMin both null = an unplaced event ("to place"); `durationMin` (default 60) is then its length. */
+export type EventInput = Pick<CalEvent, 'title' | 'tagId' | 'scope' | 'tz' | 'startMin' | 'endMin' | 'date' | 'recur' | 'notes'> & { durationMin?: number };
 export type ClosureInput = Pick<Closure, 'name' | 'startDate' | 'endDate' | 'scopes' | 'confirmed'>;
 export type TagInput = Pick<Tag, 'name' | 'color' | 'kind'>;
 export type SettingsPatch = Partial<Omit<Settings, 'id' | 'createdAt' | 'updatedAt' | 'deviceId' | 'deletedAt' | 'v'>>;
@@ -79,6 +85,8 @@ export type Command =
   | { type: 'block.move'; id: string; date: string; startMin: number; endMin: number }
   | { type: 'event.create'; input: EventInput }
   | { type: 'event.update'; id: string; input: EventInput }
+  /** Give an unplaced event its time: start at `startMin`, length = its durationMin. */
+  | { type: 'event.place'; id: string; startMin: number }
   | { type: 'event.skip'; id: string; date: string }
   | { type: 'event.editOn'; id: string; date: string; patch: OccurrencePatch }
   | { type: 'project.create'; name: string; color?: TagColor; columns?: string[] }
@@ -86,7 +94,15 @@ export type Command =
   | { type: 'closure.update'; id: string; input: ClosureInput }
   | { type: 'tag.create'; input: TagInput }
   | { type: 'tag.update'; id: string; input: TagInput }
-  | { type: 'idea.add'; text: string; taskId: string | null }
+  | { type: 'idea.add'; text: string; taskId: string | null; projectId?: string | null }
+  /** Fill the free gaps of `date` (default today) with unplanned tasks as auto blocks. Undoable as one action: the result carries `undo`. `id` = number of blocks placed. */
+  | { type: 'plan.auto'; date?: string }
+  /** Move today's missed, unstarted auto blocks forward into the remaining gaps. Result carries `undo`; `id` = number moved. */
+  | { type: 'plan.replan'; date?: string }
+  /** Answer the end-of-day review of `date`: writes reviews/review-<date> (once) and applies every answer. Result carries `undo`. */
+  | { type: 'review.submit'; date: string; outcomes: { taskId: string; action: ReviewAction }[] }
+  /** "Report misparse": append to settings.parserReports (newest last, capped at 200). */
+  | { type: 'parser.report'; input: string; expected: string; actual: string }
   /** Internal (MCP undo, snapshot restore): never parsed from IPC. */
   | { type: 'records.revert'; ops: RevertOp[] }
   /** Internal (MCP): log a change Claude made. */
@@ -114,8 +130,9 @@ export type Command =
   | { type: 'data.export' }
   | { type: 'data.openFolder' };
 
-export type Result = { ok: true; id?: string } | { ok: false; error: string; fields?: Errors };
-export type Mutation = { ok: true; d: Data; events: TimerEvent[]; id?: string } | { ok: false; error: string; fields?: Errors };
+/** `undo` (planning commands): pass it to `records.revert` to undo the whole command as one action. */
+export type Result = { ok: true; id?: string; undo?: RevertOp[] } | { ok: false; error: string; fields?: Errors };
+export type Mutation = { ok: true; d: Data; events: TimerEvent[]; id?: string; undo?: RevertOp[] } | { ok: false; error: string; fields?: Errors };
 
 const ok = (d: Data, events: TimerEvent[] = [], id?: string): Mutation => ({ ok: true, d, events, id });
 const fail = (error: string, fields?: Errors): Mutation => ({ ok: false, error, fields });
@@ -184,8 +201,14 @@ function newTask(d: Data, input: TaskInput): Fields<'tasks'> {
 /** Apply a data command. Pure: (data, command, clock+device) -> new data. */
 export function apply(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mutation {
   const res = applyRaw(d, cmd, ctx);
-  return res.ok ? { ...res, d: normalize(res.d, ctx) } : res;
+  if (!res.ok) return res;
+  const next = normalize(res.d, ctx);
+  return UNDOABLE.has(cmd.type) ? { ...res, d: next, undo: revertOpsBetween(d, next, ctx.now) } : { ...res, d: next };
 }
+
+/** Commands that change many records at once and hand back one undo step. */
+const UNDOABLE = new Set<Command['type']>(['plan.auto', 'plan.replan', 'review.submit']);
+const REVIEW_ACTIONS: ReviewAction[] = ['tomorrow', 'unscheduled', 'dropped', 'done'];
 
 function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mutation {
   switch (cmd.type) {
@@ -381,11 +404,66 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
       const e = validateEventFields(cmd.input as unknown as Record<string, unknown>);
       return checked(e, () => {
         const i = cmd.input;
-        const fields = { title: i.title.trim(), tagId: i.tagId && get(d, 'tags', i.tagId) ? i.tagId : null, scope: i.scope, tz: i.tz, startMin: i.startMin, endMin: i.endMin, date: i.date, recur: i.recur ? { ...i.recur, weekdays: [...new Set(i.recur.weekdays)].sort() } : null, notes: i.notes };
+        const durationMin = i.startMin !== null && i.endMin !== null ? i.endMin - i.startMin : (i.durationMin ?? 60);
+        const fields = { title: i.title.trim(), tagId: i.tagId && get(d, 'tags', i.tagId) ? i.tagId : null, scope: i.scope, tz: i.tz, startMin: i.startMin, endMin: i.endMin, durationMin, date: i.date, recur: i.recur ? { ...i.recur, weekdays: [...new Set(i.recur.weekdays)].sort() } : null, notes: i.notes };
         if (cmd.type === 'event.update') return get(d, 'events', cmd.id) ? ok(update(d, 'events', cmd.id, fields, ctx)) : fail('Event not found.');
         const r = create(d, 'events', fields, ctx);
         return ok(r.d, [], r.rec.id);
       });
+    }
+
+    case 'plan.auto':
+    case 'plan.replan': {
+      const date = cmd.date ?? todayOf(d, ctx.now);
+      if (!isDate(date) || date < todayOf(d, ctx.now)) return fail('Plan today or later.');
+      if (cmd.type === 'plan.auto') {
+        const r = autoPlan(d, date, ctx);
+        return ok(r.d, [], String(r.placed.length));
+      }
+      const r = replan(d, date, ctx);
+      return ok(r.d, [], String(r.moved.length));
+    }
+
+    case 'review.submit': {
+      if (!isDate(cmd.date)) return fail('Invalid date.');
+      if (isReviewed(d, cmd.date)) return fail('That day is already reviewed.');
+      const outcomes = Array.isArray(cmd.outcomes) ? cmd.outcomes : [];
+      if (outcomes.length > 1000 || !outcomes.every((o) => o && isId(o.taskId) && REVIEW_ACTIONS.includes(o.action)) || new Set(outcomes.map((o) => o.taskId)).size !== outcomes.length) return fail('Invalid review answers.');
+      let out = d;
+      const tomorrow: Task[] = [];
+      for (const o of outcomes) {
+        const t = get(out, 'tasks', o.taskId);
+        if (!t || t.deletedAt !== null || !isOpen(t)) continue; // finished or dropped elsewhere meanwhile
+        if (o.action === 'done' || o.action === 'dropped') {
+          const r = applyRaw(out, o.action === 'done' ? { type: 'task.finish', id: t.id } : { type: 'task.close', id: t.id, reason: 'Dropped in the day review.' }, ctx);
+          if (!r.ok) return r;
+          out = r.d;
+          continue;
+        }
+        for (const b of live(out, 'blocks')) if (b.taskId === t.id && b.date === cmd.date) out = recycle(out, 'blocks', b.id, ctx);
+        if (o.action === 'tomorrow') tomorrow.push(t);
+      }
+      const next = addDays(cmd.date, 1);
+      const free = tomorrow.filter((t) => !live(out, 'blocks').some((b) => b.taskId === t.id && b.date === next));
+      if (free.length) out = placeTasks(out, next, free.sort(byPlanOrder), ctx).d;
+      out = create(out, 'reviews', { date: cmd.date, outcomes: outcomes.map((o) => ({ taskId: o.taskId, action: o.action })) }, ctx, reviewId(cmd.date)).d;
+      return ok(out, [], reviewId(cmd.date));
+    }
+
+    case 'parser.report': {
+      const input = typeof cmd.input === 'string' ? cmd.input.trim() : '';
+      if (!input) return fail('Type the misread line.');
+      const cut = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+      const report = { at: ctx.now, input: input.slice(0, REPORT_MAX.input), expected: cut(cmd.expected, REPORT_MAX.expected), actual: cut(cmd.actual, REPORT_MAX.actual) };
+      return ok(updateSettings(d, { parserReports: [...settingsOf(d).parserReports, report].slice(-PARSER_REPORTS_MAX) }, ctx));
+    }
+
+    case 'event.place': {
+      const ev = get(d, 'events', cmd.id);
+      if (!ev || ev.deletedAt !== null) return fail('Event not found.');
+      if (ev.startMin !== null || ev.endMin !== null) return fail('It already has a time.');
+      if (!isMinute(cmd.startMin) || cmd.startMin + ev.durationMin > 1440) return fail('It does not fit in the day.');
+      return ok(update(d, 'events', ev.id, { startMin: cmd.startMin, endMin: cmd.startMin + ev.durationMin }, ctx), [], ev.id);
     }
 
     case 'event.skip': {
@@ -406,7 +484,7 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
       const next = { title: pick('title'), startMin: pick('startMin'), endMin: pick('endMin'), tagId: pick('tagId') };
       const e: Errors = {};
       if (next.title !== null && (typeof next.title !== 'string' || !next.title.trim() || next.title.length > 120)) e.title = 'Title must be 1-120 characters.';
-      if ((next.startMin !== null && !isMinute(next.startMin)) || (next.endMin !== null && !isMinute(next.endMin)) || (next.endMin ?? ev.endMin) <= (next.startMin ?? ev.startMin)) e.time = 'End must be after start.';
+      if ((next.startMin !== null && !isMinute(next.startMin)) || (next.endMin !== null && !isMinute(next.endMin)) || (next.endMin ?? ev.endMin ?? 0) <= (next.startMin ?? ev.startMin ?? 0)) e.time = 'End must be after start.';
       if (next.tagId !== null && !get(d, 'tags', next.tagId)) e.tagId = 'Unknown tag.';
       return checked(e, () => {
         const fields = { eventId: ev.id, date: cmd.date, kind: 'edit' as const, title: typeof next.title === 'string' ? next.title.trim() : null, startMin: next.startMin as number | null, endMin: next.endMin as number | null, tagId: next.tagId as string | null };
@@ -470,7 +548,8 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
     case 'idea.add': {
       const text = cmd.text.trim();
       if (!text || text.length > 20_000) return fail('Type a thought first (up to 20,000 characters).');
-      const r = create(d, 'ideas', { text: text.slice(0, 1000), body: text, taskId: cmd.taskId && get(d, 'tasks', cmd.taskId) ? cmd.taskId : null, reviewed: false, parsedTaskIds: [] }, ctx);
+      if (cmd.projectId && !liveProject(d, cmd.projectId)) return fail('Unknown project.', { projectId: 'Unknown project.' });
+      const r = create(d, 'ideas', { text: text.slice(0, 1000), body: text, taskId: cmd.taskId && get(d, 'tasks', cmd.taskId) ? cmd.taskId : null, projectId: cmd.projectId ?? null, reviewed: false, parsedTaskIds: [] }, ctx);
       return ok(r.d, [], r.rec.id);
     }
     case 'idea.review':

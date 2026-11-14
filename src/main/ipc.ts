@@ -71,8 +71,9 @@ function pickEvent(v: unknown): EventInput | null {
     tagId: nullableId(v.tagId),
     scope: v.scope as EventInput['scope'],
     tz: str(v.tz, 64),
-    startMin: num(v.startMin),
-    endMin: num(v.endMin),
+    startMin: v.startMin === null ? null : num(v.startMin),
+    endMin: v.endMin === null ? null : num(v.endMin),
+    ...(v.durationMin !== undefined ? { durationMin: num(v.durationMin) } : {}),
     date: v.date === null ? null : str(v.date, 10),
     recur: r
       ? {
@@ -120,6 +121,14 @@ function pickSettings(v: Obj): SettingsPatch {
   if ('runwayPosition' in v) p.runwayPosition = v.runwayPosition as SettingsPatch['runwayPosition'];
   if ('reduceMotion' in v) p.reduceMotion = v.reduceMotion as boolean | null;
   if ('onboarded' in v) p.onboarded = v.onboarded as boolean;
+  if ('themeId' in v) p.themeId = str(v.themeId, 40);
+  if (Array.isArray(v.themeSchedule)) p.themeSchedule = v.themeSchedule.slice(0, 24).map((x) => ({ from: str(isObj(x) ? x.from : '', 5), themeId: str(isObj(x) ? x.themeId : '', 40) }));
+  if ('weeklyFocusTargetH' in v) p.weeklyFocusTargetH = num(v.weeklyFocusTargetH);
+  if (isObj(v.sound)) p.sound = { enabled: v.sound.enabled as boolean, volume: num(v.sound.volume), muteInFocus: v.sound.muteInFocus as boolean };
+  const flags = <K extends string>(o: unknown, keys: readonly K[]) => Object.fromEntries(keys.map((k) => [k, (isObj(o) ? o[k] : undefined) as boolean])) as Record<K, boolean>;
+  if (isObj(v.energy)) p.energy = flags(v.energy, ['livingReactor', 'holographicDepth', 'reactiveData', 'motion'] as const);
+  if (isObj(v.widgets)) p.widgets = flags(v.widgets, ['day', 'momentum', 'notes', 'wellness'] as const);
+  if (isObj(v.planning)) p.planning = { defaultBlockMin: num(v.planning.defaultBlockMin), learnEstimates: v.planning.learnEstimates as boolean, breakAfterMin: num(v.planning.breakAfterMin) };
   return p;
 }
 
@@ -131,6 +140,8 @@ function pickDevice(v: Obj): Extract<Command, { type: 'device.update' }>['patch'
   if (isObj(v.shortcuts)) p.shortcuts = { toggle: str(v.shortcuts.toggle, 60), startPause: str(v.shortcuts.startPause, 60), capture: str(v.shortcuts.capture, 60) };
   if ('displayId' in v) p.displayId = v.displayId === null ? null : num(v.displayId);
   if ('stackFolder' in v) p.stackFolder = v.stackFolder === null ? null : str(v.stackFolder, 1000);
+  if ('composerProjectId' in v) p.composerProjectId = nullableId(v.composerProjectId);
+  if ('onboarded' in v) p.onboarded = v.onboarded as boolean;
   return p;
 }
 
@@ -207,7 +218,18 @@ export function parseCommand(raw: unknown): Command | null {
       return rid ? { type: 'tag.update', id: rid, input } : null;
     }
     case 'idea.add':
-      return { type: 'idea.add', text: str(raw.text, 1000), taskId: nullableId(raw.taskId) };
+      return { type: 'idea.add', text: str(raw.text, 20_000), taskId: nullableId(raw.taskId), projectId: nullableId(raw.projectId) };
+    case 'event.place':
+      return rid ? { type: 'event.place', id: rid, startMin: num(raw.startMin) } : null;
+    case 'plan.auto':
+    case 'plan.replan':
+      return { type: raw.type, ...(typeof raw.date === 'string' ? { date: str(raw.date, 10) } : {}) };
+    case 'review.submit': {
+      const outcomes = Array.isArray(raw.outcomes) ? raw.outcomes.slice(0, 1000).map((o) => (isObj(o) ? { taskId: id(o.taskId) ?? '', action: o.action as 'done' } : { taskId: '', action: 'done' as const })) : [];
+      return { type: 'review.submit', date: str(raw.date, 10), outcomes };
+    }
+    case 'parser.report':
+      return { type: 'parser.report', input: str(raw.input, 300), expected: str(raw.expected, 500), actual: str(raw.actual, 500) };
     case 'idea.review':
       return rid && typeof raw.reviewed === 'boolean' ? { type: 'idea.review', id: rid, reviewed: raw.reviewed } : null;
     case 'idea.toTask':

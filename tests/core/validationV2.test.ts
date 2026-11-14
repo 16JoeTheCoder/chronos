@@ -265,9 +265,9 @@ describe('validateDevice v2 fields', () => {
 describe('recordProblem', () => {
   const t = S.task as unknown as Obj;
   it('rejects a schemaVersion newer than this app', () => {
-    expect(recordProblem('tasks', { ...t, v: 3 })).toMatch(/newer/);
+    expect(recordProblem('tasks', { ...t, v: 4 })).toMatch(/newer/);
     expect(recordProblem('tasks', { ...t, v: 99 })).toMatch(/newer/);
-    expect(recordProblem('tasks', { ...t, v: 2 })).toBeNull();
+    expect(recordProblem('tasks', { ...t, v: 3 })).toBeNull();
     expect(recordProblem('tasks', { ...t, v: 1 })).toBeNull();
   });
   it('rejects bad v', () => {

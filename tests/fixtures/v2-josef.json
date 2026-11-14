@@ -1,0 +1,1156 @@
+{
+  "schema": 2,
+  "tasks": {
+    "t-done-quiz": {
+      "id": "t-done-quiz",
+      "createdAt": 1792202400000,
+      "updatedAt": 1792202700000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "kind": "task",
+      "title": "Vocabulary quiz prep",
+      "finishCondition": "Scored 80% on the practice quiz",
+      "notes": "",
+      "tagId": "tag-hist",
+      "priority": "should",
+      "estimateMin": 30,
+      "dueEventId": null,
+      "order": 0.5,
+      "status": "done",
+      "outcome": "finished",
+      "dropCount": 0,
+      "parkedAt": null,
+      "workMs": 2100000,
+      "breakMs": 0,
+      "pomodorosCompleted": 0,
+      "startedAt": 1792288800000,
+      "completedAt": 1792292400000,
+      "timer": {
+        "mode": "countdown",
+        "countdown": {
+          "durationMs": 1500000,
+          "onExpire": "continue"
+        },
+        "pomodoro": {
+          "workMs": 1500000,
+          "shortBreakMs": 300000,
+          "longBreakMs": 900000,
+          "sessionsBeforeLongBreak": 4,
+          "autoStartBreaks": false,
+          "autoStartWork": false
+        }
+      },
+      "runtime": {
+        "status": "idle",
+        "phase": "work",
+        "phaseElapsedMs": 0,
+        "sliceStartedAt": null,
+        "cycleSessions": 0,
+        "expiredNotified": false
+      },
+      "checkpointEveryMin": null,
+      "nextCheckpointMs": null,
+      "dueDate": null,
+      "dueTime": null,
+      "projectId": null,
+      "columnId": null,
+      "recurrence": null,
+      "recurrenceParentId": null,
+      "source": "typed",
+      "sortKey": "6",
+      "fv": {
+        "title": 1700000000000100,
+        "status": 1700000000000200
+      },
+      "fw": {
+        "title": "dev-josef-pc",
+        "status": "dev-josef-pc"
+      }
+    },
+    "t-sprint-app": {
+      "id": "t-sprint-app",
+      "createdAt": 1792461600000,
+      "updatedAt": 1792461900000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "kind": "sprint",
+      "title": "Chronos sync prototype",
+      "finishCondition": "Two devices converge in the simulator",
+      "notes": "",
+      "tagId": "tag-chronos",
+      "priority": "must",
+      "estimateMin": null,
+      "dueEventId": null,
+      "order": 1,
+      "status": "doing",
+      "outcome": null,
+      "dropCount": 0,
+      "parkedAt": null,
+      "workMs": 15120000,
+      "breakMs": 1200000,
+      "pomodorosCompleted": 3,
+      "startedAt": 1792720800000,
+      "completedAt": null,
+      "timer": {
+        "mode": "stopwatch",
+        "countdown": {
+          "durationMs": 1500000,
+          "onExpire": "continue"
+        },
+        "pomodoro": {
+          "workMs": 1500000,
+          "shortBreakMs": 300000,
+          "longBreakMs": 900000,
+          "sessionsBeforeLongBreak": 4,
+          "autoStartBreaks": false,
+          "autoStartWork": false
+        }
+      },
+      "runtime": {
+        "status": "paused",
+        "phase": "work",
+        "phaseElapsedMs": 15120000,
+        "sliceStartedAt": null,
+        "cycleSessions": 3,
+        "expiredNotified": false
+      },
+      "checkpointEveryMin": 120,
+      "nextCheckpointMs": 21600000,
+      "dueDate": null,
+      "dueTime": null,
+      "projectId": null,
+      "columnId": null,
+      "recurrence": null,
+      "recurrenceParentId": null,
+      "source": "typed",
+      "sortKey": "C",
+      "fv": {
+        "title": 1700000000000100,
+        "status": 1700000000000200
+      },
+      "fw": {
+        "title": "dev-josef-pc",
+        "status": "dev-josef-pc"
+      }
+    },
+    "t-killed-sprint": {
+      "id": "t-killed-sprint",
+      "createdAt": 1791943200000,
+      "updatedAt": 1791943500000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "kind": "sprint",
+      "title": "Landing page experiment",
+      "finishCondition": "Page live with the signup form",
+      "notes": "",
+      "tagId": null,
+      "priority": "should",
+      "estimateMin": null,
+      "dueEventId": null,
+      "order": 2,
+      "status": "done",
+      "outcome": "killed",
+      "dropCount": 0,
+      "parkedAt": null,
+      "workMs": 7200000,
+      "breakMs": 0,
+      "pomodorosCompleted": 0,
+      "startedAt": 1792029600000,
+      "completedAt": 1792116000000,
+      "timer": {
+        "mode": "stopwatch",
+        "countdown": {
+          "durationMs": 1500000,
+          "onExpire": "continue"
+        },
+        "pomodoro": {
+          "workMs": 1500000,
+          "shortBreakMs": 300000,
+          "longBreakMs": 900000,
+          "sessionsBeforeLongBreak": 4,
+          "autoStartBreaks": false,
+          "autoStartWork": false
+        }
+      },
+      "runtime": {
+        "status": "idle",
+        "phase": "work",
+        "phaseElapsedMs": 0,
+        "sliceStartedAt": null,
+        "cycleSessions": 0,
+        "expiredNotified": false
+      },
+      "checkpointEveryMin": 120,
+      "nextCheckpointMs": null,
+      "dueDate": null,
+      "dueTime": null,
+      "projectId": null,
+      "columnId": null,
+      "recurrence": null,
+      "recurrenceParentId": null,
+      "source": "typed",
+      "sortKey": "I",
+      "fv": {
+        "title": 1700000000000100,
+        "status": 1700000000000200
+      },
+      "fw": {
+        "title": "dev-josef-pc",
+        "status": "dev-josef-pc"
+      }
+    },
+    "t-shipped-sprint": {
+      "id": "t-shipped-sprint",
+      "createdAt": 1791770400000,
+      "updatedAt": 1791770700000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "kind": "sprint",
+      "title": "Timetable import",
+      "finishCondition": "Timetable shows on the runway",
+      "notes": "",
+      "tagId": "tag-chronos",
+      "priority": "should",
+      "estimateMin": null,
+      "dueEventId": null,
+      "order": 2.5,
+      "status": "done",
+      "outcome": "shipped",
+      "dropCount": 0,
+      "parkedAt": null,
+      "workMs": 18000000,
+      "breakMs": 0,
+      "pomodorosCompleted": 0,
+      "startedAt": 1791856800000,
+      "completedAt": 1792202400000,
+      "timer": {
+        "mode": "stopwatch",
+        "countdown": {
+          "durationMs": 1500000,
+          "onExpire": "continue"
+        },
+        "pomodoro": {
+          "workMs": 1500000,
+          "shortBreakMs": 300000,
+          "longBreakMs": 900000,
+          "sessionsBeforeLongBreak": 4,
+          "autoStartBreaks": false,
+          "autoStartWork": false
+        }
+      },
+      "runtime": {
+        "status": "idle",
+        "phase": "work",
+        "phaseElapsedMs": 0,
+        "sliceStartedAt": null,
+        "cycleSessions": 0,
+        "expiredNotified": false
+      },
+      "checkpointEveryMin": 120,
+      "nextCheckpointMs": null,
+      "dueDate": null,
+      "dueTime": null,
+      "projectId": null,
+      "columnId": null,
+      "recurrence": null,
+      "recurrenceParentId": null,
+      "source": "typed",
+      "sortKey": "O",
+      "fv": {
+        "title": 1700000000000100,
+        "status": 1700000000000200
+      },
+      "fw": {
+        "title": "dev-josef-pc",
+        "status": "dev-josef-pc"
+      }
+    },
+    "t-calc-hw": {
+      "id": "t-calc-hw",
+      "createdAt": 1792461600000,
+      "updatedAt": 1792461900000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "kind": "task",
+      "title": "Calculus problem set 7",
+      "finishCondition": "All 12 problems solved and checked",
+      "notes": "Chapter 7, integration by parts",
+      "tagId": "tag-math",
+      "priority": "must",
+      "estimateMin": 90,
+      "dueEventId": null,
+      "order": 3,
+      "status": "planned",
+      "outcome": null,
+      "dropCount": 0,
+      "parkedAt": null,
+      "workMs": 0,
+      "breakMs": 0,
+      "pomodorosCompleted": 0,
+      "startedAt": null,
+      "completedAt": null,
+      "timer": {
+        "mode": "countdown",
+        "countdown": {
+          "durationMs": 1500000,
+          "onExpire": "continue"
+        },
+        "pomodoro": {
+          "workMs": 1500000,
+          "shortBreakMs": 300000,
+          "longBreakMs": 900000,
+          "sessionsBeforeLongBreak": 4,
+          "autoStartBreaks": false,
+          "autoStartWork": false
+        }
+      },
+      "runtime": {
+        "status": "idle",
+        "phase": "work",
+        "phaseElapsedMs": 0,
+        "sliceStartedAt": null,
+        "cycleSessions": 0,
+        "expiredNotified": false
+      },
+      "checkpointEveryMin": null,
+      "nextCheckpointMs": null,
+      "dueDate": "2026-10-30",
+      "dueTime": null,
+      "projectId": null,
+      "columnId": null,
+      "recurrence": null,
+      "recurrenceParentId": null,
+      "source": "typed",
+      "sortKey": "V",
+      "fv": {
+        "title": 1700000000000100,
+        "status": 1700000000000200
+      },
+      "fw": {
+        "title": "dev-josef-pc",
+        "status": "dev-josef-pc"
+      }
+    },
+    "t-lab-report": {
+      "id": "t-lab-report",
+      "createdAt": 1792461600000,
+      "updatedAt": 1792461900000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "kind": "task",
+      "title": "Physics lab report",
+      "finishCondition": "Report PDF uploaded to the class portal",
+      "notes": "",
+      "tagId": "tag-math",
+      "priority": "must",
+      "estimateMin": 120,
+      "dueEventId": null,
+      "order": 4,
+      "status": "planned",
+      "outcome": null,
+      "dropCount": 0,
+      "parkedAt": null,
+      "workMs": 0,
+      "breakMs": 0,
+      "pomodorosCompleted": 0,
+      "startedAt": null,
+      "completedAt": null,
+      "timer": {
+        "mode": "countdown",
+        "countdown": {
+          "durationMs": 1500000,
+          "onExpire": "continue"
+        },
+        "pomodoro": {
+          "workMs": 1500000,
+          "shortBreakMs": 300000,
+          "longBreakMs": 900000,
+          "sessionsBeforeLongBreak": 4,
+          "autoStartBreaks": false,
+          "autoStartWork": false
+        }
+      },
+      "runtime": {
+        "status": "idle",
+        "phase": "work",
+        "phaseElapsedMs": 0,
+        "sliceStartedAt": null,
+        "cycleSessions": 0,
+        "expiredNotified": false
+      },
+      "checkpointEveryMin": null,
+      "nextCheckpointMs": null,
+      "dueDate": "2026-11-02",
+      "dueTime": null,
+      "projectId": null,
+      "columnId": null,
+      "recurrence": null,
+      "recurrenceParentId": null,
+      "source": "typed",
+      "sortKey": "b",
+      "fv": {
+        "title": 1700000000000100,
+        "status": 1700000000000200
+      },
+      "fw": {
+        "title": "dev-josef-pc",
+        "status": "dev-josef-pc"
+      }
+    },
+    "t-essay": {
+      "id": "t-essay",
+      "createdAt": 1792461600000,
+      "updatedAt": 1792461900000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "kind": "task",
+      "title": "History essay outline",
+      "finishCondition": "Outline with three sources sent to Ms Rina",
+      "notes": "",
+      "tagId": "tag-hist",
+      "priority": "should",
+      "estimateMin": 45,
+      "dueEventId": null,
+      "order": 5,
+      "status": "inbox",
+      "outcome": null,
+      "dropCount": 1,
+      "parkedAt": 1792807200000,
+      "workMs": 0,
+      "breakMs": 0,
+      "pomodorosCompleted": 0,
+      "startedAt": null,
+      "completedAt": null,
+      "timer": {
+        "mode": "countdown",
+        "countdown": {
+          "durationMs": 1500000,
+          "onExpire": "continue"
+        },
+        "pomodoro": {
+          "workMs": 1500000,
+          "shortBreakMs": 300000,
+          "longBreakMs": 900000,
+          "sessionsBeforeLongBreak": 4,
+          "autoStartBreaks": false,
+          "autoStartWork": false
+        }
+      },
+      "runtime": {
+        "status": "idle",
+        "phase": "work",
+        "phaseElapsedMs": 0,
+        "sliceStartedAt": null,
+        "cycleSessions": 0,
+        "expiredNotified": false
+      },
+      "checkpointEveryMin": null,
+      "nextCheckpointMs": null,
+      "dueDate": null,
+      "dueTime": null,
+      "projectId": null,
+      "columnId": null,
+      "recurrence": null,
+      "recurrenceParentId": null,
+      "source": "typed",
+      "sortKey": "h",
+      "fv": {
+        "title": 1700000000000100,
+        "status": 1700000000000200
+      },
+      "fw": {
+        "title": "dev-josef-pc",
+        "status": "dev-josef-pc"
+      }
+    },
+    "t-read-ch4": {
+      "id": "t-read-ch4",
+      "createdAt": 1792461600000,
+      "updatedAt": 1792461900000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "kind": "task",
+      "title": "Read chapter 4",
+      "finishCondition": "",
+      "notes": "",
+      "tagId": null,
+      "priority": "nice",
+      "estimateMin": null,
+      "dueEventId": null,
+      "order": 6.5,
+      "status": "inbox",
+      "outcome": null,
+      "dropCount": 0,
+      "parkedAt": null,
+      "workMs": 0,
+      "breakMs": 0,
+      "pomodorosCompleted": 0,
+      "startedAt": null,
+      "completedAt": null,
+      "timer": {
+        "mode": "countdown",
+        "countdown": {
+          "durationMs": 1500000,
+          "onExpire": "continue"
+        },
+        "pomodoro": {
+          "workMs": 1500000,
+          "shortBreakMs": 300000,
+          "longBreakMs": 900000,
+          "sessionsBeforeLongBreak": 4,
+          "autoStartBreaks": false,
+          "autoStartWork": false
+        }
+      },
+      "runtime": {
+        "status": "idle",
+        "phase": "work",
+        "phaseElapsedMs": 0,
+        "sliceStartedAt": null,
+        "cycleSessions": 0,
+        "expiredNotified": false
+      },
+      "checkpointEveryMin": null,
+      "nextCheckpointMs": null,
+      "dueDate": null,
+      "dueTime": null,
+      "projectId": "proj-chronos",
+      "columnId": "todo",
+      "recurrence": null,
+      "recurrenceParentId": null,
+      "source": "typed",
+      "sortKey": "n",
+      "fv": {
+        "title": 1700000000000100,
+        "status": 1700000000000200
+      },
+      "fw": {
+        "title": "dev-josef-pc",
+        "status": "dev-josef-pc"
+      }
+    },
+    "mono-abc123": {
+      "id": "mono-abc123",
+      "createdAt": 1791252000000,
+      "updatedAt": 1791252300000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "kind": "task",
+      "title": "Renew library card",
+      "finishCondition": "Card renewed at the front desk",
+      "notes": "",
+      "tagId": null,
+      "priority": "nice",
+      "estimateMin": 15,
+      "dueEventId": null,
+      "order": 7,
+      "status": "inbox",
+      "outcome": null,
+      "dropCount": 0,
+      "parkedAt": null,
+      "workMs": 0,
+      "breakMs": 0,
+      "pomodorosCompleted": 0,
+      "startedAt": null,
+      "completedAt": null,
+      "timer": {
+        "mode": "countdown",
+        "countdown": {
+          "durationMs": 1500000,
+          "onExpire": "continue"
+        },
+        "pomodoro": {
+          "workMs": 1500000,
+          "shortBreakMs": 300000,
+          "longBreakMs": 900000,
+          "sessionsBeforeLongBreak": 4,
+          "autoStartBreaks": false,
+          "autoStartWork": false
+        }
+      },
+      "runtime": {
+        "status": "idle",
+        "phase": "work",
+        "phaseElapsedMs": 0,
+        "sliceStartedAt": null,
+        "cycleSessions": 0,
+        "expiredNotified": false
+      },
+      "checkpointEveryMin": null,
+      "nextCheckpointMs": null,
+      "dueDate": null,
+      "dueTime": null,
+      "projectId": null,
+      "columnId": null,
+      "recurrence": null,
+      "recurrenceParentId": null,
+      "source": "import",
+      "sortKey": "t",
+      "fv": {
+        "title": 1700000000000100,
+        "status": 1700000000000200
+      },
+      "fw": {
+        "title": "dev-josef-pc",
+        "status": "dev-josef-pc"
+      }
+    }
+  },
+  "events": {
+    "ev-math-a": {
+      "id": "ev-math-a",
+      "createdAt": 1789524000000,
+      "updatedAt": 1789524300000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "title": "Mathematics",
+      "tagId": "tag-math",
+      "scope": "school",
+      "tz": "Asia/Jakarta",
+      "startMin": 450,
+      "endMin": 540,
+      "date": null,
+      "recur": {
+        "weekdays": [
+          1,
+          3
+        ],
+        "everyNWeeks": 2,
+        "anchorDate": "2026-10-26",
+        "from": "2026-08-03",
+        "until": "2026-12-18"
+      },
+      "notes": "",
+      "fv": {},
+      "fw": {}
+    },
+    "ev-bio-b": {
+      "id": "ev-bio-b",
+      "createdAt": 1789524000000,
+      "updatedAt": 1789524300000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "title": "Biology",
+      "tagId": "tag-hist",
+      "scope": "school",
+      "tz": "Asia/Jakarta",
+      "startMin": 540,
+      "endMin": 630,
+      "date": null,
+      "recur": {
+        "weekdays": [
+          2,
+          4
+        ],
+        "everyNWeeks": 2,
+        "anchorDate": "2026-11-02",
+        "from": "2026-08-03",
+        "until": "2026-12-18"
+      },
+      "notes": "",
+      "fv": {},
+      "fw": {}
+    },
+    "ev-chem": {
+      "id": "ev-chem",
+      "createdAt": 1789524000000,
+      "updatedAt": 1789524300000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "title": "Chemistry lab",
+      "tagId": null,
+      "scope": "school",
+      "tz": "Asia/Jakarta",
+      "startMin": 480,
+      "endMin": 570,
+      "date": null,
+      "recur": {
+        "weekdays": [
+          5
+        ],
+        "everyNWeeks": 1,
+        "anchorDate": "2026-10-26",
+        "from": "2026-08-03",
+        "until": "2026-12-18"
+      },
+      "notes": "",
+      "fv": {},
+      "fw": {}
+    },
+    "ev-dentist": {
+      "id": "ev-dentist",
+      "createdAt": 1789524000000,
+      "updatedAt": 1789524300000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "title": "Dentist",
+      "tagId": null,
+      "scope": "other",
+      "tz": "Asia/Jakarta",
+      "startMin": 840,
+      "endMin": 900,
+      "date": "2026-10-29",
+      "recur": null,
+      "notes": "Bring the insurance card",
+      "fv": {},
+      "fw": {}
+    }
+  },
+  "eventExceptions": {
+    "x-ev-math-a-2026-11-09": {
+      "id": "x-ev-math-a-2026-11-09",
+      "createdAt": 1792634400000,
+      "updatedAt": 1792634700000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "eventId": "ev-math-a",
+      "date": "2026-11-09",
+      "kind": "skip",
+      "title": null,
+      "startMin": null,
+      "endMin": null,
+      "tagId": null,
+      "fv": {},
+      "fw": {}
+    },
+    "x-ev-chem-2026-10-30": {
+      "id": "x-ev-chem-2026-10-30",
+      "createdAt": 1792720800000,
+      "updatedAt": 1792721100000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "eventId": "ev-chem",
+      "date": "2026-10-30",
+      "kind": "edit",
+      "startMin": 600,
+      "endMin": 690,
+      "title": null,
+      "tagId": null,
+      "fv": {},
+      "fw": {}
+    }
+  },
+  "closures": {
+    "hol-2026-12-25": {
+      "id": "hol-2026-12-25",
+      "createdAt": 1790388000000,
+      "updatedAt": 1790388300000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "name": "Christmas Day",
+      "startDate": "2026-12-25",
+      "endDate": "2026-12-25",
+      "scopes": [],
+      "source": "holiday",
+      "confirmed": false,
+      "fv": {},
+      "fw": {}
+    }
+  },
+  "blocks": {
+    "b-today-calc": {
+      "id": "b-today-calc",
+      "createdAt": 1792807200000,
+      "updatedAt": 1792807500000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "taskId": "t-calc-hw",
+      "tagId": "tag-math",
+      "title": "Calculus problem set 7",
+      "date": "2026-10-26",
+      "startMin": 600,
+      "endMin": 690,
+      "tz": "Asia/Jakarta",
+      "kind": "work",
+      "auto": false,
+      "fv": {},
+      "fw": {}
+    },
+    "b-past-essay": {
+      "id": "b-past-essay",
+      "createdAt": 1792807200000,
+      "updatedAt": 1792807500000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "taskId": "t-essay",
+      "tagId": "tag-hist",
+      "title": "History essay outline",
+      "date": "2026-10-20",
+      "startMin": 780,
+      "endMin": 825,
+      "tz": "Asia/Jakarta",
+      "kind": "work",
+      "auto": false,
+      "fv": {},
+      "fw": {}
+    },
+    "b-lab": {
+      "id": "b-lab",
+      "createdAt": 1792807200000,
+      "updatedAt": 1792807500000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "taskId": "t-lab-report",
+      "tagId": "tag-math",
+      "title": "Physics lab report",
+      "date": "2026-10-28",
+      "startMin": 900,
+      "endMin": 1020,
+      "tz": "Asia/Jakarta",
+      "kind": "work",
+      "auto": true,
+      "fv": {},
+      "fw": {}
+    },
+    "b-sprint": {
+      "id": "b-sprint",
+      "createdAt": 1792807200000,
+      "updatedAt": 1792807500000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "taskId": "t-sprint-app",
+      "tagId": "tag-chronos",
+      "title": "Chronos sync prototype",
+      "date": "2026-10-26",
+      "startMin": 780,
+      "endMin": 960,
+      "tz": "Asia/Jakarta",
+      "kind": "sprint",
+      "auto": false,
+      "fv": {},
+      "fw": {}
+    }
+  },
+  "sessions": {
+    "s-t-sprint-app-1": {
+      "id": "s-t-sprint-app-1",
+      "createdAt": 1792720800000,
+      "updatedAt": 1792721100000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "taskId": "t-sprint-app",
+      "blockId": null,
+      "startedAt": 1792810800000,
+      "endedAt": 1792816200000,
+      "phase": "work",
+      "overrunMs": 0,
+      "fv": {},
+      "fw": {}
+    },
+    "s-t-sprint-app-2": {
+      "id": "s-t-sprint-app-2",
+      "createdAt": 1792720800000,
+      "updatedAt": 1792721100000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "taskId": "t-sprint-app",
+      "blockId": null,
+      "startedAt": 1792818000000,
+      "endedAt": 1792819500000,
+      "phase": "work",
+      "overrunMs": 0,
+      "fv": {},
+      "fw": {}
+    },
+    "s-t-done-quiz-3": {
+      "id": "s-t-done-quiz-3",
+      "createdAt": 1792720800000,
+      "updatedAt": 1792721100000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "taskId": "t-done-quiz",
+      "blockId": null,
+      "startedAt": 1792288800000,
+      "endedAt": 1792289100000,
+      "phase": "break",
+      "overrunMs": 0,
+      "fv": {},
+      "fw": {}
+    }
+  },
+  "tags": {
+    "tag-math": {
+      "id": "tag-math",
+      "createdAt": 1787796000000,
+      "updatedAt": 1787796300000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "name": "Math",
+      "color": "tag2",
+      "kind": "class",
+      "fv": {},
+      "fw": {}
+    },
+    "tag-hist": {
+      "id": "tag-hist",
+      "createdAt": 1787796000000,
+      "updatedAt": 1787796300000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "name": "History",
+      "color": "tag4",
+      "kind": "class",
+      "fv": {},
+      "fw": {}
+    },
+    "tag-chronos": {
+      "id": "tag-chronos",
+      "createdAt": 1787796000000,
+      "updatedAt": 1787796300000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "name": "Chronos",
+      "color": "tag6",
+      "kind": "project",
+      "fv": {},
+      "fw": {}
+    }
+  },
+  "ideas": {
+    "i-1": {
+      "id": "i-1",
+      "createdAt": 1792548000000,
+      "updatedAt": 1792548300000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "text": "Idea: a weekly review view that shows estimate vs actual",
+      "taskId": null,
+      "reviewed": false,
+      "body": "Idea: a weekly review view that shows estimate vs actual",
+      "parsedTaskIds": [],
+      "fv": {},
+      "fw": {}
+    },
+    "i-2": {
+      "id": "i-2",
+      "createdAt": 1792893600000,
+      "updatedAt": 1792893900000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "text": "Ask Ms Rina about the extra credit",
+      "taskId": "t-essay",
+      "reviewed": true,
+      "body": "Ask Ms Rina about the extra credit",
+      "parsedTaskIds": [
+        "t-read-ch4"
+      ],
+      "fv": {},
+      "fw": {}
+    }
+  },
+  "activity": {
+    "a-1": {
+      "id": "a-1",
+      "createdAt": 1792720800000,
+      "updatedAt": 1792721100000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "type": "started",
+      "taskId": "t-sprint-app",
+      "at": 1792720800000,
+      "reason": "",
+      "fv": {},
+      "fw": {}
+    },
+    "a-2": {
+      "id": "a-2",
+      "createdAt": 1792720800000,
+      "updatedAt": 1792721100000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "type": "finished",
+      "taskId": "t-done-quiz",
+      "at": 1792292400000,
+      "reason": "",
+      "fv": {},
+      "fw": {}
+    },
+    "a-3": {
+      "id": "a-3",
+      "createdAt": 1792720800000,
+      "updatedAt": 1792721100000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "type": "killed",
+      "taskId": "t-killed-sprint",
+      "at": 1792116000000,
+      "reason": "Not worth more time",
+      "fv": {},
+      "fw": {}
+    }
+  },
+  "timer": {
+    "current": {
+      "id": "current",
+      "createdAt": 1790388000000,
+      "updatedAt": 1790388300000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "taskId": "t-sprint-app",
+      "ownerDeviceId": "dev-josef-pc",
+      "ownerName": "Josef PC",
+      "takeoverAt": null,
+      "fv": {},
+      "fw": {}
+    }
+  },
+  "settings": {
+    "main": {
+      "id": "main",
+      "createdAt": 1787796000000,
+      "updatedAt": 1787796300000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "displayName": "Josef",
+      "timezone": "Asia/Jakarta",
+      "dayStartMin": 360,
+      "dayEndMin": 1320,
+      "bufferMin": 30,
+      "timeLeft": {
+        "gapFilterMin": 15,
+        "transitionMin": 5,
+        "mealReserveMin": 45
+      },
+      "timetable": {
+        "enabled": true,
+        "scopes": {
+          "school": true,
+          "work": true,
+          "uni": true,
+          "other": true
+        }
+      },
+      "timerDefaults": {
+        "mode": "countdown",
+        "countdown": {
+          "durationMs": 1500000,
+          "onExpire": "continue"
+        },
+        "pomodoro": {
+          "workMs": 1500000,
+          "shortBreakMs": 300000,
+          "longBreakMs": 900000,
+          "sessionsBeforeLongBreak": 4,
+          "autoStartBreaks": false,
+          "autoStartWork": false
+        }
+      },
+      "blockEnd": "continue",
+      "prepLeadMin": 60,
+      "checkpointEveryMin": 120,
+      "holidaysEnabled": true,
+      "theme": "dark",
+      "accent": null,
+      "runwayPosition": "top",
+      "reduceMotion": null,
+      "onboarded": true,
+      "fv": {},
+      "fw": {},
+      "themeId": "default",
+      "customTheme": {
+        "--accent": "#ff5b1f"
+      },
+      "snapMin": 15,
+      "parserRules": [
+        {
+          "keyword": "lab",
+          "kind": "fixed"
+        }
+      ]
+    }
+  },
+  "projects": {
+    "proj-chronos": {
+      "id": "proj-chronos",
+      "createdAt": 1790000000000,
+      "updatedAt": 1790000000000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "fv": {},
+      "fw": {},
+      "name": "Chronos",
+      "color": "tag3",
+      "columns": [
+        {
+          "id": "todo",
+          "name": "To do"
+        },
+        {
+          "id": "doing",
+          "name": "Doing"
+        },
+        {
+          "id": "done",
+          "name": "Done"
+        }
+      ],
+      "archived": false,
+      "sortKey": "V"
+    }
+  },
+  "reviews": {
+    "review-2026-10-19": {
+      "id": "review-2026-10-19",
+      "createdAt": 1789000000000,
+      "updatedAt": 1789000000000,
+      "deviceId": "dev-josef-pc",
+      "deletedAt": null,
+      "v": 2,
+      "fv": {},
+      "fw": {},
+      "date": "2026-10-19",
+      "outcomes": [
+        {
+          "taskId": "t-essay",
+          "action": "tomorrow"
+        }
+      ]
+    }
+  },
+  "tombs": {
+    "tasks": {
+      "t-old-purged": {
+        "id": "t-old-purged",
+        "updatedAt": 1791252000000,
+        "deletedAt": 1790560800000,
+        "deviceId": "dev-josef-pc",
+        "v": 1,
+        "purged": true
+      }
+    }
+  }
+}

@@ -45,6 +45,13 @@ export function defaultSettings(): Settings {
     holidaysEnabled: true,
     theme: 'dark',
     themeId: 'default',
+    themeSchedule: [],
+    weeklyFocusTargetH: 20,
+    sound: { enabled: true, volume: 0.35, muteInFocus: false },
+    energy: { livingReactor: true, holographicDepth: true, reactiveData: true, motion: true },
+    widgets: { day: true, momentum: true, notes: true, wellness: true },
+    parserReports: [],
+    planning: { defaultBlockMin: 30, learnEstimates: true, breakAfterMin: 75 },
     customTheme: null,
     snapMin: 5,
     parserRules: [],
@@ -61,7 +68,7 @@ export function defaultActiveTimer(): ActiveTimer {
 
 export function emptyData(): Data {
   return {
-    schema: 2,
+    schema: 3,
     tasks: {},
     events: {},
     eventExceptions: {},
@@ -92,6 +99,8 @@ export function defaultDevice(deviceId: string, deviceName: string): DeviceSetti
     stackFolder: null,
     sound: true,
     notifications: true,
+    composerProjectId: null,
+    onboarded: false,
     experimental: false,
     mcp: { enabled: false, port: 0, token: '' },
     sync: { uid: null, cursors: {}, lastSyncAt: null },

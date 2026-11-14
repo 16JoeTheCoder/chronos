@@ -1,5 +1,5 @@
 // npm run audit (§11.2): the mechanical backstop. Typecheck, tests, build, then
-// the standing rules: core purity (and core/mcp free of Node/Electron), dependency
+// the standing rules: core purity (and core/mcp and core/parser free of Node/Electron), dependency
 // allowlist, network code only where it belongs (Firebase only in src/main/sync),
 // the typed finish phrase gone, bundle budgets, no fast intervals in main, no
 // unexplained TODOs, every core module covered by a test. Prints one line per check and exits non-zero on any failure.
@@ -33,11 +33,11 @@ check('tests', () => {
 });
 check('build', () => void sh('node scripts/build.mjs'));
 
-check('core imports only core (minisearch in core/search only)', () => {
+check('core imports only core (minisearch in core/search, chrono-node in core/parser only)', () => {
   const bad = [];
   for (const f of files('src/core')) {
     const src = readFileSync(f, 'utf8');
-    for (const i of imports(src)) if (!i.startsWith('.') && !(i === 'minisearch' && f === 'src/core/search/index.ts')) bad.push(`${f}: imports ${i}`);
+    for (const i of imports(src)) if (!i.startsWith('.') && !(i === 'minisearch' && f === 'src/core/search/index.ts') && !(i === 'chrono-node' && f.startsWith('src/core/parser/'))) bad.push(`${f}: imports ${i}`);
     if (/\b(document|window|localStorage|navigator)\./.test(src)) bad.push(`${f}: touches the DOM`);
   }
   return bad;
@@ -57,14 +57,23 @@ check('the typed finish phrase is gone', () => {
   return all.filter((f) => readFileSync(f, 'utf8').toLowerCase().includes(phrase)).map((f) => `${f}: still mentions the typed phrase`);
 });
 
+check('core/parser is free of Electron and Node imports', () =>
+  files('src/core/parser', /\.(ts|tsx)$/).flatMap((f) => {
+    const src = readFileSync(f, 'utf8');
+    const bad = imports(src).filter((i) => i === 'electron' || i === 'fs' || i === 'path' || i === 'os' || i === 'crypto' || i.startsWith('node:') || i.startsWith('electron/'));
+    const api = /\b(process\.|Buffer\b|require\(|__dirname|__filename)/.test(src) ? [`${f}: uses a Node API`] : [];
+    return [...bad.map((i) => `${f}: imports ${i}`), ...api];
+  }),
+);
+
 check('renderer never imports main', () =>
   files('src/renderer').flatMap((f) => imports(readFileSync(f, 'utf8')).filter((i) => i.includes('/main/')).map((i) => `${f}: imports ${i}`)),
 );
 
 check('dependency allowlist', () => {
-  const allow = new Set(['electron', 'react', 'react-dom', 'typescript', 'vite', '@vitejs/plugin-react', 'esbuild', 'electron-builder', 'vitest', 'playwright-core', '@types/node', '@types/react', '@types/react-dom', 'firebase', 'minisearch', '@modelcontextprotocol/sdk']);
+  const allow = new Set(['electron', 'react', 'react-dom', 'typescript', 'vite', '@vitejs/plugin-react', 'esbuild', 'electron-builder', 'vitest', 'playwright-core', '@types/node', '@types/react', '@types/react-dom', 'firebase', 'minisearch', '@modelcontextprotocol/sdk', 'chrono-node']);
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-  return Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter((d) => !allow.has(d)).map((d) => `not allowed: ${d}`);
+  return Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter((d) => !allow.has(d) && !d.startsWith('@fontsource/')).map((d) => `not allowed: ${d}`);
 });
 
 // Network code lives in exactly these files: sync (Firestore, Google sign-in), the

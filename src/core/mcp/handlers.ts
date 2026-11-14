@@ -11,14 +11,14 @@ import type { Command, Result, RevertOp } from '../commands';
 import { blockFits } from '../commands';
 import { clockOf, formatHM, parseHM } from '../format';
 import { newId, reviewId } from '../model/ids';
-import type { Block, Coll, Data, Rec, Task } from '../model/types';
+import type { Block, Data, Task } from '../model/types';
 import { get, live, settingsOf } from '../repo/repo';
 import { SearchIndex, type SearchType } from '../search/index';
-import { diffData } from '../sync/outbox';
+import { revertOpsBetween } from '../undo';
 import { PRIORITY_RANK, activeTask, blockSpan, blocksOn, isOpen, todayOf } from '../tasks/tasks';
 import { overlaps, total } from '../time/intervals';
 import { prepNudges } from '../time/prep';
-import { expandEvents } from '../time/schedule';
+import { expandEvents, unplacedOn } from '../time/schedule';
 import { timeLeft } from '../time/timeLeft';
 import { addDays, daysBetween, mondayOf, weekdayOf, zonedToUtc } from '../time/zone';
 import { WEEKDAYS } from '../format';
@@ -143,13 +143,7 @@ export class Mcp {
     const r = this.store.run(cmd);
     if (!r.ok) return { ok: false, error: r.fields && Object.keys(r.fields).length ? `${r.error} ${Object.values(r.fields).join(' ')}` : r.error };
     const after = this.d;
-    const ops: RevertOp[] = diffData(before, after, this.store.now()).map((e) => {
-      const prev = (before[e.coll] as Record<string, Rec>)[e.id];
-      if (!prev) return { coll: e.coll as Coll, id: e.id, prev: null };
-      const fields: Record<string, unknown> = {};
-      for (const k of Object.keys(e.fields)) fields[k] = (prev as unknown as Record<string, unknown>)[k] ?? null;
-      return { coll: e.coll as Coll, id: e.id, prev: fields };
-    });
+    const ops: RevertOp[] = revertOpsBetween(before, after, this.store.now());
     const token = newId();
     this.undo.set(token, { ops, label, taskId });
     for (const k of [...this.undo.keys()].slice(0, Math.max(0, this.undo.size - UNDO_KEEP))) this.undo.delete(k);
@@ -185,6 +179,7 @@ export class Mcp {
           now: date === this.today ? this.clock(now) : null,
           day: { start: formatHM(s.dayStartMin), end: formatHM(s.dayEndMin) },
           events: instances.map((i) => ({ id: i.event.id, title: i.event.title, start: formatHM(i.startMin), end: formatHM(i.endMin), recurring: i.event.recur !== null, ...(i.exceptionId ? { editedToday: true } : {}) })),
+          unplaced: unplacedOn(d, date).map((e) => ({ id: e.id, title: e.title, durationMin: e.durationMin })),
           blocks: blocks.map((b) => this.block(b)),
           free: tl.free.map(([x, y]) => ({ start: this.clock(x), end: this.clock(y), minutes: m(y - x) })),
           buffer: { start: formatHM(s.dayEndMin - s.bufferMin), end: formatHM(s.dayEndMin), minutes: s.bufferMin },
@@ -331,8 +326,24 @@ export class Mcp {
         return ok({ notes });
       }
 
+      case 'search_log': {
+        this.index.update(d);
+        const notes = this.index.search(a.query as string, { types: ['note'], limit: 20 }).flatMap((h) => {
+          const n = d.ideas[h.id];
+          return n && n.deletedAt === null ? [{ id: n.id, body: n.body.length > 1000 ? `${n.body.slice(0, 1000)}…` : n.body, project: n.projectId ? (d.projects[n.projectId]?.name ?? null) : null, posted: `${todayOf(d, n.createdAt)} ${this.clock(n.createdAt)}` }] : [];
+        });
+        return ok({ results: notes });
+      }
+      case 'list_unplaced': {
+        const from = str(a.date) ?? this.today;
+        const dates = new Set(a.date !== undefined ? [from] : live(d, 'events').filter((e) => e.date !== null && e.date >= from).map((e) => e.date as string));
+        const events = [...dates].sort().flatMap((date) => unplacedOn(d, date).map((e) => ({ id: e.id, title: e.title, date, durationMin: e.durationMin })));
+        return ok({ timezone: s.timezone, events });
+      }
+
       // ---- writes ----
       case 'add_task': {
+        // TODO(D-130): optional `text` argument parsed by src/core/parser (source 'claude'); if confidence is not high, return the parse for Claude to confirm. The hub wires it after the parser lands.
         const tag = this.tagId(str(a.tag));
         if ('error' in tag) return fail(tag.error);
         const dueTime = str(a.dueTime) !== undefined ? parseHM(a.dueTime as string) : null;
@@ -439,6 +450,19 @@ export class Mcp {
       }
       case 'add_note':
         return this.write('add_note', { type: 'idea.add', text: a.body as string, taskId: null }, `saved a note`, (x, id) => (id ? { id, body: x.ideas[id]?.body } : null));
+      case 'post_log': {
+        if (a.projectId !== undefined && !get(d, 'projects', a.projectId as string)) return fail('No project with that id.');
+        return this.write('post_log', { type: 'idea.add', text: a.body as string, taskId: null, projectId: str(a.projectId) ?? null }, 'posted', (x, id) => (id ? { id, body: x.ideas[id]?.body, projectId: x.ideas[id]?.projectId ?? null } : null));
+      }
+      case 'place_event': {
+        const ev = get(d, 'events', str(a.eventId));
+        if (!ev || ev.deletedAt !== null || ev.date === null) return fail('No such one-off event.');
+        if (ev.startMin !== null || ev.endMin !== null) return fail(`"${ev.title}" already has a time.`);
+        const sm = a.startMin as number;
+        const em = sm + ev.durationMin;
+        if (!blockFits(d, ev.date, sm, em)) return fail(this.overlapReason(ev.date, sm, em));
+        return this.write('place_event', { type: 'event.place', id: ev.id, startMin: sm }, `placed "${ev.title}" ${ev.date} ${formatHM(sm)}-${formatHM(em)}`, (x) => ({ eventId: ev.id, date: ev.date, start: formatHM(sm), end: formatHM(em), title: x.events[ev.id]?.title }));
+      }
       case 'add_project':
         return this.write('add_project', { type: 'project.create', name: a.name as string, color: a.color as never, columns: a.columns as string[] | undefined }, `created project "${a.name as string}"`, (x, id) => (id ? { id, name: x.projects[id]?.name, columns: x.projects[id]?.columns } : null));
       case 'move_card': {

@@ -184,7 +184,7 @@ describe('invalid records on load', () => {
       const t = d.tasks[Object.keys(d.tasks)[1]!]!;
       return {
         ...d,
-        tasks: { ...d.tasks, [t.id]: { ...t, v: 3 } },
+        tasks: { ...d.tasks, [t.id]: { ...t, v: 4 } },
         blocks: { b1: { id: 'b1', createdAt: 1, updatedAt: 1, deviceId: 'x', deletedAt: null, v: 2, fv: {}, fw: {}, taskId: null, tagId: null, title: 'B', date: '2026-10-26', startMin: 600, endMin: 660, tz: 'Asia/Jakarta', kind: 'work', auto: 'maybe' } as never },
       };
     });
@@ -220,7 +220,7 @@ describe('a v1 data file on disk', () => {
   it('loads migrated: schema 2, statuses mapped, nothing quarantined', () => {
     new Store(dir).data.save(v1());
     const c = boot();
-    expect(c.data.schema).toBe(2);
+    expect(c.data.schema).toBe(3);
     expect(c.quarantine).toEqual([]);
     expect(c.data.tasks['t-sprint-app']?.status).toBe('doing');
     expect(c.data.tasks['t-calc-hw']?.status).toBe('planned'); // block today
@@ -237,7 +237,7 @@ describe('a v1 data file on disk', () => {
     new Store(dir).data.save(v1());
     const c = boot();
     c.flush();
-    expect(readJson('chronos-data.json').schema).toBe(2);
+    expect(readJson('chronos-data.json').schema).toBe(3);
     expect(readJson('chronos-data.json').tasks['t-calc-hw'].deadline).toBeUndefined();
     const again = boot();
     expect(again.data.tasks).toEqual(c.data.tasks);
@@ -258,7 +258,7 @@ describe('snapshots', () => {
     const file = path.join(dir, 'snapshots', 'chronos-2026-10-26.json');
     expect(fs.existsSync(file)).toBe(true);
     const snap = JSON.parse(fs.readFileSync(file, 'utf8'));
-    expect(snap.schema).toBe(2);
+    expect(snap.schema).toBe(3);
     expect(c.snapshots()).toEqual(['chronos-2026-10-26.json']);
   });
 

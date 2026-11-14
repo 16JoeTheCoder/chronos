@@ -25,6 +25,30 @@ Terse, for a fresh session to resume from.
 - Real Firestore provider and rules never run (emulator blocked, D-124). Google sign-in, MCP via Claude Desktop, ELECTRON_RUN_AS_NODE: Windows checklist.
 
 
+# Phase 2+3 build log
+
+## Checkpoint A: schema v3 and planning logic (core only, no UI)
+
+### Done
+- Schema v3 (D-127 to D-129, D-138): `SCHEMA_V` 3; `migrate` v1/v2/v3 -> v3, lossless and idempotent, tested on `tests/fixtures/v2-josef.json`; Phase 1 clients go read-only on v3 records; v2 docs pulled by a v3 client are upgraded, not quarantined. Unplaced events (`startMin`/`endMin` null, `durationMin`), `event.place`, `unplacedOn`; `Idea.projectId`; new Settings fields and device `composerProjectId`/`onboarded`; `parser.report` (cap 200); validation, ipc pickers and Firestore rules updated.
+- Planning (D-131 to D-136) in `src/core/planning/` (estimates, plan, review, wellness) with commands `plan.auto`, `plan.replan`, `review.submit`; undo ops via `src/core/undo.ts`.
+- MCP (D-130): `post_log`, `search_log`, `list_unplaced`, `place_event`, `get_day.unplaced`; docs/MCP.md updated.
+- Audit: parser purity rule, chrono-node and @fontsource allowances, PHASE23 wording fixed (D-137).
+- Tests: tests/core/migrateV3, schemaV3, tests/planning/*, tests/mcp/logTools.
+
+### Doing
+- Nothing in core. The parser agent works in `src/core/parser` and `tests/parser`.
+
+### Next
+- Hub: wire the parser into quick-add and into MCP `add_task` (`TODO(D-130)` in `src/core/mcp/handlers.ts`); wire the UI to `plan.auto` (morning start), `plan.replan`, `review.submit` (pending via `pendingReview`), `breakDue`, the "to place" tray (`unplacedOn`, `event.place`) and "Report misparse" (`parser.report`).
+- UI undo for planning commands: keep `Result.undo` in main behind a token (D-136).
+- Checkpoint B: desktop layer and overlay windows.
+
+### Known failures / unverified
+- Firestore rules `shape()` (D-138) and the real provider were not run against the emulator (D-124).
+- No cross-midnight flag exists, so the PHASE23 clause "unless the cross-midnight flag is set" is not implemented (D-127).
+- `npm test` here excludes `tests/parser` (owned by the parser agent).
+
 ## Parser handoff log (imported)
 
 # log.md (parser)

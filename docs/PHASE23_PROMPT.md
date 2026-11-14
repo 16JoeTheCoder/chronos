@@ -32,7 +32,7 @@ Merge the parser's `decision.md` into the root `decision.md` under a "Parser" he
 - **The opposite of information overload.** Default views show Now, Next and time left; everything else is one key away. No badges, red counters or "14 overdue" banners. Overdue items fold quietly into the end-of-day review.
 - **5 % of his brain to manage, 95 % on the work.** Every action has a default that is right ~80 % of the time; he confirms or nudges. Every automatic action is undoable (toast or Ctrl+Z) and nothing asks "are you sure".
 - **Only three things interrupt:** an upcoming fixed event, the end-of-day review, and break prompts at the end of a long block.
-- **Hold Enter 2 s to finish** (ring or bar fills; early release drains; Space taps start/pause and never finishes). The typed "I have finished this task" phrase is already gone; keep it gone.
+- **Hold Enter 2 s to finish** (ring or bar fills; early release drains; Space taps start/pause and never finishes). The old typed confirmation sentence is already gone; keep it gone.
 
 ## 2. Schema v3 (one migration, then frozen again)
 

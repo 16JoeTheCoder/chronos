@@ -1,4 +1,4 @@
-# Known gaps: spec grammar with NO corpus line yet. Add lines (Josef confirms) before calling the parser done.
+# Known gaps: spec grammar with NO corpus line yet. Add lines (Josef confirms). All of these are implemented and unit-tested in tests/parser/grammar.test.ts and learning.test.ts; no corpus line is failing.
 # Format: item | reason
 
 bare-hour rule: 1-6 = pm, 7-11 = next occurrence after now within the day window, 12 = noon | D6 limits bare numbers to after at/@/by/due/from/till/until; no line pins it yet

@@ -2,9 +2,10 @@
   "$schema": "chronos-parser-pack/1",
   "name": "Chronos built-in (English)",
   "version": 1,
+  "defaultFixedDurationMin": 60,
   "_comment": "Data, not code. allowDateOnly (optional) lets a fixed word become an all-day event with no time. defaultDurationMin applies only to the words that list it.",
   "rules": [
-    { "id": "b-class", "match": "class", "aliases": ["lesson", "lecture"], "kind": "fixed", "defaultDurationMin": 60, "source": "builtin" },
+    { "id": "b-class", "match": "class", "aliases": ["lesson", "lecture"], "kind": "fixed", "defaultDurationMin": 60, "usesSchedule": true, "source": "builtin" },
     { "id": "b-training", "match": "training", "aliases": ["practice", "session"], "kind": "fixed", "source": "builtin" },
     { "id": "b-match", "match": "match", "aliases": ["game"], "kind": "fixed", "source": "builtin" },
     { "id": "b-meeting", "match": "meeting", "kind": "fixed", "source": "builtin" },
