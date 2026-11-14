@@ -1,0 +1,10 @@
+# Known gaps: spec grammar with NO corpus line yet. Add lines (Josef confirms). All of these are implemented and unit-tested in tests/parser/grammar.test.ts and learning.test.ts; no corpus line is failing.
+# Format: item | reason
+
+bare-hour rule: 1-6 = pm, 7-11 = next occurrence after now within the day window, 12 = noon | D6 limits bare numbers to after at/@/by/due/from/till/until; no line pins it yet
+half 5 (5:30), quarter past 4, noon, midday, midnight, 17, 1700, 5.30, 5p | spec grammar, untested
+yesterday (reject for new items: warn) | spec says warn; behaviour (drop date? keep text?) never decided
+next mon vs mon at different weekdays, until dec 5, every other fri edge cases | partly covered
+priority !3, tags (tagId) | no tags exist in the fixture yet
+Notepad lines ("- ", "[] ", "task ", "event ", "@") | notepad parser mode has no corpus lines
+literalRanges (Backspace on a chip) and applyCorrection learning | unit tests, not corpus lines

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Terrain: the day as a climb</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&amp;family=Geist:wght@300;400;500;600&amp;family=Geist+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#C2410C}a:hover{color:#9A3412}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; background: #E6E3DC; font-family: Geist, system-ui, sans-serif; color: #17191C">
+<div style="position: absolute; left: 64px; top: 56px; right: 64px; display: flex; justify-content: space-between; align-items: flex-start">
+<div style="display: flex; flex-direction: column; gap: 8px; max-width: 760px">
+<span style="font-size: 14px; color: #6B6862">Summit now · until 15:30</span>
+<h1 style="margin: 0; font-family: 'Instrument Serif', serif; font-weight: 400; font-size: 76px; line-height: 1; letter-spacing: -0.01em">Blade pitch model</h1>
+<span style="font-size: 16px; color: #4A4843">Done when the power curve plateaus at rated speed.</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 10px">
+<span style="font-family: 'Geist Mono', monospace; font-size: 48px; letter-spacing: -0.02em">41:08</span>
+<button style="height: 44px; padding: 0 20px; border-radius: 10px; border: none; background: #17191C; color: #E6E3DC; font: 500 14px Geist, sans-serif">Hold Enter to reach the top</button>
+</div>
+</div>
+<svg width="1312" height="320" viewBox="0 0 1312 320" style="position: absolute; left: 64px; top: 380px" role="img" aria-label="Today as a terrain line. School from 07:30 to 14:00, the current task is the summit, football 16:00 to 18:00, physics at 19:00.">
+<g fill="none" stroke="#17191C" stroke-linejoin="round">
+<path d="M0 230 L41 150 L574 150 L620 70 L697 70 L738 200 L760 140 L902 140 L930 210 L984 170 L1045 170 L1100 240 L1312 250" stroke-width="2"></path>
+<path d="M0 248 L41 172 L574 172 L620 98 L697 98 L738 216 L760 162 L902 162 L930 226 L984 190 L1045 190 L1100 254 L1312 262" stroke-width="1" opacity="0.55"></path>
+<path d="M0 266 L41 194 L574 194 L620 126 L697 126 L738 232 L760 184 L902 184 L930 242 L984 210 L1045 210 L1100 268 L1312 274" stroke-width="1" opacity="0.35"></path>
+<path d="M0 284 L41 216 L574 216 L620 154 L697 154 L738 248 L760 206 L902 206 L930 258 L984 230 L1045 230 L1100 282 L1312 286" stroke-width="1" opacity="0.2"></path>
+<path d="M41 150 L41 300" stroke-width="1" stroke-dasharray="2 4" opacity="0.4"></path>
+<path d="M738 140 L738 300" stroke-width="1" stroke-dasharray="2 4" opacity="0.4"></path>
+</g>
+<line x1="604" y1="0" x2="604" y2="300" stroke="#C2410C" stroke-width="1.5"></line>
+<circle cx="604" cy="84" r="6" fill="#C2410C"></circle>
+<text x="612" y="16" fill="#C2410C" font-family="Geist Mono" font-size="12">14:22</text>
+<text x="300" y="138" fill="#4A4843" font-family="Geist" font-size="13" text-anchor="middle">School</text>
+<text x="831" y="128" fill="#4A4843" font-family="Geist" font-size="13" text-anchor="middle">Football</text>
+<text x="1014" y="158" fill="#4A4843" font-family="Geist" font-size="13" text-anchor="middle">Physics</text>
+<g fill="#6B6862" font-family="Geist Mono" font-size="11">
+<text x="0" y="316">07:00</text><text x="410" y="316">12:00</text><text x="902" y="316">18:00</text><text x="1272" y="316">23:00</text>
+</g>
+</svg>
+<div style="position: absolute; left: 64px; right: 64px; bottom: 56px; display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid #C9C5BC; padding-top: 20px">
+<span style="font-size: 15px">Next: football training at 16:00</span>
+<span style="font-size: 15px; color: #4A4843">3 h 05 m of free ground left today</span>
+<span style="font-size: 13px; color: #6B6862">Ctrl K</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

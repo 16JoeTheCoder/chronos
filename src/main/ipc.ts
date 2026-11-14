@@ -7,8 +7,10 @@ import { ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import { RECYCLABLE, type ClosureInput, type Command, type EventInput, type OccurrencePatch, type Result, type SettingsPatch, type TaskInput, type TagInput } from '../core/commands';
 import { isId } from '../core/model/ids';
 import { COLLS, type Coll, type DeviceSettings, type ShelfItem, type Snapshot, type TimerConfig } from '../core/model/types';
-import { CHANNELS } from '../preload/api';
+import { CHANNELS, type NotepadCreated } from '../preload/api';
+import type { ParserRule } from '../core/parser/types';
 import { isObj } from '../core/validation';
+import { TOKEN_RE } from './undoTokens';
 
 type Obj = Record<string, unknown>;
 const str = (v: unknown, max = 5000): string => (typeof v === 'string' ? v.slice(0, max) : '');
@@ -71,8 +73,9 @@ function pickEvent(v: unknown): EventInput | null {
     tagId: nullableId(v.tagId),
     scope: v.scope as EventInput['scope'],
     tz: str(v.tz, 64),
-    startMin: num(v.startMin),
-    endMin: num(v.endMin),
+    startMin: v.startMin === null ? null : num(v.startMin),
+    endMin: v.endMin === null ? null : num(v.endMin),
+    ...(v.durationMin !== undefined ? { durationMin: num(v.durationMin) } : {}),
     date: v.date === null ? null : str(v.date, 10),
     recur: r
       ? {
@@ -120,17 +123,41 @@ function pickSettings(v: Obj): SettingsPatch {
   if ('runwayPosition' in v) p.runwayPosition = v.runwayPosition as SettingsPatch['runwayPosition'];
   if ('reduceMotion' in v) p.reduceMotion = v.reduceMotion as boolean | null;
   if ('onboarded' in v) p.onboarded = v.onboarded as boolean;
+  if ('snapMin' in v) p.snapMin = num(v.snapMin);
+  if (Array.isArray(v.parserRules)) p.parserRules = v.parserRules.slice(0, 201).map(pickRule);
+  if (Array.isArray(v.parserReports)) p.parserReports = v.parserReports.slice(0, 201).map((x) => ({ at: isObj(x) ? num(x.at) : NaN, input: str(isObj(x) ? x.input : '', 300), expected: str(isObj(x) ? x.expected : '', 500), actual: str(isObj(x) ? x.actual : '', 500) }));
+  if ('themeId' in v) p.themeId = str(v.themeId, 40);
+  if (Array.isArray(v.themeSchedule)) p.themeSchedule = v.themeSchedule.slice(0, 24).map((x) => ({ from: str(isObj(x) ? x.from : '', 5), themeId: str(isObj(x) ? x.themeId : '', 40) }));
+  if ('weeklyFocusTargetH' in v) p.weeklyFocusTargetH = num(v.weeklyFocusTargetH);
+  if (isObj(v.sound)) p.sound = { enabled: v.sound.enabled as boolean, volume: num(v.sound.volume), muteInFocus: v.sound.muteInFocus as boolean };
+  const flags = <K extends string>(o: unknown, keys: readonly K[]) => Object.fromEntries(keys.map((k) => [k, (isObj(o) ? o[k] : undefined) as boolean])) as Record<K, boolean>;
+  if (isObj(v.energy)) p.energy = flags(v.energy, ['livingReactor', 'holographicDepth', 'reactiveData', 'motion'] as const);
+  if (isObj(v.widgets)) p.widgets = flags(v.widgets, ['day', 'momentum', 'notes', 'wellness'] as const);
+  if (isObj(v.planning)) p.planning = { defaultBlockMin: num(v.planning.defaultBlockMin), learnEstimates: v.planning.learnEstimates as boolean, breakAfterMin: num(v.planning.breakAfterMin) };
   return p;
+}
+
+/** Copy a parser rule's known keys; core's isParserRule checks the values. The Phase 1 `{keyword, kind}` shape passes through. */
+function pickRule(v: unknown): ParserRule {
+  const r = isObj(v) ? v : {};
+  if ('keyword' in r && !('match' in r)) return { keyword: str(r.keyword, 61), kind: r.kind } as unknown as ParserRule;
+  const o: Record<string, unknown> = { id: str(r.id, 81), match: str(r.match, 61), source: r.source };
+  if (Array.isArray(r.aliases)) o.aliases = r.aliases.slice(0, 21).map((a) => str(a, 61));
+  for (const k of ['kind', 'defaultDurationMin', 'allowDateOnly', 'usesSchedule'] as const) if (k in r) o[k] = r[k];
+  for (const k of ['tagId', 'projectId'] as const) if (k in r) o[k] = str(r[k], 161);
+  return o as unknown as ParserRule;
 }
 
 function pickDevice(v: Obj): Extract<Command, { type: 'device.update' }>['patch'] {
   const p: Extract<Command, { type: 'device.update' }>['patch'] = {};
-  for (const k of ['launchAtLogin', 'skipLaunchScreen', 'sound', 'notifications', 'experimental'] as const) if (k in v) p[k] = v[k] as boolean;
+  for (const k of ['launchAtLogin', 'skipLaunchScreen', 'sound', 'notifications', 'experimental', 'liveOnDesktop', 'overlayHideInFullscreen'] as const) if (k in v) p[k] = v[k] as boolean;
   if (isObj(v.mcp) && typeof v.mcp.enabled === 'boolean') p.mcp = { enabled: v.mcp.enabled };
   if ('widgetDock' in v) p.widgetDock = v.widgetDock as DeviceSettings['widgetDock'];
   if (isObj(v.shortcuts)) p.shortcuts = { toggle: str(v.shortcuts.toggle, 60), startPause: str(v.shortcuts.startPause, 60), capture: str(v.shortcuts.capture, 60) };
   if ('displayId' in v) p.displayId = v.displayId === null ? null : num(v.displayId);
   if ('stackFolder' in v) p.stackFolder = v.stackFolder === null ? null : str(v.stackFolder, 1000);
+  if ('composerProjectId' in v) p.composerProjectId = nullableId(v.composerProjectId);
+  if ('onboarded' in v) p.onboarded = v.onboarded as boolean;
   return p;
 }
 
@@ -207,7 +234,30 @@ export function parseCommand(raw: unknown): Command | null {
       return rid ? { type: 'tag.update', id: rid, input } : null;
     }
     case 'idea.add':
-      return { type: 'idea.add', text: str(raw.text, 1000), taskId: nullableId(raw.taskId) };
+      return { type: 'idea.add', text: str(raw.text, 20_000), taskId: nullableId(raw.taskId), projectId: nullableId(raw.projectId) };
+    case 'event.place':
+      return rid ? { type: 'event.place', id: rid, startMin: num(raw.startMin) } : null;
+    case 'plan.auto':
+    case 'plan.replan':
+      return { type: raw.type, ...(typeof raw.date === 'string' ? { date: str(raw.date, 10) } : {}) };
+    case 'review.submit': {
+      const outcomes = Array.isArray(raw.outcomes) ? raw.outcomes.slice(0, 1000).map((o) => (isObj(o) ? { taskId: id(o.taskId) ?? '', action: o.action as 'done' } : { taskId: '', action: 'done' as const })) : [];
+      return { type: 'review.submit', date: str(raw.date, 10), outcomes };
+    }
+    case 'parser.report':
+      return { type: 'parser.report', input: str(raw.input, 300), expected: str(raw.expected, 500), actual: str(raw.actual, 500) };
+    case 'idea.edit': {
+      if (!rid) return null;
+      const ids = Array.isArray(raw.parsedTaskIds) ? raw.parsedTaskIds.slice(0, 500) : undefined;
+      if (ids && !ids.every((x) => typeof x === 'string' && x.length <= 200)) return null;
+      return {
+        type: 'idea.edit',
+        id: rid,
+        ...('body' in raw ? { body: str(raw.body, 20_000) } : {}),
+        ...('projectId' in raw ? { projectId: nullableId(raw.projectId) } : {}),
+        ...(ids ? { parsedTaskIds: ids as string[] } : {}),
+      };
+    }
     case 'idea.review':
       return rid && typeof raw.reviewed === 'boolean' ? { type: 'idea.review', id: rid, reviewed: raw.reviewed } : null;
     case 'idea.toTask':
@@ -250,16 +300,28 @@ export function parseCommand(raw: unknown): Command | null {
   }
 }
 
+/** The notepad's close summary: at most 100 known records, short text; anything else is dropped. */
+export function pickCreated(v: unknown): NotepadCreated | null {
+  if (!isObj(v) || !Array.isArray(v.records)) return null;
+  const records = v.records.slice(0, 100).flatMap((r) => (isObj(r) && ['tasks', 'events', 'ideas'].includes(r.coll as string) && isId(r.id) ? [{ coll: r.coll as 'tasks', id: r.id as string }] : []));
+  return records.length ? { text: str(v.text, 120), records } : null;
+}
+
 export interface IpcDeps {
   isOurSender(e: IpcMainEvent | IpcMainInvokeEvent): boolean;
   snapshot(): Snapshot;
   command(cmd: Command): Result | Promise<Result>;
+  /** Raw undo ops from a command result go behind a token (D-143). */
+  seal(res: Result): Result;
+  redeemUndo(token: unknown): Extract<Command, { type: 'records.revert' }> | null;
   hide(): void;
-  widgetClick(): void;
-  widgetMenu(): void;
-  dragStart(): void;
-  dragEnd(): boolean;
-  closeCapture(): void;
+  showHome(view: 'runway' | 'focus' | null): void;
+  overlayClick(): void;
+  overlayExpand(expanded: boolean): void;
+  closeNotepad(created: NotepadCreated | null): void;
+  closePalette(): void;
+  notify(text: string, undoToken: string | undefined): void;
+  askClaude(text: string): Promise<Result>;
   quit(): void;
   restart(reason: string): void;
   mark(name: string, ms: number): void;
@@ -276,17 +338,32 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle(CHANNELS.getSnapshot, guard(null, () => deps.snapshot()));
   ipcMain.handle(
     CHANNELS.command,
-    guard<[unknown], Result | Promise<Result>>(forbidden, (raw) => {
+    guard<[unknown], Promise<Result>>(Promise.resolve(forbidden), async (raw) => {
       const cmd = parseCommand(raw);
-      return cmd ? deps.command(cmd) : { ok: false, error: 'Invalid command.' };
+      return cmd ? deps.seal(await deps.command(cmd)) : { ok: false, error: 'Invalid command.' };
     }),
   );
+  ipcMain.handle(
+    CHANNELS.undo,
+    guard<[unknown], Promise<Result>>(Promise.resolve(forbidden), async (token) => {
+      const cmd = deps.redeemUndo(token);
+      return cmd ? deps.seal(await deps.command(cmd)) : { ok: false, error: 'That change can no longer be undone.' };
+    }),
+  );
+  ipcMain.handle(CHANNELS.askClaude, guard<[unknown], Promise<Result>>(Promise.resolve(forbidden), (text) => {
+    const t = str(text, 20_000).trim();
+    return t ? deps.askClaude(t) : Promise.resolve({ ok: false, error: 'Nothing to send.' });
+  }));
   ipcMain.on(CHANNELS.hide, guard(undefined, () => deps.hide()));
-  ipcMain.on(CHANNELS.widgetClick, guard(undefined, () => deps.widgetClick()));
-  ipcMain.on(CHANNELS.widgetMenu, guard(undefined, () => deps.widgetMenu()));
-  ipcMain.on(CHANNELS.dragStart, guard(undefined, () => deps.dragStart()));
-  ipcMain.handle(CHANNELS.dragEnd, guard(false, () => deps.dragEnd()));
-  ipcMain.on(CHANNELS.closeCapture, guard(undefined, () => deps.closeCapture()));
+  ipcMain.on(CHANNELS.showHome, guard<[unknown], void>(undefined, (v) => deps.showHome(oneOf(v, ['runway', 'focus'] as const) ?? null)));
+  ipcMain.on(CHANNELS.overlayClick, guard(undefined, () => deps.overlayClick()));
+  ipcMain.on(CHANNELS.overlayExpand, guard<[unknown], void>(undefined, (v) => deps.overlayExpand(v === true)));
+  ipcMain.on(CHANNELS.closeNotepad, guard<[unknown], void>(undefined, (v) => deps.closeNotepad(pickCreated(v))));
+  ipcMain.on(CHANNELS.closePalette, guard(undefined, () => deps.closePalette()));
+  ipcMain.on(CHANNELS.notify, guard<[unknown, unknown], void>(undefined, (text, token) => {
+    const t = str(text, 120).trim();
+    if (t) deps.notify(t, typeof token === 'string' && TOKEN_RE.test(token) ? token : undefined);
+  }));
   ipcMain.on(CHANNELS.quit, guard(undefined, () => deps.quit()));
   ipcMain.on(CHANNELS.restart, guard<[unknown], void>(undefined, (reason) => deps.restart(str(reason, 2000))));
   ipcMain.on(CHANNELS.mark, guard<[unknown, unknown], void>(undefined, (name, ms) => {

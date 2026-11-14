@@ -12,6 +12,9 @@ export interface HoldControl {
   holding: boolean;
   pulse: boolean;
   secs: number;
+  /** Programmatic hold, for the Focus window-level key listener. */
+  press: (src: 'enter' | 'pointer') => void;
+  release: () => void;
   handlers: {
     onKeyDown: (e: KeyboardEvent) => void;
     onKeyUp: (e: KeyboardEvent) => void;
@@ -38,6 +41,7 @@ export function useHold(onComplete: () => void): HoldControl {
         durationMs: HOLD_MS,
         onProgress: (p) => {
           ring.current?.style.setProperty('--p', String(p));
+          ring.current?.parentElement?.style.setProperty('--p', String(p));
           setSecs(Math.max(1, Math.ceil((1 - p) * WHOLE)));
         },
         onComplete: () => {
@@ -64,6 +68,8 @@ export function useHold(onComplete: () => void): HoldControl {
     holding,
     pulse,
     secs,
+    press,
+    release,
     handlers: {
       onKeyDown: (e) => {
         if (e.key === 'Enter') {
@@ -93,7 +99,8 @@ export function useHold(onComplete: () => void): HoldControl {
 
 export function HoldButton({ hold, reduce, label, hintId, className = '' }: { hold: HoldControl; reduce: boolean; label: string; hintId: string; className?: string }) {
   return (
-    <button type="button" className={`btn hold${hold.holding ? ' holding' : ''} ${className}`} aria-describedby={hintId} {...hold.handlers}>
+    <button type="button" data-hold className={`btn hold${hold.holding ? ' holding' : ''} ${className}`} aria-describedby={hintId} {...hold.handlers}>
+      <i className="hold-bar" aria-hidden="true" />
       <span ref={hold.ring} className={`hold-ring${hold.holding ? ' on' : ''}${hold.pulse ? ' pulse' : ''}`} aria-hidden="true">
         <i className="hold-track" />
         {!reduce && (
@@ -108,7 +115,7 @@ export function HoldButton({ hold, reduce, label, hintId, className = '' }: { ho
         )}
         {reduce && hold.holding ? <b className="hold-num">{hold.secs}</b> : <Icon name="check" size={14} />}
       </span>
-      {label}
+      <span className="hold-label">{label}</span>
     </button>
   );
 }

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Focus screen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FF5B1F}a:hover{color:#FF7A47}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; background: #0D0E10; font-family: 'Space Grotesk', system-ui, sans-serif; color: #F3F2EE; display: flex; flex-direction: column; box-sizing: border-box; padding: 40px 64px">
+<div style="display: flex; justify-content: space-between; font-size: 12px; color: #8D9198">
+<span style="font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase">Focus</span>
+<span>Football at 16:00 · 1 h 12 m free after this</span>
+</div>
+<div style="flex: 1; display: flex; gap: 96px; align-items: center">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 32px">
+<div style="font-size: 56px; line-height: 1.1; letter-spacing: -0.02em"><span style="font-weight: 300">Wind sim:</span> <span style="font-weight: 700">blade pitch model</span></div>
+<div style="font-size: 16px; color: #A9ADB3; max-width: 560px; line-height: 1.5">Done when: the power curve plateaus at rated speed and matches the reference within 5 %.</div>
+<div style="display: flex; align-items: center; gap: 32px">
+<svg width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Hold Enter to finish, 0 percent"><circle cx="80" cy="80" r="70" fill="none" stroke="#25292E" stroke-width="6"></circle><circle cx="80" cy="80" r="70" fill="none" stroke="#FF5B1F" stroke-width="6" stroke-dasharray="440" stroke-dashoffset="150" stroke-linecap="round" transform="rotate(-90 80 80)"></circle><text x="80" y="88" text-anchor="middle" fill="#F3F2EE" font-family="JetBrains Mono, monospace" font-size="28" font-weight="500">41:08</text></svg>
+<div style="display: flex; flex-direction: column; gap: 12px">
+<button style="height: 48px; padding: 0 24px; background: #FF5B1F; color: #0D0E10; border: none; border-radius: 10px; font: 700 15px 'Space Grotesk', sans-serif">Hold Enter to finish</button>
+<button style="height: 44px; padding: 0 24px; background: transparent; color: #F3F2EE; border: 1px solid #7B8088; border-radius: 10px; font: 500 14px 'Space Grotesk', sans-serif">Space · Pause</button>
+</div>
+</div>
+</div>
+<div style="width: 420px; align-self: stretch; margin: 48px 0; border-left: 1px solid #2A2D32; padding-left: 40px; display: flex; flex-direction: column; gap: 12px">
+<span style="font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #8D9198">Thinking space</span>
+<p style="margin: 0; font-size: 15px; line-height: 1.7; color: #F3F2EE">Cp drops hard past 12 m/s. Ramp pitch from 10 m/s and compare.</p>
+<p style="margin: 0; font-size: 15px; line-height: 1.7; color: #A9ADB3">Tip-speed ratio clamp at cut-in?</p>
+<span style="font-size: 13px; color: #8D9198">Type to add a thought. It stays with this task.</span>
+</div>
+</div>
+<div style="font-size: 11px; color: #8D9198; font-family: 'JetBrains Mono', monospace">No other tasks are shown here. Esc returns to the desktop.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chronos: Flight plan home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&amp;family=Barlow:wght@400;500;600&amp;family=Courier+Prime:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F5DA8}a:hover{color:#1F3F75}
+::selection{background:#FF6A13;color:#111418}
+.fp-btn{transition:background 160ms cubic-bezier(.16,1,.3,1)}
+.fp-btn:hover{background:#E85A08}
+.fp-ghost:hover{background:rgba(17,20,24,0.06)}
+.fp-btn:focus-visible,.fp-ghost:focus-visible{outline:2px solid #2F5DA8;outline-offset:2px}
+.fp-w{transition:opacity 420ms cubic-bezier(.16,1,.3,1)}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; background: #F2F2EE; font-family: Barlow, system-ui, sans-serif; color: #111418; display: grid; grid-template-columns: 380px minmax(0,1fr) 360px; overflow: hidden">
+<aside aria-label="Flight plan for today" style="background: #FFFFFF; border-right: 1px solid #D5D6D2; padding: 36px 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: 0.01em">Flight plan</h1>
+<span style="font-family: 'Courier Prime', monospace; font-size: 14px; color: #5A6068">Wed 11 Nov 2026 · Day 315</span>
+</div>
+<ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px"><li style="display: grid; grid-template-columns: 64px 14px minmax(0,1fr); gap: 12px; align-items: center; padding: 12px 14px; border-radius: 6px; "><span style="font-family: 'Courier Prime', monospace; font-size: 15px; color: #3A3F46">07:30</span><span style="width: 10px; height: 10px; border-radius: 5px; background: #5A6068"></span><span style="font-size: 16px; color: #5A6068; font-weight: 400">School</span></li><li style="display: grid; grid-template-columns: 64px 14px minmax(0,1fr); gap: 12px; align-items: center; padding: 12px 14px; border-radius: 6px; background: rgba(255,106,19,0.10);"><span style="font-family: 'Courier Prime', monospace; font-size: 15px; color: #3A3F46">14:00</span><span style="width: 10px; height: 10px; border-radius: 5px; background: #FF6A13"></span><span style="font-size: 16px; color: #111418; font-weight: 600">Wind sim: blade pitch model</span></li><li style="display: grid; grid-template-columns: 64px 14px minmax(0,1fr); gap: 12px; align-items: center; padding: 12px 14px; border-radius: 6px; "><span style="font-family: 'Courier Prime', monospace; font-size: 15px; color: #3A3F46">15:30</span><span style="width: 10px; height: 10px; border-radius: 5px; background: #2F5DA8"></span><span style="font-size: 16px; color: #111418; font-weight: 400">Break, 10 min</span></li><li style="display: grid; grid-template-columns: 64px 14px minmax(0,1fr); gap: 12px; align-items: center; padding: 12px 14px; border-radius: 6px; "><span style="font-family: 'Courier Prime', monospace; font-size: 15px; color: #3A3F46">16:00</span><span style="width: 10px; height: 10px; border-radius: 5px; background: #5A6068"></span><span style="font-size: 16px; color: #5A6068; font-weight: 400">Football training</span></li><li style="display: grid; grid-template-columns: 64px 14px minmax(0,1fr); gap: 12px; align-items: center; padding: 12px 14px; border-radius: 6px; "><span style="font-family: 'Courier Prime', monospace; font-size: 15px; color: #3A3F46">19:00</span><span style="width: 10px; height: 10px; border-radius: 5px; background: #111418"></span><span style="font-size: 16px; color: #111418; font-weight: 400">Physics: Paper 2 corrections</span></li><li style="display: grid; grid-template-columns: 64px 14px minmax(0,1fr); gap: 12px; align-items: center; padding: 12px 14px; border-radius: 6px; "><span style="font-family: 'Courier Prime', monospace; font-size: 15px; color: #3A3F46">22:30</span><span style="width: 10px; height: 10px; border-radius: 5px; background: #8C9097"></span><span style="font-size: 16px; color: #111418; font-weight: 400">Buffer</span></li></ol>
+<div style="flex: 1"></div>
+<span style="font-size: 14px; color: #3A3F46">3 h 05 m free after the buffer</span>
+</aside>
+<main style="padding: 40px 48px; display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<span style="font-family: 'Courier Prime', monospace; font-size: 15px; color: #5A6068">14:22 WIB</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #3A3F46"><span style="width: 8px; height: 8px; border-radius: 4px; background: #17784B"></span>Synced</span>
+</div>
+<section aria-label="Current step" style="flex: 1; background: #FFFFFF; border: 1px solid #D5D6D2; border-radius: 8px; padding: 40px; display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 52px; line-height: 1.02">Wind sim: blade pitch model</h2>
+<p style="margin: 0; font-size: 18px; line-height: 1.5; color: #3A3F46; max-width: 52ch">Done when the power curve plateaus at rated speed and matches the reference within 5 %.</p>
+</div>
+<div style="display: flex; gap: 56px; align-items: flex-end">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 14px; color: #5A6068">Elapsed in step</span>
+<span style="font-family: 'Courier Prime', monospace; font-weight: 700; font-size: 44px; color: #111418">T+ 00:48:52</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 14px; color: #5A6068">Until step ends at 15:30</span>
+<span style="font-family: 'Courier Prime', monospace; font-weight: 700; font-size: 96px; line-height: 0.9; color: #B84508">T– 41:08</span>
+</div>
+</div>
+<div role="img" aria-label="Step 54 percent complete" style="position: relative; height: 14px; background: #E6E6E1; border-radius: 3px; overflow: hidden"><div style="position: absolute; inset: 0 46% 0 0; background: #FF6A13"></div></div>
+<div style="flex: 1"></div>
+<div style="display: flex; gap: 12px">
+<button class="fp-btn" onClick="{{ toggleFocus }}" style="height: 56px; padding: 0 28px; border-radius: 6px; border: none; background: #FF6A13; color: #111418; font: 700 18px 'Barlow Condensed', sans-serif; letter-spacing: 0.02em; cursor: pointer">{{ focusLabel }}</button>
+<button class="fp-ghost" style="height: 56px; padding: 0 22px; border-radius: 6px; border: 1.5px solid #111418; background: transparent; color: #111418; font: 600 16px Barlow, sans-serif; cursor: pointer">Hold Enter to complete step</button>
+<button class="fp-ghost" style="height: 56px; padding: 0 22px; border-radius: 6px; border: 1px solid #A9ADB3; background: transparent; color: #3A3F46; font: 500 16px Barlow, sans-serif; cursor: pointer">Hold</button>
+</div>
+</section>
+<button class="fp-ghost" style="height: 52px; border-radius: 6px; border: 1px solid #A9ADB3; background: #FFFFFF; color: #5A6068; font: 400 16px Barlow, sans-serif; display: flex; align-items: center; gap: 12px; padding: 0 18px; text-align: left; cursor: text">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2F5DA8" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+<span style="flex: 1">Call Mission Control: add, search or ask Claude</span><span style="font-family: 'Courier Prime', monospace; font-size: 13px">Ctrl K</span>
+</button>
+</main>
+<aside aria-label="Widgets" class="fp-w" style="{{ widgetsStyle }}">
+<section style="background: #FFFFFF; border: 1px solid #D5D6D2; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 600">Mission log, this week</h2>
+<table style="border-collapse: collapse; font-family: 'Courier Prime', monospace; font-size: 14px">
+<tr><td style="padding: 4px 0; color: #5A6068">Focus hours</td><td style="text-align: right; font-weight: 700">17.8 h</td></tr>
+<tr><td style="padding: 4px 0; color: #5A6068">Steps completed</td><td style="text-align: right; font-weight: 700">23</td></tr>
+<tr><td style="padding: 4px 0; color: #5A6068">Streak</td><td style="text-align: right; font-weight: 700">4 days</td></tr>
+<tr><td style="padding: 4px 0; color: #5A6068">Estimates</td><td style="text-align: right; font-weight: 700; color: #C2410C">+12 % long</td></tr>
+</table>
+</section>
+<section style="background: #FFFFFF; border: 1px solid #D5D6D2; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 600">Crew notes</h2>
+<p style="margin: 0; font-size: 15px; line-height: 1.55">Cp drops hard past 12 m/s. Ramp pitch from 10 m/s and compare.</p>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #5A6068">Tip-speed ratio clamp at cut-in?</p>
+</section>
+<section style="background: #EAF0FA; border: 1px solid #2F5DA8; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 6px">
+<h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 600; color: #1F3F75">Crew rest</h2>
+<span style="font-size: 15px; color: #1F3F75">82 min since your last break. Rest 10 min at 15:30.</span>
+</section>
+</aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { focus: false }; }
+  renderVals() {
+    const f = this.state.focus;
+    return {
+      focusLabel: f ? 'Leave focus' : 'Engage focus',
+      toggleFocus: () => this.setState({ focus: !f }),
+      widgetsStyle: 'padding: 40px 32px 40px 0; display: flex; flex-direction: column; gap: 16px; ' + (f ? 'opacity: 0.2;' : 'opacity: 1;')
+    };
+  }
+}
+</script>
+</body>
+</html>

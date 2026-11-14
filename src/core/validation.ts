@@ -6,7 +6,7 @@ import { isValidZone } from './time/zone';
 import { isSortKey } from './model/sortKey';
 import { isId } from './model/ids';
 import { SNAP_OPTIONS } from './model/defaults';
-import { COLLS, PRIORITIES, SCHEMA_V, SCOPES, TAG_COLORS, TASK_SOURCES, TASK_STATUSES, type Coll, type DeviceSettings, type Settings } from './model/types';
+import { COLLS, PARSER_REPORTS_MAX, PRIORITIES, SCHEMA_V, SCOPES, TAG_COLORS, TASK_SOURCES, TASK_STATUSES, type Coll, type DeviceSettings, type Settings } from './model/types';
 
 export const MIN_FINISH_CONDITION = 8;
 const SEC = 1000;
@@ -100,7 +100,12 @@ export function validateEventFields(ev: Record<string, unknown>): Errors {
   if (!isStr(ev.title) || !ev.title.trim() || ev.title.length > 120) e.title = 'Title must be 1-120 characters.';
   if (!SCOPES.includes(ev.scope as never)) e.scope = 'Choose a scope.';
   if (!isValidZone(ev.tz)) e.tz = 'Unknown time zone.';
-  if (!isMinute(ev.startMin) || !isMinute(ev.endMin) || (ev.endMin as number) <= (ev.startMin as number)) e.time = 'End must be after start.';
+  const unplaced = ev.startMin === null && ev.endMin === null;
+  if (unplaced) {
+    // "To place": a one-off event with a date and a length but no time yet (v3).
+    if (ev.date === null) e.time = 'Only a one-off event can be unplaced.';
+  } else if (!isMinute(ev.startMin) || !isMinute(ev.endMin) || (ev.endMin as number) <= (ev.startMin as number)) e.time = 'End must be after start.';
+  if (ev.durationMin !== undefined && !(Number.isInteger(ev.durationMin) && inRange(ev.durationMin, 1, 1440))) e.durationMin = 'Length must be 1 minute to 24 hours.';
   if (ev.date !== null && !isDate(ev.date)) e.date = 'Use a date like 2026-10-26.';
   const r = ev.recur;
   if (ev.date === null) {
@@ -116,6 +121,11 @@ export function validateEventFields(ev: Record<string, unknown>): Errors {
   if (!isStr(ev.notes) || ev.notes.length > 5000) e.notes = 'Notes are too long.';
   return e;
 }
+
+const bools = (o: unknown, keys: string[]): boolean => isObj(o) && keys.every((k) => isBool(o[k]));
+/** A misparse report (docs/parser): bounded strings so 200 of them stay far under Firestore's 1 MiB document limit. */
+export const REPORT_MAX = { input: 300, expected: 500, actual: 500 };
+const isParserReport = (r: unknown): boolean => isObj(r) && isNum(r.at) && isStr(r.input) && r.input.length <= REPORT_MAX.input && isStr(r.expected) && r.expected.length <= REPORT_MAX.expected && isStr(r.actual) && r.actual.length <= REPORT_MAX.actual;
 
 export function validateSettings(s: Settings): Errors {
   const e: Errors = {};
@@ -138,7 +148,16 @@ export function validateSettings(s: Settings): Errors {
   if (!isStr(s.themeId) || !s.themeId || s.themeId.length > 40) e.themeId = 'Unknown theme.';
   if (s.customTheme !== null && !(isObj(s.customTheme) && Object.keys(s.customTheme).length <= 64 && Object.values(s.customTheme).every((v) => isStr(v) && v.length <= 64))) e.customTheme = 'Invalid custom theme.';
   if (!SNAP_OPTIONS.includes(s.snapMin)) e.snapMin = 'Snap must be 5, 10, 15 or 30 minutes.';
-  if (!Array.isArray(s.parserRules) || s.parserRules.length > 200 || !s.parserRules.every((r) => isObj(r) && isStr(r.keyword) && r.keyword.trim().length > 0 && r.keyword.length <= 60 && (r.kind === 'fixed' || r.kind === 'task'))) e.parserRules = 'Invalid parser rules.';
+  if (!Array.isArray(s.themeSchedule) || s.themeSchedule.length > 24 || !s.themeSchedule.every((x) => isObj(x) && isStr(x.from) && /^([01]\d|2[0-3]):[0-5]\d$/.test(x.from) && isStr(x.themeId) && x.themeId.length > 0 && x.themeId.length <= 40)) e.themeSchedule = 'Invalid theme schedule.';
+  if (!inRange(s.weeklyFocusTargetH, 0, 168)) e.weeklyFocusTargetH = 'Use 0-168 hours.';
+  const so = s.sound;
+  if (!isObj(so) || !isBool(so.enabled) || !inRange(so.volume, 0, 1) || !isBool(so.muteInFocus)) e.sound = 'Invalid sound.';
+  if (!bools(s.energy, ['livingReactor', 'holographicDepth', 'reactiveData', 'motion'])) e.energy = 'Invalid energy.';
+  if (!bools(s.widgets, ['day', 'momentum', 'notes', 'wellness'])) e.widgets = 'Invalid widgets.';
+  if (!Array.isArray(s.parserReports) || s.parserReports.length > PARSER_REPORTS_MAX || !s.parserReports.every(isParserReport)) e.parserReports = 'Invalid parser reports.';
+  const pl = s.planning;
+  if (!isObj(pl) || !(Number.isInteger(pl.defaultBlockMin) && inRange(pl.defaultBlockMin, 5, 480)) || !isBool(pl.learnEstimates) || !(Number.isInteger(pl.breakAfterMin) && inRange(pl.breakAfterMin, 15, 240))) e.planning = 'Invalid planning.';
+  if (!Array.isArray(s.parserRules) || s.parserRules.length > 200 || !s.parserRules.every(isParserRule)) e.parserRules = 'Invalid parser rules.';
   return e;
 }
 
@@ -153,9 +172,27 @@ export function isValidAccelerator(acc: unknown): boolean {
   return keyOk && !mods.has(key) && parts.slice(0, -1).every((m) => mods.has(m.toLowerCase()));
 }
 
+const optStr = (v: unknown, max: number) => v === undefined || (isStr(v) && v.length <= max);
+const optBool = (v: unknown) => v === undefined || isBool(v);
+
+/** A ParserRule (core/parser/types). The Phase 1 `{keyword, kind}` shape is still accepted on read; the parser maps it. */
+export function isParserRule(r: unknown): boolean {
+  if (!isObj(r)) return false;
+  if ('keyword' in r && !('match' in r)) return isStr(r.keyword) && r.keyword.trim().length > 0 && r.keyword.length <= 60 && (r.kind === 'fixed' || r.kind === 'task');
+  return (
+    isStr(r.id) && r.id.length > 0 && r.id.length <= 80 &&
+    isStr(r.match) && r.match.trim().length > 0 && r.match.length <= 60 &&
+    (r.aliases === undefined || (Array.isArray(r.aliases) && r.aliases.length <= 20 && r.aliases.every((a) => isStr(a) && a.trim().length > 0 && a.length <= 60))) &&
+    (r.kind === undefined || r.kind === 'fixed' || r.kind === 'task' || r.kind === 'note') &&
+    (r.defaultDurationMin === undefined || (Number.isInteger(r.defaultDurationMin) && inRange(r.defaultDurationMin as number, 1, 1440))) &&
+    optBool(r.allowDateOnly) && optBool(r.usesSchedule) && optStr(r.tagId, 160) && optStr(r.projectId, 160) &&
+    (r.source === 'builtin' || r.source === 'user' || r.source === 'learned')
+  );
+}
+
 export function validateDevice(s: DeviceSettings): Errors {
   const e: Errors = {};
-  for (const k of ['launchAtLogin', 'skipLaunchScreen', 'sound', 'notifications'] as const) if (!isBool(s[k])) e[k] = 'Invalid flag.';
+  for (const k of ['launchAtLogin', 'skipLaunchScreen', 'sound', 'notifications', 'liveOnDesktop', 'overlayHideInFullscreen'] as const) if (!isBool(s[k])) e[k] = 'Invalid flag.';
   if (!['taskbar-left', 'taskbar-right', 'free'].includes(s.widgetDock)) e.widgetDock = 'Invalid dock.';
   const sc = s.shortcuts;
   const keys = ['toggle', 'startPause', 'capture'] as const;
@@ -163,7 +200,8 @@ export function validateDevice(s: DeviceSettings): Errors {
   if (new Set(keys.map((k) => sc[k].toLowerCase())).size !== keys.length) e.shortcuts = 'Shortcuts must differ.';
   if (s.stackFolder !== null && (!isStr(s.stackFolder) || s.stackFolder.length > 1000)) e.stackFolder = 'Invalid folder.';
   if (s.displayId !== null && !isNum(s.displayId)) e.displayId = 'Invalid display.';
-  if (!isBool(s.experimental)) e.experimental = 'Invalid flag.';
+  if (!isBool(s.experimental) || !isBool(s.onboarded)) e.experimental = 'Invalid flag.';
+  if (s.composerProjectId !== null && !isId(s.composerProjectId)) e.composerProjectId = 'Invalid project.';
   const m = s.mcp;
   if (!isObj(m) || !isBool(m.enabled) || !(Number.isInteger(m.port) && inRange(m.port, 0, 65535)) || !isStr(m.token) || m.token.length > 200) e.mcp = 'Invalid MCP settings.';
   const y = s.sync;
@@ -203,13 +241,13 @@ const SHAPES: Record<Coll, Record<string, Check>> = {
     workMs: anyNum, breakMs: anyNum, pomodorosCompleted: int(0, 1e6), startedAt: nullable(anyNum), completedAt: nullable(anyNum), timer: timerCfg, runtime,
     checkpointEveryMin: nullable(int(1, 24 * 60)), nextCheckpointMs: nullable(anyNum),
   },
-  events: { title: str(500), tagId: idRef, scope: oneOf(SCOPES), tz: isValidZone, startMin: minute, endMin: minute, date: nullable(DATE), recur: nullable(recur), notes: str(100_000) },
+  events: { title: str(500), tagId: idRef, scope: oneOf(SCOPES), tz: isValidZone, startMin: nullable(minute), endMin: nullable(minute), durationMin: int(1, 1440), date: nullable(DATE), recur: nullable(recur), notes: str(100_000) },
   eventExceptions: { eventId: isId, date: DATE, kind: oneOf(['skip', 'edit']), title: nullable(str(500)), startMin: nullable(minute), endMin: nullable(minute), tagId: idRef },
   closures: { name: str(200), startDate: DATE, endDate: DATE, scopes: arrOf(oneOf(SCOPES), 4), source: oneOf(['holiday', 'break', 'custom']), confirmed: isBool },
   blocks: { taskId: idRef, tagId: idRef, title: str(500), date: DATE, startMin: minute, endMin: minute, tz: isValidZone, kind: oneOf(['work', 'sprint', 'break']), auto: isBool },
   sessions: { taskId: isId, blockId: idRef, startedAt: anyNum, endedAt: anyNum, phase: oneOf(['work', 'break']), overrunMs: anyNum },
   tags: { name: str(200), color: oneOf(TAG_COLORS), kind: oneOf(['class', 'project', 'general']) },
-  ideas: { text: str(5000), body: str(100_000), taskId: idRef, reviewed: isBool, parsedTaskIds: arrOf(isId, 500) },
+  ideas: { text: str(5000), body: str(100_000), taskId: idRef, projectId: idRef, reviewed: isBool, parsedTaskIds: arrOf(isId, 500) },
   activity: { type: oneOf(['started', 'finished', 'dropped', 'killed', 'claude']), taskId: (v) => v === '' || isId(v), at: anyNum, reason: str(5000) },
   timer: { taskId: idRef, ownerDeviceId: str(200), ownerName: str(200), takeoverAt: nullable(anyNum) },
   settings: {},
@@ -243,6 +281,8 @@ export function recordProblem(coll: string, rec: unknown): string | null {
   }
   if (coll === 'timer' && rec.id !== 'current') return 'timer must be doc current';
   for (const [k, c] of Object.entries(SHAPES[coll as Coll])) if (!c(rec[k])) return `bad ${k}`;
+  // An event is placed (both times) or unplaced (neither); a recurring one is always placed.
+  if (coll === 'events' && ((rec.startMin === null) !== (rec.endMin === null) || (rec.startMin === null && rec.date === null))) return 'bad time';
   return null;
 }
 

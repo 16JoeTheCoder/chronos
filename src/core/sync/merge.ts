@@ -11,6 +11,7 @@
 
 import { META_FIELDS, get, putRaw, timerOf, type Ctx } from '../repo/repo';
 import { SCHEMA_V, type Coll, type Conflict, type Data, type QuarantineItem, type Rec, type Stub } from '../model/types';
+import { upgradeRecord } from '../repo/migrate';
 import { recordProblem } from '../validation';
 import { recordSlices } from '../tasks/tasks';
 import { pauseAt } from '../timer/timer';
@@ -97,13 +98,15 @@ export function mergeRemote(d: Data, docs: readonly RemoteDoc[], pending: Readon
     merged.id = id;
     merged.fv = { ...(local?.fv ?? {}), ...doc.fv };
     merged.fw = { ...(local?.fw ?? {}), ...doc.fw };
-    const problem = recordProblem(coll, merged);
+    // A new record from a v2 device lacks the v3 fields: add their defaults before validating.
+    const next = local ? merged : upgradeRecord(coll, merged);
+    const problem = recordProblem(coll, next);
     if (problem) {
       quarantined.push({ at: ctx.now, coll, id, reason: problem, doc: doc.data });
       continue;
     }
-    if (local && same(local, merged)) continue;
-    out = putRaw(out, coll as Coll, merged as never);
+    if (local && same(local, next)) continue;
+    out = putRaw(out, coll as Coll, next as never);
     changed++;
   }
   return { d: changed ? afterTakeover(d, out, ctx) : d, quarantined, newer: newerDocs, changed };

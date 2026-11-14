@@ -51,34 +51,35 @@ export const minuteOf = (m: DayModel, ts: number): number => {
   return p.date === m.date ? p.minutes : p.date < m.date ? 0 : 1440;
 };
 
-export const snap = (min: number) => Math.round(min / SNAP_MIN) * SNAP_MIN;
+/** Snap a minute to the grid; `snapMin` 1 (Alt, free drag) leaves it on whole minutes. */
+export const snap = (min: number, snapMin: number = SNAP_MIN) => Math.round(min / snapMin) * snapMin;
 
 /** Free gaps [startMin, endMin) today: inside the day, after now, not fixed, not planned (ignoring one block). */
-export function freeGaps(d: Data, m: DayModel, now: number, ignoreBlockId?: string): [number, number][] {
+export function freeGaps(d: Data, m: DayModel, now: number, ignoreBlockId?: string, snapMin: number = SNAP_MIN): [number, number][] {
   const s = settingsOf(d);
   const busy = [
     ...m.instances.map((i): [number, number] => [minuteOf(m, i.start), minuteOf(m, i.end)]),
     ...m.blocks.filter((b) => b.id !== ignoreBlockId).map((b): [number, number] => [b.startMin, b.endMin]),
   ].sort((a, b) => a[0] - b[0]);
   const out: [number, number][] = [];
-  let cur = Math.max(s.dayStartMin, Math.ceil(minuteOf(m, now) / SNAP_MIN) * SNAP_MIN);
+  let cur = Math.max(s.dayStartMin, Math.ceil(minuteOf(m, now) / snapMin) * snapMin);
   for (const [a, b] of busy) {
     if (a > cur) out.push([cur, Math.min(a, s.dayEndMin)]);
     cur = Math.max(cur, b);
   }
   if (cur < s.dayEndMin) out.push([cur, s.dayEndMin]);
-  return out.filter(([a, b]) => b - a >= SNAP_MIN);
+  return out.filter(([a, b]) => b - a >= snapMin);
 }
 
 /**
  * Place a block of `dur` minutes starting at `startMin`: valid only if the start
  * lies in a free gap; a gap shorter than the duration shortens the block to fit.
  */
-export function place(gaps: [number, number][], startMin: number, dur: number): { startMin: number; endMin: number } | null {
+export function place(gaps: [number, number][], startMin: number, dur: number, minLen: number = SNAP_MIN): { startMin: number; endMin: number } | null {
   const g = gaps.find(([a, b]) => startMin >= a && startMin < b);
   if (!g) return null;
   const endMin = Math.min(startMin + dur, g[1]);
-  return endMin - startMin >= SNAP_MIN ? { startMin, endMin } : null;
+  return endMin - startMin >= minLen ? { startMin, endMin } : null;
 }
 
 /** The first gap that fits the whole duration, else the longest gap. */

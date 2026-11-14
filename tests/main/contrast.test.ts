@@ -1,35 +1,32 @@
-// WCAG 2.2 AA contrast for the token pairs the UI actually uses, in both themes (§9.12).
+// Colours come from the theme engine now (see tests/theme for the theme contrast rules). What is
+// left in tokens.css is the tag palette: data colours, which must read as marks (3:1) on the ground
+// of every launch theme in the same mode.
 import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { contrast, parseColor } from '../../src/core/theme/color';
+import { findTheme } from '../../src/renderer/themes';
 
 const css = fs.readFileSync('src/renderer/public/tokens.css', 'utf8');
-
-function block(selector: string): Record<string, string> {
+function tags(selector: string): Record<string, string> {
   const start = css.indexOf(`${selector} {`);
   const body = css.slice(start, css.indexOf('}', start));
-  return Object.fromEntries([...body.matchAll(/--([\w-]+):\s*(#[0-9A-Fa-f]{6})/g)].map((m) => [m[1] as string, m[2] as string]));
+  return Object.fromEntries([...body.matchAll(/--(tag\d):\s*(#[0-9A-Fa-f]{6})/g)].map((m) => [m[1] as string, m[2] as string]));
 }
+const palettes = { dark: tags(':root[data-mode="dark"]'), light: tags(':root[data-mode="light"]') };
+const THEMES = ['tactile-instrument', 'stark-workshop', 'tars-gargantua/day', 'tars-gargantua/night'];
 
-function luminance(hex: string): number {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * (r as number) + 0.7152 * (g as number) + 0.0722 * (b as number);
-}
-const ratio = (a: string, b: string) => {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
-  return (hi + 0.05) / (lo + 0.05);
-};
-
-const dark = block(':root');
-const light = { ...dark, ...block(':root[data-theme="light"]') };
-const TEXT: [string, string][] = [['text', 'bg'], ['text', 's1'], ['text', 's2'], ['text-2', 'bg'], ['text-2', 's1'], ['text-2', 's2'], ['text-3', 'bg'], ['text-3', 's1'], ['on-inverse', 'inverse'], ['on-accent', 'accent'], ['accent-text', 'bg'], ['warn', 'bg'], ['warn', 's1'], ['danger', 'bg'], ['ok', 'bg']];
-// The orange accent itself is decorative (caps, the primary fill); meaningful orange marks use --now.
-const MARKS: [string, string][] = [['line-strong', 'bg'], ['ring', 'bg'], ['now', 'bg'], ...(['tag1', 'tag2', 'tag3', 'tag4', 'tag5', 'tag6', 'tag7', 'tag8'].map((t) => [t, 'bg']) as [string, string][])];
-
-describe.each([['dark', dark], ['light', light]] as const)('%s theme', (_name, t) => {
-  it.each(TEXT)('text %s on %s >= 4.5:1', (fg, bg) => {
-    expect(ratio(t[fg] as string, t[bg] as string)).toBeGreaterThanOrEqual(4.5);
+describe.each(THEMES)('tag palette on %s', (id) => {
+  const t = findTheme(id);
+  const ground = parseColor(t.color.ground);
+  it.each(Object.entries(palettes[t.mode]))('%s >= 3:1', (_n, hex) => {
+    expect(contrast(parseColor(hex)!, ground!)).toBeGreaterThanOrEqual(3);
   });
-  it.each(MARKS)('mark %s on %s >= 3:1', (fg, bg) => {
-    expect(ratio(t[fg] as string, t[bg] as string)).toBeGreaterThanOrEqual(3);
-  });
+});
+it('has all eight tags in both modes', () => {
+  expect(Object.keys(palettes.dark)).toHaveLength(8);
+  expect(Object.keys(palettes.light)).toHaveLength(8);
+});
+it('keeps no other hard-coded colour in tokens.css', () => {
+  const rest = css.replace(/--tag\d:\s*#[0-9A-Fa-f]{6};/g, '');
+  expect(rest).not.toMatch(/#[0-9A-Fa-f]{3,8}\b/);
 });

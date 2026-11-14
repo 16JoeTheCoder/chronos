@@ -80,14 +80,14 @@ const claudeLog = (d: Data) => live(d, 'activity').filter((a) => a.type === 'cla
 const task = (r: Rig, key: string) => r.st.d.tasks[r.ids[key]!]!;
 
 describe('tool catalogue', () => {
-  it('lists 24 tools with strict schemas', () => {
-    expect(TOOLS).toHaveLength(24);
-    expect(new Set(TOOLS.map((t) => t.name)).size).toBe(24);
+  it('lists 28 tools with strict schemas', () => {
+    expect(TOOLS).toHaveLength(28);
+    expect(new Set(TOOLS.map((t) => t.name)).size).toBe(28);
     for (const t of TOOLS) {
       expect(t.inputSchema.additionalProperties, t.name).toBe(false);
       expect(t.description.length, t.name).toBeGreaterThan(10);
     }
-    expect(TOOLS.filter((t) => t.write).map((t) => t.name).sort()).toEqual(['add_note', 'add_project', 'add_task', 'complete_task', 'drop_task', 'edit_event_on', 'move_block', 'move_card', 'place_block', 'remove_block', 'skip_event_on', 'undo', 'update_task']);
+    expect(TOOLS.filter((t) => t.write).map((t) => t.name).sort()).toEqual(['add_note', 'add_project', 'add_task', 'complete_task', 'drop_task', 'edit_event_on', 'move_block', 'move_card', 'place_block', 'place_event', 'post_log', 'remove_block', 'skip_event_on', 'undo', 'update_task']);
   });
 });
 
@@ -656,7 +656,7 @@ describe('strict input checking', () => {
   });
   it('rejects missing required fields', () => {
     const r = rig();
-    expect(r.err('add_task', {})).toMatch(/args\.title is required/);
+    expect(r.err('add_task', {})).toMatch(/title or text/);
     expect(r.err('get_task', {})).toMatch(/args\.id is required/);
     expect(r.err('place_block', { taskId: 'x', date: TODAY, startMin: 1 })).toMatch(/args\.endMin is required/);
     expect(r.err('undo', {})).toMatch(/args\.undoToken is required/);
@@ -741,9 +741,11 @@ describe('coverage', () => {
     const card = r.ok('add_task', { title: 'Cov card', projectId: proj.id }).changed.id;
     const note = r.ok('add_note', { body: 'cov' });
     const block = r.ok('place_block', { taskId: r.ids.trip, date: TODAY, startMin: 900, endMin: 960 }).changed.id;
+    const unplaced = run(r.st.d, { type: 'event.create', input: { title: 'Cov exam', tagId: null, scope: 'school', tz: 'Asia/Jakarta', startMin: null, endMin: null, durationMin: 45, date: TODAY, recur: null, notes: '' } });
+    r.st.d = unplaced.d;
     const calls: [string, unknown][] = [
       ['get_day', {}], ['get_week', {}], ['list_tasks', {}], ['get_task', { id: r.ids.trip }], ['search', { query: 'trip' }], ['list_projects', {}], ['get_project', { id: proj.id }],
-      ['list_events', {}], ['get_stats', { from: TODAY, to: TODAY }], ['get_review', { date: TODAY }], ['list_notes', {}],
+      ['list_events', {}], ['get_stats', { from: TODAY, to: TODAY }], ['get_review', { date: TODAY }], ['list_notes', {}], ['search_log', { query: 'cov' }], ['list_unplaced', {}], ['place_event', { eventId: unplaced.id, startMin: 1080 }], ['post_log', { body: 'cov post' }],
       ['update_task', { id: r.ids.trip, patch: { notes: 'x' } }], ['move_block', { id: block, startMin: 1000 }], ['remove_block', { id: block }],
       ['skip_event_on', { eventId: r.ids.class, date: MON2 }], ['edit_event_on', { eventId: r.ids.class, date: '2026-11-09', patch: { title: 'E' } }],
       ['move_card', { taskId: card, columnId: proj.columns[1].id }], ['drop_task', { id: r.ids.trip, reason: 'coverage' }], ['complete_task', { id: r.ids.paper }], ['undo', { undoToken: note.undoToken }],

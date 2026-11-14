@@ -86,17 +86,6 @@ export function useAlignedNow(ms: number): number {
   return now;
 }
 
-/** Resolve 'system' to light/dark (and follow OS changes) so tokens.css holds each palette once. */
-export function useTheme(theme: 'dark' | 'light' | 'system'): void {
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: light)');
-    const apply = () => (document.documentElement.dataset.theme = theme === 'system' ? (mq.matches ? 'light' : 'dark') : theme);
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, [theme]);
-}
-
 // ---- Toasts (bottom-centre, polite live region) ----
 export interface Toast {
   id: number;
@@ -112,7 +101,41 @@ export function toast(text: string, opts: { undo?: () => void; error?: boolean }
   const t = { id: ++seq, text, ...opts };
   toasts = [...toasts.slice(-2), t];
   toastListeners.forEach((l) => l());
+  if (opts.undo) pushUndo(opts.undo);
   setTimeout(() => dismissToast(t.id), 8000);
+}
+
+// ---- Undo: every automatic action offers it on its toast, and Ctrl+Z runs the latest ----
+const undoStack: { fn: () => void; at: number }[] = [];
+const UNDO_WINDOW_MS = 60_000;
+function pushUndo(fn: () => void): void {
+  undoStack.push({ fn, at: Date.now() });
+  if (undoStack.length > 10) undoStack.shift();
+}
+/** Run the most recent undo that is still fresh. Returns false when there is nothing to undo. */
+export function undoLast(): boolean {
+  while (undoStack.length) {
+    const u = undoStack.pop() as { fn: () => void; at: number };
+    if (Date.now() - u.at > UNDO_WINDOW_MS) continue;
+    u.fn();
+    return true;
+  }
+  return false;
+}
+/** Make an undo callback from a command result: an undo token (main) or the revert ops it returned. */
+export function undoFor(r: Result): (() => void) | undefined {
+  if (!r.ok) return undefined;
+  const token = (r as { undoToken?: string }).undoToken;
+  const chronos = api as unknown as { undo?: (t: string) => Promise<unknown> };
+  if (token && chronos.undo) return () => void chronos.undo?.(token);
+  if (r.undo?.length) return () => void api.command({ type: 'records.revert', ops: r.undo ?? [] });
+  return undefined;
+}
+/** Run a command and tell the user, with Undo, what it did. Returns the result. */
+export async function runWithToast(cmd: Command, text: (r: Result & { ok: true }) => string): Promise<Result> {
+  const r = await run(cmd);
+  if (r.ok) toast(text(r), { undo: undoFor(r) });
+  return r;
 }
 
 export function dismissToast(id: number): void {
