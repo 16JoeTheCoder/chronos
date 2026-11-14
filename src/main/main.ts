@@ -104,7 +104,7 @@ function boot(): void {
     now: () => Date.now(),
     run: (cmd) => controller.command(cmd, Date.now()),
     notify: (n) => notice({ text: n.text, undoToken: n.undoToken }),
-    // The parser (and chrono-node) is a lazy chunk, like sync.js, to keep it out of the main bundle (D-144).
+    // The parser (and chrono-node) is a lazy chunk, like sync.js, to keep it out of the main bundle (D-147).
     parse: (text, ctx) => (require(path.join(__dirname, 'parser.js')) as typeof import('../core/parser')).parse(text, ctx),
   });
   const undoTokens = new UndoTokens();
@@ -307,7 +307,7 @@ function boot(): void {
           clipboard.writeText(claudeConfig());
           return { ok: true };
         case 'mcp.undo': {
-          // Notepad undo tokens (D-140) share this command so Home's existing toast code works for both.
+          // Notepad undo tokens (D-143) share this command so Home's existing toast code works for both.
           const revert = undoTokens.redeem(cmd.token);
           if (revert) return controller.command(revert, Date.now());
           const r = mcp.undoToken(cmd.token);
@@ -343,7 +343,7 @@ function boot(): void {
     closePalette: () => palette.close(),
     notify: (text, undoToken) => notice({ text, undoToken }),
     askClaude: async (text) => {
-      // D-143: no direct text-injection path exists, so copy and open Claude Desktop; fall back to claude.ai.
+      // D-146: no direct text-injection path exists, so copy and open Claude Desktop; fall back to claude.ai.
       clipboard.writeText(text);
       try {
         await shell.openExternal('claude://');

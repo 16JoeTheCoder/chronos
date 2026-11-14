@@ -34,7 +34,7 @@ export interface StorePort {
   run(cmd: Command): Result;
   /** A change Claude made, for the app's Undo toast. */
   notify?(n: { text: string; undoToken: string }): void;
-  /** The quick-add parser, injected so core never bundles it (main loads it lazily, D-144). Missing = `text` is refused. */
+  /** The quick-add parser, injected so core never bundles it (main loads it lazily, D-147). Missing = `text` is refused. */
   parse?(text: string, ctx: ParseContext): ParseResult;
 }
 
@@ -356,7 +356,7 @@ export class Mcp {
 
       // ---- writes ----
       case 'add_task': {
-        // `text`: parsed like the quick-add box (source 'claude', D-144). Anything but a confident task is returned, not written.
+        // `text`: parsed like the quick-add box (source 'claude', D-147). Anything but a confident task is returned, not written.
         let parsed: ParseResult | null = null;
         if (str(a.text) !== undefined) {
           if (!this.store.parse) return fail('Natural-language text is not available here. Send title and the other fields.');

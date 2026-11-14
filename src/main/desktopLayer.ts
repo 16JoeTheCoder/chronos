@@ -1,4 +1,4 @@
-// Desktop layer (D-141): parent the Home window to the WorkerW behind the desktop icons so
+// Desktop layer (D-144): parent the Home window to the WorkerW behind the desktop icons so
 // Win+D shows Chronos. Native calls go through koffi, loaded lazily and only on win32 (it is
 // an external of the main bundle). EVERY failure returns { ok: false, reason } and the caller
 // keeps running as a normal window: never throw, never a black screen.

@@ -2,7 +2,7 @@
 // (not kiosk fullscreen, so the taskbar and the widget stay visible). On show it
 // is briefly always-on-top so it lands in front, then becomes an ordinary window:
 // Alt+Tab and Win+D always work. Esc hides it; it is never destroyed (instant re-show).
-// With "Live on the desktop" (D-141) Esc does not hide it: it goes behind the desktop icons
+// With "Live on the desktop" (D-144) Esc does not hide it: it goes behind the desktop icons
 // (WorkerW) and Win+D shows it; any show() (shortcut, tray, palette) detaches it into this
 // normal interactive window again. If attaching fails it simply hides, as before.
 // UNVERIFIED-ON-WINDOWS: z-order, DPI, multi-monitor behaviour and the desktop layer.

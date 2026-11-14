@@ -26,7 +26,7 @@ export function ExperimentalSection({ snap }: { snap: Snapshot }) {
 
   return (
     <>
-      <Group title="Experimental" note="Things for finding out why something went wrong. Safe to leave off.">
+      <Group title="Diagnostics" note="Things for finding out why something went wrong. Safe to leave off.">
         <Toggle label="Show diagnostics" hint="Sync internals, snapshots, conflicts and the Claude token. Per PC." checked={dev.experimental} onChange={(experimental) => run({ type: 'device.update', patch: { experimental } })} />
       </Group>
 

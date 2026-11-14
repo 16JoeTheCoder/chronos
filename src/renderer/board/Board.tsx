@@ -70,11 +70,12 @@ export function BoardView({ snap, projectId, onOpenLog, onEnterFocus, onOpenTask
         <h1>Projects</h1>
         <ul>
           {projects.map((p) => {
-            const n = Object.values(boardCards(d, p)).flat().filter((t) => t.status !== 'done').length;
+            const sm = summarize(d, p, s.planning.defaultBlockMin);
+            const n = sm.total - sm.done;
             return (
               <li key={p.id}>
                 <button type="button" className="bd-proj" aria-current={project?.id === p.id ? 'page' : undefined} onClick={() => setPicked(p.id)}>
-                  <span className="bd-dot" style={{ ['--sw' as string]: `var(--${p.color})` }} aria-hidden="true" />
+                  <span className="bd-dot" style={{ ['--sw' as string]: `var(--${p.color}, var(--c-accent))` }} aria-hidden="true" />
                   <span className="bd-proj-name">{p.name}</span>
                   <span className="bd-proj-n">{n} open</span>
                 </button>

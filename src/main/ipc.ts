@@ -231,6 +231,18 @@ export function parseCommand(raw: unknown): Command | null {
     }
     case 'parser.report':
       return { type: 'parser.report', input: str(raw.input, 300), expected: str(raw.expected, 500), actual: str(raw.actual, 500) };
+    case 'idea.edit': {
+      if (!rid) return null;
+      const ids = Array.isArray(raw.parsedTaskIds) ? raw.parsedTaskIds.slice(0, 500) : undefined;
+      if (ids && !ids.every((x) => typeof x === 'string' && x.length <= 200)) return null;
+      return {
+        type: 'idea.edit',
+        id: rid,
+        ...('body' in raw ? { body: str(raw.body, 20_000) } : {}),
+        ...('projectId' in raw ? { projectId: nullableId(raw.projectId) } : {}),
+        ...(ids ? { parsedTaskIds: ids as string[] } : {}),
+      };
+    }
     case 'idea.review':
       return rid && typeof raw.reviewed === 'boolean' ? { type: 'idea.review', id: rid, reviewed: raw.reviewed } : null;
     case 'idea.toTask':
@@ -284,7 +296,7 @@ export interface IpcDeps {
   isOurSender(e: IpcMainEvent | IpcMainInvokeEvent): boolean;
   snapshot(): Snapshot;
   command(cmd: Command): Result | Promise<Result>;
-  /** Raw undo ops from a command result go behind a token (D-140). */
+  /** Raw undo ops from a command result go behind a token (D-143). */
   seal(res: Result): Result;
   redeemUndo(token: unknown): Extract<Command, { type: 'records.revert' }> | null;
   hide(): void;

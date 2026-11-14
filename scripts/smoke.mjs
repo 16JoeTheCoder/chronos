@@ -24,141 +24,112 @@ try {
   await home.waitForSelector('[data-stat="left"]:not(.sk)');
   await home.screenshot({ path: `${shots}/1-launch.png` });
 
-  step('Enter reveals the runway');
+  step('Enter reveals Home; finish onboarding (sets the device flag)');
   await home.keyboard.press('Enter');
-  await home.waitForSelector('.runway');
   await home.getByRole('button', { name: 'Skip setup' }).click();
-  await home.waitForTimeout(1100); // let the draw-in finish so screenshots are clean
+  await home.waitForSelector('.now');
+  await home.waitForTimeout(1100);
 
-  step('seed a timetable through the command channel');
+  step('seed events, tasks and a plan through the command channel');
   await home.evaluate(async () => {
     const c = window.chronos.command;
     const tag = (await c({ type: 'tag.create', input: { name: 'Physics', color: 'tag1', kind: 'class' } })).id;
     const tz = 'Asia/Jakarta';
     const all = { weekdays: [1, 2, 3, 4, 5, 6, 7], everyNWeeks: 1, anchorDate: '2026-10-26', from: null, until: null };
-    await c({ type: 'event.create', input: { title: 'Physics', tagId: tag, scope: 'school', tz, startMin: 600, endMin: 660, date: null, recur: all, notes: '' } });
-    await c({ type: 'event.create', input: { title: 'Lunch', tagId: null, scope: 'other', tz, startMin: 720, endMin: 780, date: null, recur: all, notes: '' } });
     await c({ type: 'event.create', input: { title: 'Football', tagId: null, scope: 'other', tz, startMin: 1020, endMin: 1110, date: null, recur: all, notes: '' } });
-    await c({ type: 'task.create', input: { title: 'Kinematics worksheet', finishCondition: 'All 12 questions answered and checked', tagId: tag, estimateMin: 25, priority: 'must' } });
-    await c({ type: 'task.create', input: { title: 'Essay draft', finishCondition: 'Draft of 800 words saved', estimateMin: 45 } });
-    await c({ type: 'task.create', input: { title: 'Read chapter 4' } });
+    await c({ type: 'task.create', input: { title: 'Wind sim: blade pitch model', finishCondition: 'Power curve plateaus at rated speed', tagId: tag, estimateMin: 90, priority: 'must' } });
+    await c({ type: 'task.create', input: { title: 'Find NREL 5 MW data', finishCondition: 'Dataset downloaded and checked', estimateMin: 25 } });
+    await c({ type: 'task.create', input: { title: 'Reply to coach', finishCondition: 'Reply sent about Saturday', estimateMin: 15 } });
+    await c({ type: 'idea.add', text: 'Cp drops hard past 12 m/s. Ramp pitch from 10 m/s and compare.', taskId: null });
   });
+  await home.waitForSelector('.now-title');
+  await home.screenshot({ path: `${shots}/2-home.png` });
 
-  step('quick-add a task with N');
-  await home.keyboard.press('n');
-  await home.getByLabel('Title').fill('Smoke test task');
-  await home.getByLabel('Finish condition').fill('The smoke test finishes it');
-  await home.getByRole('button', { name: 'Add task' }).click();
-  await home.waitForSelector('.card:has-text("Smoke test task")');
-
-  step('schedule it from the keyboard with S');
-  await home.locator('.card:has-text("Smoke test task")').focus();
-  await home.keyboard.press('s');
-  await home.waitForSelector('.sched');
-  await home.keyboard.press('Enter');
-  await home.waitForSelector('.blk:has-text("Smoke test task")');
-  await home.waitForTimeout(300);
-  await home.screenshot({ path: `${shots}/2-runway.png` });
-
-  step('now-line label in both ranges, buffer block');
-  await home.waitForSelector('.now-label');
-  if (!/^\d\d:\d\d$/.test((await home.locator('.now-label').textContent()) ?? '')) throw new Error('now label is not HH:MM');
-  await home.waitForSelector('.buf');
-  await home.getByRole('radio', { name: 'Next 6 h' }).click();
-  await home.waitForSelector('.now-label');
-  await home.waitForTimeout(300);
-  await home.screenshot({ path: `${shots}/2b-next6.png` });
-  await home.getByRole('radio', { name: 'Full day' }).click();
-
-  step('per-day event menu: Shift+F10, Escape, Skip today, Undo');
-  const fb = home.locator('.ev:has-text("Football")');
-  await fb.focus();
-  await home.keyboard.press('Shift+F10');
-  await home.waitForSelector('[role="menu"] [role="menuitem"]');
-  await home.keyboard.press('ArrowDown');
-  await home.screenshot({ path: `${shots}/2c-event-menu.png` });
-  await home.keyboard.press('Escape');
-  await home.waitForSelector('[role="menu"]', { state: 'detached' });
-  if (!(await fb.evaluate((el) => el === document.activeElement))) throw new Error('focus did not return to the event');
-  await home.keyboard.press('ContextMenu');
-  await home.getByRole('menuitem', { name: 'Skip today' }).click();
-  await home.waitForSelector('.toast:has-text("skipped today")');
-  await home.waitForSelector('.ev:has-text("Football")', { state: 'detached' });
-  await home.locator('.toast button:has-text("Undo")').click();
-  await home.waitForSelector('.ev:has-text("Football")');
-
-  step('Focus Core: start, then finish by holding Enter');
+  step('Focus: Space starts without clicking, a short Enter does not finish, a 2 s hold does');
   await home.keyboard.press('f');
-  await home.waitForSelector('.focus .digits-hero');
-  const title = await home.locator('.focus-title').textContent();
-  await home.getByRole('button', { name: /^Start/ }).click();
-  await home.waitForSelector('button:has-text("Pause")');
-  await home.locator('.stray input').fill('Look up projectile range formula');
-  await home.keyboard.press('Enter');
-  await home.waitForTimeout(1200);
-  await home.screenshot({ path: `${shots}/3-focus.png` });
-  const finishBtn = home.getByRole('button', { name: 'Finish', exact: true });
-  await finishBtn.focus();
-  // Space and a short Enter hold must not finish the task.
+  await home.waitForSelector('.focus .focus-title');
   await home.keyboard.press('Space');
+  await home.waitForSelector('button:has-text("Pause")');
+  await home.waitForTimeout(1500);
+  await home.screenshot({ path: `${shots}/3-focus.png` });
+  await home.keyboard.press('Space');
+  await home.waitForSelector('button:has-text("Resume")');
+  const title = await home.locator('.focus-title').textContent();
   await home.keyboard.down('Enter');
   await home.waitForTimeout(500);
   await home.keyboard.up('Enter');
   await home.waitForTimeout(500);
   if ((await home.locator('.toast:has-text("Done.")').count()) > 0) throw new Error('an early release finished the task');
-  // Holding Enter for about 2 s finishes it.
   await home.keyboard.down('Enter');
   await home.waitForTimeout(1000);
   await home.screenshot({ path: `${shots}/3b-hold.png` });
-  await home.waitForTimeout(1200);
+  await home.waitForTimeout(1300);
   await home.keyboard.up('Enter');
-  await home.waitForSelector(`.toast:has-text("Done.")`);
+  await home.waitForSelector('.toast:has-text("Done.")');
   if ((await home.locator('.focus-title').textContent()) === title) throw new Error('finished task is still in focus');
 
-  step('recycle a card, then Undo');
-  await home.keyboard.press('f');
-  await home.waitForSelector('.cards');
-  const card = home.locator('.card:has-text("Read chapter 4")');
-  await card.focus();
-  await home.keyboard.press('Delete');
-  await home.waitForSelector('.toast button:has-text("Undo")');
-  await home.locator('.toast button:has-text("Undo")').click();
-  await home.waitForSelector('.card:has-text("Read chapter 4")');
-
-  step('open the Desktop shelf');
-  await home.getByRole('button', { name: 'Desktop' }).click();
-  await home.waitForSelector('.shelf');
+  step('Plan: Re-plan toast, drag a card onto the Plan lane, drag the block back');
+  await home.keyboard.press('Escape');
+  await home.keyboard.press('p');
+  await home.waitForSelector('.runway .rw-plan');
+  await home.getByRole('button', { name: 'Re-plan' }).click();
+  await home.waitForSelector('.toast');
+  const card = home.locator('.card').first();
+  const lane = await home.locator('.rw-plan').boundingBox();
+  const cb = await card.boundingBox();
+  if (lane && cb) {
+    await home.mouse.move(cb.x + 40, cb.y + 20);
+    await home.mouse.down();
+    await home.mouse.move(lane.x + lane.width * 0.6, lane.y + 30, { steps: 8 });
+    await home.mouse.up();
+    await home.waitForTimeout(400);
+  }
+  await home.screenshot({ path: `${shots}/4-plan.png` });
+  const blocks = await home.locator('.blk').count();
+  if (blocks > 0) {
+    const bb = await home.locator('.blk-body').first().boundingBox();
+    const cards = await home.locator('.cards').boundingBox();
+    if (bb && cards) {
+      await home.mouse.move(bb.x + 20, bb.y + 10);
+      await home.mouse.down();
+      await home.mouse.move(cards.x + 100, cards.y + 60, { steps: 8 });
+      await home.mouse.up();
+      await home.waitForTimeout(400);
+      if ((await home.locator('.blk').count()) >= blocks) throw new Error('dropping a block on the cards did not unschedule it');
+    }
+  }
   await home.keyboard.press('Escape');
 
-  step('schedule editor');
-  await home.getByRole('button', { name: 'Schedule' }).click();
-  await home.waitForSelector('.week');
-  await home.locator('.wk-ev').first().click();
-  await home.screenshot({ path: `${shots}/4-schedule.png` });
-  await home.keyboard.press('Escape');
-
-  step('settings and About');
-  await home.getByRole('button', { name: 'Settings' }).click();
+  step('Settings and Log from the rail');
+  await home.getByRole('button', { name: 'Settings', exact: true }).first().click();
   await home.waitForSelector('.settings');
   await home.screenshot({ path: `${shots}/5-settings.png` });
-  for (const name of ['Sync', 'Integrations']) {
-    await home.getByRole('button', { name, exact: true }).click();
-    await home.waitForSelector('.settings-body .form');
-  }
-  await home.screenshot({ path: `${shots}/5b-integrations.png` });
-  await home.getByRole('button', { name: 'Advanced', exact: true }).click();
-  await home.locator('label.switch:has-text("Experimental")').click();
-  await home.getByRole('button', { name: 'Diagnostics', exact: true }).click();
-  await home.waitForSelector('h3.h:has-text("Diagnostics")'); // the body fills once main sends snap.diag
-  await home.screenshot({ path: `${shots}/5c-diagnostics.png` });
-  await home.getByRole('button', { name: 'Advanced', exact: true }).click();
-  await home.locator('label.switch:has-text("Experimental")').click();
-  await home.getByRole('button', { name: 'About' }).click();
-  await home.waitForSelector('.about');
-  await home.screenshot({ path: `${shots}/6-about.png` });
+  await home.keyboard.press('Control+l');
+  await home.waitForSelector('.placeholder, .log');
+  await home.getByRole('button', { name: 'Home', exact: true }).click();
 
-  const widget = app.windows().find((w) => w.url().includes('widget.html'));
-  if (widget) await widget.screenshot({ path: `${shots}/7-widget.png` });
+  step('theme matrix: 1440 and 390 px in every launch theme');
+  const themes = ['tactile-instrument', 'stark-workshop', 'tars-gargantua/day', 'tars-gargantua/night'];
+  for (const themeId of themes) {
+    await home.evaluate((id) => window.chronos.command({ type: 'settings.update', patch: { themeId: id } }), themeId);
+    await home.waitForFunction((id) => document.documentElement.dataset.themeId === id, themeId);
+    for (const [w, h] of [[1440, 900], [390, 844]]) {
+      await home.setViewportSize({ width: w, height: h });
+      await home.waitForTimeout(1300);
+      const tag = themeId.replace('/', '-');
+      await home.screenshot({ path: `${shots}/theme-${tag}-${w}-home.png` });
+      await home.keyboard.press('f');
+      await home.waitForTimeout(900);
+      await home.screenshot({ path: `${shots}/theme-${tag}-${w}-focus.png` });
+      await home.keyboard.press('f');
+      await home.keyboard.press('p');
+      await home.waitForTimeout(500);
+      await home.screenshot({ path: `${shots}/theme-${tag}-${w}-plan.png` });
+      await home.keyboard.press('p');
+      await home.waitForTimeout(200);
+    }
+  }
+  await home.setViewportSize({ width: 1440, height: 900 });
 
   if (errors.length) throw new Error(`console errors:\n${errors.join('\n')}`);
   console.log('ok smoke test passed');

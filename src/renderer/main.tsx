@@ -1,13 +1,17 @@
 // Home entry. The launch screen is already painted (static HTML); this mounts
 // React behind it, hydrates data during the launch screen, and reveals the
 // Runway with the draw-in on Enter.
-import { Component, StrictMode, useState, type ReactNode } from 'react';
+import { Component, StrictMode, useEffect, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/app.css';
+import './styles/screens.css';
 import { api } from './api';
 import { Home } from './home/Home';
+import { settingsOf } from '../core/repo/repo';
+import { themeToCssVars, type ChronosTheme } from '../core/theme';
+import { ThemeProvider, useTheme as useActiveTheme } from './theme/ThemeProvider';
 import { awaitLaunch, fillLaunch } from './launch/launch';
-import { initStore, run, toast, useSnap } from './store';
+import { initStore, toast, useSnap } from './store';
 
 api.win.mark('launch.script', performance.now());
 let reveal: () => void = () => undefined;
@@ -20,7 +24,28 @@ function App() {
     document.documentElement.classList.add('drawin');
     setTimeout(() => document.documentElement.classList.remove('drawin'), 1000);
   };
-  return snap ? <Home snap={snap} revealed={revealed} /> : null;
+  if (!snap) return null;
+  const s = settingsOf(snap.data);
+  const custom = ((s as unknown as { customThemes?: ChronosTheme[] }).customThemes ?? []) as ChronosTheme[];
+  return (
+    <ThemeProvider themeId={s.themeId} themeSchedule={s.themeSchedule} customThemes={custom} energy={s.energy}>
+      <ThemeBoot />
+      <Home snap={snap} revealed={revealed} />
+    </ThemeProvider>
+  );
+}
+
+/** Remember the active theme's variables so the next launch screen paints themed (public/boot.js). */
+function ThemeBoot() {
+  const t = useActiveTheme();
+  useEffect(() => {
+    try {
+      localStorage.setItem('chronos.themeBoot', JSON.stringify({ vars: themeToCssVars(t.theme), mode: t.theme.mode, id: t.id, sig: t.theme.motion.signature.kind }));
+    } catch {
+      /* optional */
+    }
+  }, [t]);
+  return null;
 }
 
 class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -48,7 +73,7 @@ createRoot(document.getElementById('root') as HTMLElement).render(
 );
 
 // Things main wants the user to see once (e.g. a change Claude made, with Undo).
-api.onNotice((n) => toast(n.text, { error: n.error, undo: n.undoToken ? () => void run({ type: 'mcp.undo', token: n.undoToken as string }) : undefined }));
+api.onNotice((n) => toast(n.text, { error: n.error, undo: n.undoToken ? () => void api.undo(n.undoToken as string) : undefined }));
 
 initStore((snap) => {
   fillLaunch(snap);

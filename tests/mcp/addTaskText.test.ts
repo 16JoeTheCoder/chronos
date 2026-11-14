@@ -1,4 +1,4 @@
-// add_task `text` (D-144): parsed with source 'claude'; only a confident task is written, anything else is returned for confirmation.
+// add_task `text` (D-147): parsed with source 'claude'; only a confident task is written, anything else is returned for confirmation.
 import { describe, expect, it } from 'vitest';
 import { apply, type Command } from '../../src/core/commands';
 import { Mcp, type StorePort } from '../../src/core/mcp/handlers';

@@ -1,4 +1,4 @@
-// Undo tokens (D-140). `records.revert` is never accepted over IPC (D-136), so a command
+// Undo tokens (D-143). `records.revert` is never accepted over IPC (D-136), so a command
 // result that carries undo ops is kept here and the renderer gets a short-lived token.
 // Redeeming a token runs one `records.revert`; a token works once.
 

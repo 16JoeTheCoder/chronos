@@ -42,7 +42,7 @@ export interface ChronosApi {
     mark(name: string, ms: number): void;
   };
   palette: {
-    /** Copy `text` to the clipboard and open Claude Desktop (D-143). */
+    /** Copy `text` to the clipboard and open Claude Desktop (D-146). */
     askClaude(text: string): Promise<Result>;
   };
   shelf: {

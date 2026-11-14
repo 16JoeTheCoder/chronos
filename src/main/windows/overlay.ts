@@ -1,4 +1,4 @@
-// Overlay (D-142): a small always-on-top pill at the bottom-left of the work area. It is
+// Overlay (D-145): a small always-on-top pill at the bottom-left of the work area. It is
 // `focusable: false` and shown with showInactive, so it never takes keyboard focus from
 // the app you are in (clicks still reach it). Collapsed it is a pill; the renderer asks to
 // expand while the pointer is over it (or a notice with Undo is showing). It hides while

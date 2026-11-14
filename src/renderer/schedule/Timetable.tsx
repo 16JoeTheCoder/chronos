@@ -83,7 +83,7 @@ export function TimetableSection({ snap, onOpenWeek }: { snap: Snapshot; onOpenW
 
   return (
     <>
-      <Group title="School timetable" note="Your weekly lessons. They repeat every week, show on the runway, and teach the quick-add what Math or a test means on a given day.">
+      <Group title="Weekly lessons" note="Your weekly lessons. They repeat every week, show on the runway, and teach the quick-add what Math or a test means on a given day.">
         <Toggle label="Use the timetable" hint="Off hides every repeating event from the runway." checked={s.timetable.enabled} onChange={(enabled) => saveSettings({ timetable: { ...s.timetable, enabled } })} />
         <Toggle label="Pre-fill national holidays" checked={s.holidaysEnabled} onChange={(holidaysEnabled) => saveSettings({ holidaysEnabled })} />
         {onOpenWeek && (

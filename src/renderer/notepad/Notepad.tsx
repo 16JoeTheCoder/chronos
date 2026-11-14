@@ -1,6 +1,6 @@
 // Notepad: opens on the focused task's notes, else a general note (kept on this device).
 // Autosaves (debounced). Esc closes and hands focus back; on close, lines marked as tasks
-// ("- ", "task ", "@ ") go through the parser and become records, with an Undo toast (D-139).
+// ("- ", "task ", "@ ") go through the parser and become records, with an Undo toast (D-145).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Data, Snapshot } from '../../core/model/types';
 import { parseNotepad } from '../../core/parser';

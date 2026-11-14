@@ -1,4 +1,4 @@
-// Overlay (D-142): collapsed pill = mini signature timer + task title + time; expanded on hover =
+// Overlay (D-145): collapsed pill = mini signature timer + task title + time; expanded on hover =
 // title, timer, Hold to finish. The window is focusable:false, so only the pointer reaches it.
 // Also shows notices with Undo (Claude's changes, notepad results) when Home is not in front.
 import { useEffect, useMemo, useRef, useState } from 'react';

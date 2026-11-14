@@ -51,3 +51,14 @@ describe('pickCreated (notepad close summary)', () => {
     expect(parseCommand({ type: 'activity.claude', taskId: 'abc', reason: 'x' })).toBeNull();
   });
 });
+
+describe('idea.edit', () => {
+  it('rebuilds known fields only and validates ids', () => {
+    expect(parseCommand({ type: 'idea.edit', id: 'abc', body: 'hi', projectId: null, parsedTaskIds: ['L0:t1', 'L2:t2'], evil: 1 })).toEqual({ type: 'idea.edit', id: 'abc', body: 'hi', projectId: null, parsedTaskIds: ['L0:t1', 'L2:t2'] });
+    expect(parseCommand({ type: 'idea.edit', id: 'abc', body: 'x' })).toEqual({ type: 'idea.edit', id: 'abc', body: 'x' });
+    expect(parseCommand({ type: 'idea.edit', id: '../x', body: 'x' })).toBeNull();
+    expect(parseCommand({ type: 'idea.edit', id: 'abc', parsedTaskIds: [1] })).toBeNull();
+    expect(parseCommand({ type: 'idea.edit', id: 'abc', projectId: '../p' })).toMatchObject({ projectId: null });
+    expect((parseCommand({ type: 'idea.edit', id: 'abc', parsedTaskIds: Array(900).fill('L0:a') }) as { parsedTaskIds: string[] }).parsedTaskIds).toHaveLength(500);
+  });
+});
