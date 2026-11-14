@@ -23,3 +23,34 @@ Terse, for a fresh session to resume from.
 ## Known failures / unverified
 - Renderer build fails until the UI branch is merged (FocusCore imports the removed phrase helpers).
 - Real Firestore provider and rules never run (emulator blocked, D-124). Google sign-in, MCP via Claude Desktop, ELECTRON_RUN_AS_NODE: Windows checklist.
+
+
+## Parser handoff log (imported)
+
+# log.md (parser)
+
+Keeps the AI on track. Update at the end of every work session.
+
+## Status (2026-11-14)
+- Requirements: `CHRONOS_PARSER_REQUIREMENTS.md` (Josef's spec). Overrides: `decision.md`.
+- Nothing is built yet. This folder is the design handoff.
+- Corpus: `tests/parser/corpus.txt`, 117 lines, all confirmed by Josef. Fixture: `tests/parser/fixture.json`.
+- Data: `src/core/parser/builtin.chronos-parser.json` (rules) and `lexicon.en.json` (words, shorthand, thresholds).
+
+## Rules for the build
+1. Read `src/core/model/types.ts`, `src/core/validation.ts`, `src/core/commands.ts` first. Check D8 (fixed event with no time).
+2. Write the corpus runner FIRST (reads corpus.txt + fixture.json, calls `parse`), watch it fail, then implement.
+3. Pin chrono-node's version. Override it in our layer for our cases; never fork it.
+4. Keep the code lean. Skip anything costly that does not raise accuracy on the corpus. Everything tunable stays in the JSON files.
+5. Tell Josef where to run every command (VS Code terminal at the repo root, or PowerShell).
+6. Every misparse Josef reports becomes a corpus line BEFORE it is fixed.
+7. Do not mark done until 100% of the corpus passes or the failure is moved to `corpus.known-gaps.txt` with a reason.
+
+## Next steps
+1. Read the three core files; settle D8 and D13 with Josef.
+2. Scaffold `src/core/parser/` (types, index.ts exports: parse, applyCorrection, validatePack, mergePacks), the runner, the property tests and the benchmark.
+3. Implement in layers: tokenizer + fuzzy, chrono-node dates/times, durations, recurrence, keyword/kind classifier (D3-D10), project/priority, title cleanup (D12).
+4. Add the "Report misparse" action and the Ctrl+K preview wiring last.
+
+## Log
+- 2026-11-14: design finished, corpus confirmed, handoff exported.

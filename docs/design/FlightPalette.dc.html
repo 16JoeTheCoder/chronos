@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Call Mission Control palette</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&amp;family=Barlow:wght@400;500;600&amp;family=Courier+Prime:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F5DA8}a:hover{color:#1F3F75}
+::selection{background:#FF6A13;color:#111418}
+.fp-ghost:hover{background:rgba(17,20,24,0.06)}
+.fp-btn:hover{background:#E85A08}
+.fp-btn:focus-visible,.fp-ghost:focus-visible{outline:2px solid #2F5DA8;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; background: rgba(17,20,24,0.55); font-family: Barlow, system-ui, sans-serif; color: #111418; display: flex; justify-content: center; padding-top: 150px; box-sizing: border-box">
+<div style="width: 720px; align-self: flex-start; background: #FFFFFF; border: 1px solid #111418; border-radius: 8px; box-shadow: 0 16px 36px rgba(17,20,24,0.18); overflow: hidden">
+<div style="padding: 22px 26px; display: flex; flex-direction: column; gap: 14px; border-bottom: 1px solid #D5D6D2">
+<label for="mc" style="font-size: 14px; color: #5A6068">Call Mission Control: add, search or ask Claude</label>
+<div id="mc" style="font-family: 'Courier Prime', monospace; font-size: 24px; line-height: 1.4">teach <span style="background: #FFE3D2; padding: 0 3px">coding class</span> <span style="background: #DCE6F6; padding: 0 3px">thu 4pm to 6pm</span><span aria-hidden="true" style="display: inline-block; width: 2px; height: 26px; background: #FF6A13; vertical-align: middle; margin-left: 3px"></span></div>
+<div style="display: flex; gap: 8px">
+<span style="font-size: 14px; padding: 4px 12px; border-radius: 4px; background: #111418; color: #FFFFFF">Fixed event</span>
+<span style="font-size: 14px; padding: 4px 12px; border-radius: 4px; border: 1px solid #2F5DA8; color: #1F3F75">Thu 12 Nov, 16:00 to 18:00</span>
+</div>
+</div>
+<div style="padding: 10px">
+<div style="padding: 14px 18px; border-radius: 6px; background: #FFE3D2; display: flex; justify-content: space-between"><span style="font-size: 16px; font-weight: 600">Add fixed event</span><span style="font-family: 'Courier Prime', monospace; font-size: 13px">Enter</span></div>
+<div style="padding: 14px 18px; display: flex; justify-content: space-between"><span style="font-size: 16px">Add as a task instead</span><span style="font-family: 'Courier Prime', monospace; font-size: 13px; color: #5A6068">Shift Enter</span></div>
+<div style="padding: 14px 18px; display: flex; justify-content: space-between"><span style="font-size: 16px">Ask Claude: “plan my Thursday around this”</span><span style="font-family: 'Courier Prime', monospace; font-size: 13px; color: #5A6068">Tab</span></div>
+<div style="padding: 14px 18px; display: flex; justify-content: space-between; color: #3A3F46"><span style="font-size: 16px">Coding club: lesson 3 slides</span><span style="font-size: 14px">Task, Friday</span></div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

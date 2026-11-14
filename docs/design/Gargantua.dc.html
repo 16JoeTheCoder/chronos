@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gargantua night</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Michroma&amp;family=Red+Hat+Text:wght@300;400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+@keyframes g-turn{to{transform:rotate(360deg)}} .g-disk{transform-origin:360px 360px;animation:g-turn 90s linear infinite}
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; background: #000000; font-family: 'Red Hat Text', sans-serif; color: #D9DEE6; position: relative; overflow: hidden">
+<div style="position: absolute; left: 64px; top: 56px; font-size: 15px; color: #7A818C">14:22 · Wed 11 Nov</div>
+<div style="position: absolute; right: 64px; top: 56px; font-size: 15px; color: #7A818C">Football at 16:00</div>
+<svg width="720" height="720" viewBox="0 0 720 720" style="position: absolute; left: 360px; top: 70px" role="img" aria-label="Timer inside a black hole ring, 54 percent of the block done">
+<ellipse cx="360" cy="360" rx="330" ry="64" fill="none" stroke="#F4E7D0" stroke-opacity="0.18" stroke-width="18"></ellipse>
+<circle cx="360" cy="360" r="200" fill="#000"></circle>
+<circle cx="360" cy="360" r="206" fill="none" stroke="#F4E7D0" stroke-opacity="0.25" stroke-width="2"></circle>
+<circle cx="360" cy="360" r="206" fill="none" stroke="#FFF4E2" stroke-width="4" stroke-dasharray="699 1294" transform="rotate(-90 360 360)"></circle>
+<g class="g-disk"><path d="M30 360 A330 64 0 0 0 690 360" fill="none" stroke="#FFE9C4" stroke-width="3" stroke-opacity="0.7"></path></g>
+<text x="360" y="372" text-anchor="middle" fill="#F5F7FA" font-family="Michroma" font-size="64">41:08</text>
+<text x="360" y="412" text-anchor="middle" fill="#7A818C" font-family="Red Hat Text" font-size="16">left in this block</text>
+</svg>
+<div style="position: absolute; left: 0; right: 0; bottom: 96px; display: flex; flex-direction: column; align-items: center; gap: 18px">
+<h1 style="margin: 0; font-weight: 300; font-size: 34px; color: #F5F7FA">Blade pitch model</h1>
+<div style="display: flex; gap: 12px"><button style="height: 48px; padding: 0 24px; border-radius: 24px; border: 1px solid #FFF4E2; background: transparent; color: #FFF4E2; font: 500 15px 'Red Hat Text', sans-serif">Hold Enter to finish</button><button style="height: 48px; padding: 0 20px; border-radius: 24px; border: 1px solid #3A3F47; background: transparent; color: #A9B0BA; font: 400 15px 'Red Hat Text', sans-serif">Pause</button></div>
+</div>
+<div style="position: absolute; left: 64px; bottom: 56px; font-size: 14px; color: #7A818C">3 h 05 m free today</div>
+<div style="position: absolute; right: 64px; bottom: 56px; font-size: 14px; color: #7A818C">Ctrl K</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

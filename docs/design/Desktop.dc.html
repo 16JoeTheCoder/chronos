@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Desktop Now and Next</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FF5B1F}a:hover{color:#FF7A47}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; background: #0D0E10; font-family: 'Space Grotesk', system-ui, sans-serif; color: #F3F2EE; display: flex; flex-direction: column; box-sizing: border-box; padding: 48px 64px 32px; gap: 40px">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<div style="font-size: 40px; letter-spacing: -0.02em"><span style="font-weight: 300">Wed</span> <span style="font-weight: 700">11 Nov</span></div>
+<div style="display: flex; gap: 24px; align-items: baseline">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 40px; font-weight: 500">14:22</span>
+<span style="font-size: 14px; color: #A9ADB3"><span style="color: #F3F2EE; font-weight: 700">3 h 05 m</span> free today</span>
+</div>
+</div>
+<div style="display: flex; gap: 24px">
+<div style="flex: 2; background: #16181B; border: 1px solid #2A2D32; border-radius: 10px; overflow: hidden">
+<div style="height: 6px; background: #FF5B1F"></div>
+<div style="padding: 32px; display: flex; flex-direction: column; gap: 16px">
+<span style="font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #8D9198">Now · 14:00 to 15:30</span>
+<div style="font-size: 32px; font-weight: 700; letter-spacing: -0.01em">Wind sim: blade pitch model</div>
+<div style="font-size: 15px; color: #A9ADB3">Done when: the power curve plateaus at rated speed.</div>
+<div style="display: flex; gap: 12px; margin-top: 8px">
+<button style="height: 48px; padding: 0 24px; background: #FF5B1F; color: #0D0E10; border: none; border-radius: 10px; font: 700 15px 'Space Grotesk', sans-serif">Enter · Focus</button>
+<button style="height: 48px; padding: 0 20px; background: transparent; color: #F3F2EE; border: 1px solid #7B8088; border-radius: 10px; font: 500 14px 'Space Grotesk', sans-serif">Re-plan day</button>
+</div>
+</div>
+</div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 12px">
+<span style="font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #8D9198">Next</span>
+<div style="padding: 16px; border: 1px solid #2A2D32; border-radius: 10px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; color: #8D9198; font-family: 'JetBrains Mono', monospace">16:00 to 18:00 · fixed</span>
+<span style="font-size: 16px; font-weight: 700">Football training</span>
+</div>
+<div style="padding: 16px; border: 1px solid #2A2D32; border-radius: 10px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; color: #8D9198; font-family: 'JetBrains Mono', monospace">19:00 to 19:45 · planned</span>
+<span style="font-size: 16px; font-weight: 500">Physics: Paper 2 corrections</span>
+</div>
+<span style="font-size: 13px; color: #8D9198">2 more later · 4 unscheduled</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; font-size: 11px; color: #8D9198; font-family: 'JetBrains Mono', monospace"><span>07:00</span><span>12:00</span><span>18:00</span><span>23:00</span></div>
+<div style="position: relative; height: 28px; background: #16181B; border: 1px solid #2A2D32; border-radius: 6px">
+<div style="position: absolute; left: 6%; width: 38%; top: 4px; bottom: 4px; background: #25292E; border-radius: 4px"></div>
+<div style="position: absolute; left: 44%; width: 9%; top: 4px; bottom: 4px; border: 1px solid #FF5B1F; border-radius: 4px"></div>
+<div style="position: absolute; left: 56%; width: 12%; top: 4px; bottom: 4px; background: #25292E; border-radius: 4px"></div>
+<div style="position: absolute; left: 75%; width: 5%; top: 4px; bottom: 4px; border: 1px solid #56B4E9; border-radius: 4px"></div>
+<div style="position: absolute; left: 92%; width: 8%; top: 4px; bottom: 4px; border: 1px dashed #7B8088; border-radius: 4px"></div>
+<div style="position: absolute; left: 46.5%; top: -8px; bottom: -8px; width: 2px; background: #FF5B1F"></div>
+<span style="position: absolute; left: 46.5%; top: -28px; transform: translateX(-50%); font-size: 11px; font-family: 'JetBrains Mono', monospace; color: #0D0E10; background: #FF5B1F; padding: 1px 6px; border-radius: 4px">14:22</span>
+</div>
+<span style="font-size: 12px; color: #8D9198">Day strip · grey fixed · outlined planned · dashed buffer · Tab to open the full runway</span>
+</div>
+<div style="flex: 1"></div>
+<div style="display: flex; justify-content: space-between; align-items: center">
+<div style="display: flex; gap: 12px">
+<span style="height: 40px; padding: 0 16px; border: 1px solid #2A2D32; border-radius: 10px; display: flex; align-items: center; font-size: 13px; color: #A9ADB3">Desktop files</span>
+<span style="height: 40px; padding: 0 16px; border: 1px solid #2A2D32; border-radius: 10px; display: flex; align-items: center; font-size: 13px; color: #A9ADB3">Trash</span>
+</div>
+<span style="font-size: 12px; color: #8D9198; font-family: 'JetBrains Mono', monospace">Ctrl+K search or add · ? shortcuts</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

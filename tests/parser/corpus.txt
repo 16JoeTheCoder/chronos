@@ -1,0 +1,157 @@
+# Chronos parser corpus. One case per line:  input → kind | date | time | extras | title=...
+# now: 2026-11-11T14:22 Asia/Jakarta, Wednesday
+# fixture: tests/parser/fixture.json (projects, tags, bell grid, timetable)
+# time column: HH:MM-HH:MM = fixed range (start-only input gets +60 min, D17) | due HH:MM = task due time | unplaced 60 = fixed event on that date with no time yet, 60 min (D16)
+#              +1d after an end time = crosses midnight (endMin > 1440, add a warning)
+# extras: est=<minutes>  rec=<rule>  project=<name>  prio=<1-3>
+# "## text" at the end of a line is a human comment, ignored by the runner.
+# Every line below was typed by Josef or drafted by Claude and then confirmed by Josef.
+
+# ---- starter
+Study for magnets test on this fri → task | 2026-11-13 | title=Study for magnets test
+Read the Bible 4 chapters of John 8pm → task | 2026-11-11 | due 20:00 | title=Read the Bible 4 chapters of John
+Work on chronos phase 4 integration 1hr → task | est=60 | project=chronos | title=Work on chronos phase 4 integration
+Study python cs50p for 2hrs → task | est=120 | title=Study python cs50p
+Football match 3pm to 5pm → fixed | 2026-11-11 | 15:00-17:00 | title=Football match
+Video call oma at 9pm → fixed | 2026-11-11 | 21:00-21:30 | title=Video call oma ## call default 30 min
+Cook some pasta at 5pm → task | 2026-11-11 | due 17:00 | title=Cook some pasta
+Gym workout 90 mins 4pm → fixed | 2026-11-11 | 16:00-17:30 | title=Gym workout ## start + length, no "for"
+Math kinematics 3 finish by 8pm → task | 2026-11-11 | due 20:00 | title=Math kinematics 3 finish
+Comp Sci Work Wrap by 6pm → task | 2026-11-11 | due 18:00 | title=Comp Sci Work Wrap
+
+# ---- Josef's own lines
+Study with Mr. Tjong at 10to1pm → fixed | 2026-11-11 | 10:00-13:00 | title=Study with Mr. Tjong ## range beats "study"; glued 10to1pm; 10:00 passed: keep + warn
+Workout with Kobe at 4pm → fixed | 2026-11-11 | 16:00-17:00 | title=Workout with Kobe ## D17: 1 h default
+Meet with big bro to play padel Saturday 10am → fixed | 2026-11-14 | 10:00-11:00 | title=Meet with big bro to play padel ## D17: 1 h default
+Go to Nicoles Birthday 5pm tomorrow → fixed | 2026-11-12 | 17:00-18:00 | title=Go to Nicoles Birthday ## D17: 1 h default
+Learn python tomorrow 8am to 11am in Kopi Kenangan → fixed | 2026-11-12 | 08:00-11:00 | title=Learn python in Kopi Kenangan ## "in Kopi" is not "in N days"
+Finish Chronos Build by 4pm → task | 2026-11-11 | due 16:00 | project=chronos | title=Finish Chronos Build ## D13 revised: any project word sets the project
+Contact Adely regarding forms by Sunday 7pm → task | 2026-11-15 | due 19:00 | title=Contact Adely regarding forms
+Student Council Meeting for 30 minutes on Monday morning 8am → fixed | 2026-11-16 | 08:00-08:30 | title=Student Council Meeting ## "morning" consumed with the time
+Monitor production build stages and have it ready for launch by 10pm tomorrow → task | 2026-11-12 | due 22:00 | title=Monitor production build stages and have it ready for launch
+Start to learn ESP32 and camera video for shorts today for 90 minutes → task | 2026-11-11 | est=90 | title=Start to learn ESP32 and camera video for shorts ## "for shorts" stays
+Math Class 7:45 monday → fixed | 2026-11-16 | 07:45-09:05 | title=Math Class ## length from timetable (Mon P1-2 double)
+Football match this Tuesday 3pm → fixed | 2026-11-17 | 15:00-17:00 | title=Football match ## this Tuesday on a Wednesday = the coming one; length from timetable
+Meeting with SC in the morning of Monday 7:30AM → fixed | 2026-11-16 | 07:30-08:30 | project=sc | title=Meeting with SC ## "in the morning of" consumed; D17: 1 h default
+Call mom by 8pm → task | 2026-11-11 | due 20:00 | title=Call mom ## "by" beats the call keyword
+Go to restaurant at 5pm → fixed | 2026-11-11 | 17:00-18:00 | title=Go to restaurant ## D17: 1 h default
+Setup Bak Jago 4pm today → task | 2026-11-11 | due 16:00 | title=Setup Bak Jago
+Work on pythhoon 40miuntues 3pm → fixed | 2026-11-11 | 15:00-15:40 | title=Work on pythhoon ## fuzzy unit; start + length = fixed
+simulate build ideas by 10am → task | 2026-11-11 | due 10:00 | title=simulate build ideas ## passed: stays today; end-of-day review asks
+work on sc draft proposal and confirm by 11am → task | 2026-11-11 | due 11:00 | project=sc | title=work on sc draft proposal and confirm
+Make coffee → task | title=Make coffee
+shower → task | title=shower
+learn about esp32 → task | title=learn about esp32
+meditate → task | title=meditate
+read word of god → task | title=read word of god
+call majesty → task | title=call majesty ## call without a time is not fixed
+meet ko theo at church → task | title=meet ko theo at church ## "at church" is not a time
+finish design request by ko dieky → task | title=finish design request by ko dieky ## "by" + a name is not a deadline
+go to church tmr → task | 2026-11-12 | title=go to church ## fixed word + date only = task
+buy keyboardthis mon → task | 2026-11-16 | title=buy keyboardthis ## letters-only glued words are not split
+organize your day with journal → task | title=organize your day with journal ## verb start
+so much bandwith in mind clear tdy → note | title=so much bandwith in mind clear tdy ## sentence-like; "tdy" not consumed
+
+# ---- numbers that are not times
+meeting student council room 204 at 3pm thursday → fixed | 2026-11-12 | 15:00-16:00 | title=meeting student council room 204 ## D17: 1 h default
+sell 4 tires to matthew by 4pm → task | 2026-11-11 | due 16:00 | title=sell 4 tires to matthew
+esp32 board study 2hrs today → task | 2026-11-11 | est=120 | title=esp32 board study
+study pages 10-20 on math textbook 1hr tonight → task | 2026-11-11 | est=60 | title=study pages 10-20 on math textbook ## tonight = today, no time
+2026 budget reivew on this saturday 6pm → task | 2026-11-14 | due 18:00 | title=2026 budget reivew
+atleast 10 pages read of moby dick for eng homework due 3pm tomorrow → task | 2026-11-12 | due 15:00 | title=atleast 10 pages read of moby dick for eng homework ## "due" works like "by"
+3 note feature on sc forms by 3pm today → task | 2026-11-11 | due 15:00 | title=3 note feature on sc forms ## "note" mid-line does not force a note; mid-line sc is not a project
+2hrs sleep nap 2pm today → fixed | 2026-11-11 | 14:00-16:00 | title=sleep nap ## 14:00 passed: keep + warn
+math hw 5 → task | title=math hw 5 ## a bare number is never a time
+
+# ---- typos and shorthand
+2morow buy google ai subscription → task | 2026-11-12 | title=buy google ai subscription
+fix corupus action 3p[m today → task | 2026-11-11 | due 15:00 | title=fix corupus action
+chinese hw 3pages 40minz → task | est=40 | title=chinese hw 3pages
+2hrzz in mechanical engineering prep → task | est=120 | title=mechanical engineering prep ## repeated letters collapse; leading "in" dropped
+call mom4pm → fixed | 2026-11-11 | 16:00-16:30 | title=call mom
+tdy finish everything on physics project → task | 2026-11-11 | title=finish everything on physics project
+
+# ---- notes vs tasks
+Need a zuckerberg style blog on the side that is private and tracks all my ideas → note | title=Need a zuckerberg style blog on the side that is private and tracks all my ideas
+Maybe integrate engineering diary to the pushed blog → note | title=Maybe integrate engineering diary to the pushed blog
+Maybe I need a short breather and some shuteye → note | title=Maybe I need a short breather and some shuteye
+Physics hw due fri class → task | 2026-11-13 | title=Physics hw class
+Chronos needs to be a webapp just as todoist has both desktop and webapp → note | title=Chronos needs to be a webapp just as todoist has both desktop and webapp ## notes keep raw text; no project
+When speaking, take it slowly, don't use filler words, be sharp vigilant and be alright with pausing → note | title=When speaking, take it slowly, don't use filler words, be sharp vigilant and be alright with pausing
+I think mark zuckerberg is wrong that he left Eduardo Saverin in the dust like that. I think he should → note | title=I think mark zuckerberg is wrong that he left Eduardo Saverin in the dust like that. I think he should
+Clean desk → task | title=Clean desk
+Maybe you should get off software and into hardware → note | title=Maybe you should get off software and into hardware
+Math test tomorrow! → fixed | 2026-11-12 | unplaced 60 | title=Math test ## D16: no Math period on Thu, so unplaced 1 h event; with a Math period it takes that period
+
+# ---- fixed words
+Bicycle with alex 5pm for 1 hour → fixed | 2026-11-11 | 17:00-18:00 | title=Bicycle with alex
+
+# ---- ranges (Claude drafts, confirmed)
+dinner w/ family 6-8pm → fixed | 2026-11-11 | 18:00-20:00 | title=dinner w/ family
+lab 10-1 tomorrow → fixed | 2026-11-12 | 10:00-13:00 | title=lab
+coding club 16:00–18:00 thu → fixed | 2026-11-12 | 16:00-18:00 | title=coding club
+meeting from 4 till 6 → fixed | 2026-11-11 | 16:00-18:00 | title=meeting
+greenmech 3pm to 4:30pm friday → fixed | 2026-11-13 | 15:00-16:30 | project=greenmech | title=greenmech ## title would be empty, so the project word stays
+
+# ---- task + time
+submit form 5pm → task | 2026-11-11 | due 17:00 | title=submit form
+email mr ariel by 3pm → task | 2026-11-11 | due 15:00 | title=email mr ariel
+reply to adely 9pm → task | 2026-11-11 | due 21:00 | title=reply to adely
+math hw 5pm → task | 2026-11-11 | due 17:00 | title=math hw
+
+# ---- relative days
+buy snacks tmrw → task | 2026-11-12 | title=buy snacks
+dinner tonight → task | 2026-11-11 | title=dinner ## tonight = today, no time; dinner needs a time to be fixed
+study physics sat → task | 2026-11-14 | title=study physics
+gym next mon → task | 2026-11-16 | title=gym
+finish report in 3 days → task | 2026-11-14 | title=finish report
+essay end of week → task | 2026-11-13 | title=essay ## end of week = Friday
+
+# ---- absolute dates (day/month)
+pay fees 12 nov → task | 2026-11-12 | title=pay fees
+birthday nov 20 6pm → fixed | 2026-11-20 | 18:00-19:00 | title=birthday ## D17: 1 h default
+submit form 12/11 → task | 2026-11-12 | title=submit form ## day/month
+dentist appointment 3/12/2026 10am → fixed | 2026-12-03 | 10:00-11:00 | title=dentist appointment ## D17: 1 h default
+trip 2026-12-20 → task | 2026-12-20 | title=trip
+
+# ---- durations
+read ch 5 for 2h → task | est=120 | title=read ch 5
+write essay ~45m → task | est=45 | title=write essay
+fix bug 1h30 → task | est=90 | title=fix bug
+hw 90 min tomorrow → task | 2026-11-12 | est=90 | title=hw
+call oma 4pm for 1h → fixed | 2026-11-11 | 16:00-17:00 | title=call oma
+
+# ---- recurrence
+football practice every tue 3-5pm → fixed | 2026-11-17 | 15:00-17:00 | rec=weekly tue | title=football practice
+gym every other fri 6pm → fixed | 2026-11-13 | 18:00-19:00 | rec=every 2 weeks fri | title=gym ## D17: 1 h default
+journal daily 9pm → task | 2026-11-11 | due 21:00 | rec=daily | title=journal
+team meeting every mon 7:30am → fixed | 2026-11-16 | 07:30-08:30 | rec=weekly mon | title=team meeting ## D17: 1 h default
+study weekdays 7pm → task | 2026-11-11 | due 19:00 | rec=weekdays | title=study
+
+# ---- projects and priority
+fix parser bug chronos !1 → task | project=chronos | prio=1 | title=fix parser bug chronos ## D13 revised: word sets project, stays in title
+greenmech build robot arm friday 4pm → task | 2026-11-13 | due 16:00 | project=greenmech | title=greenmech build robot arm
+sc budget draft !2 tmr → task | 2026-11-12 | project=sc | prio=2 | title=sc budget draft
+!1 call mom → task | prio=1 | title=call mom
+chronos phase 4 notes → task | project=chronos | title=chronos phase 4 notes
+
+# ---- overrides
+task dinner with ko theo 7pm → task | 2026-11-11 | due 19:00 | title=dinner with ko theo
+- gym 5pm → task | 2026-11-11 | due 17:00 | title=gym
+event study group 4pm → fixed | 2026-11-11 | 16:00-17:00 | title=study group ## D17: 1 h default
+@ call dad 9pm → fixed | 2026-11-11 | 21:00-21:30 | title=call dad
+// buy 4 tires → note | title=buy 4 tires
+
+# ---- past times (now = 14:22)
+call mom 9am → fixed | 2026-11-11 | 09:00-09:30 | title=call mom ## passed: kept, warn
+email adely 11am → task | 2026-11-11 | due 11:00 | title=email adely ## passed: stays today
+gym 7am → fixed | 2026-11-11 | 07:00-08:00 | title=gym ## passed: kept, warn; D17: 1 h default
+meeting 1pm to 2pm → fixed | 2026-11-11 | 13:00-14:00 | title=meeting ## passed: kept, warn
+submit form 2pm → task | 2026-11-11 | due 14:00 | title=submit form ## passed 22 min ago: stays today
+
+# ---- crossing midnight
+party 11pm-1am sat → fixed | 2026-11-14 | 23:00-01:00+1d | title=party ## warn
+call oma 11pm to 1am → fixed | 2026-11-11 | 23:00-01:00+1d | title=call oma ## warn
+gaming 9pm-2am fri → fixed | 2026-11-13 | 21:00-02:00+1d | title=gaming ## warn
+study group 10pm to 12:30am → fixed | 2026-11-11 | 22:00-00:30+1d | title=study group ## warn
+late call 11:30pm - 12:15am → fixed | 2026-11-11 | 23:30-00:15+1d | title=late call ## warn; spaced dash

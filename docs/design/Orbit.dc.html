@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Orbit: the day as a dial</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@500;800&amp;family=Geist:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#E9B872}a:hover{color:#F3CF98}
+.stars{background-color:#0B0F15;background-image:radial-gradient(rgba(220,230,240,0.10) 1px,transparent 1.2px);background-size:24px 24px}
+</style>
+</helmet>
+<div class="stars" style="width: 1440px; height: 900px; position: relative; overflow: hidden; font-family: Geist, system-ui, sans-serif; color: #DCE4EC">
+<div style="position: absolute; left: 72px; top: 64px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 14px; color: #7D8794">Wednesday 11 November</span>
+<span style="font-family: Doto, monospace; font-weight: 800; font-size: 64px; letter-spacing: 0.02em; color: #DCE4EC">14:22</span>
+</div>
+<div style="position: absolute; right: 72px; top: 72px; text-align: right; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 14px; color: #7D8794">Free time left today</span>
+<span style="font-size: 32px; font-weight: 300">3 h 05 m</span>
+</div>
+<svg width="680" height="680" viewBox="0 0 680 680" style="position: absolute; left: 380px; top: 110px" role="img" aria-label="Today as a 24 hour dial. School until 14:00, now in the blade pitch task, football 16:00 to 18:00, physics at 19:00.">
+<circle cx="340" cy="340" r="280" fill="none" stroke="#1E2632" stroke-width="1"></circle>
+<circle cx="340" cy="340" r="300" fill="none" stroke="#1E2632" stroke-width="1" stroke-dasharray="1 9.47"></circle>
+<circle cx="340" cy="340" r="280" fill="none" stroke="#3A4656" stroke-width="14" stroke-dasharray="476.5 1759.3" transform="rotate(22.5 340 340)"></circle>
+<circle cx="340" cy="340" r="280" fill="none" stroke="#E9B872" stroke-width="14" stroke-dasharray="110 1759.3" transform="rotate(120 340 340)"></circle>
+<circle cx="340" cy="340" r="280" fill="none" stroke="#3A4656" stroke-width="14" stroke-dasharray="146.6 1759.3" transform="rotate(150 340 340)"></circle>
+<circle cx="340" cy="340" r="280" fill="none" stroke="#DCE4EC" stroke-width="2" stroke-dasharray="55 1759.3" transform="rotate(195 340 340)"></circle>
+<circle cx="340" cy="340" r="280" fill="none" stroke="#56606C" stroke-width="14" stroke-opacity="0.5" stroke-dasharray="36.7 1759.3" transform="rotate(232.5 340 340)"></circle>
+<line x1="340" y1="340" x2="165.8" y2="584.2" stroke="#E9B872" stroke-width="1.5"></line>
+<circle cx="165.8" cy="584.2" r="5" fill="#E9B872"></circle>
+<text x="340" y="36" text-anchor="middle" fill="#56606C" font-size="12" font-family="Geist">00</text>
+<text x="652" y="344" text-anchor="middle" fill="#56606C" font-size="12" font-family="Geist">06</text>
+<text x="340" y="654" text-anchor="middle" fill="#56606C" font-size="12" font-family="Geist">12</text>
+<text x="28" y="344" text-anchor="middle" fill="#56606C" font-size="12" font-family="Geist">18</text>
+<text x="560" y="520" fill="#7D8794" font-size="13" font-family="Geist">School</text>
+<text x="66" y="470" fill="#7D8794" font-size="13" font-family="Geist">Football</text>
+</svg>
+<div style="position: absolute; left: 520px; top: 330px; width: 400px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center">
+<span style="font-size: 13px; color: #E9B872">In orbit until 15:30</span>
+<span style="font-size: 30px; font-weight: 500; line-height: 1.2; letter-spacing: -0.01em">Wind sim: blade pitch model</span>
+<span style="font-family: Doto, monospace; font-weight: 800; font-size: 44px; color: #E9B872">41:08</span>
+<button style="margin-top: 6px; height: 44px; padding: 0 22px; border-radius: 22px; border: 1px solid #E9B872; background: transparent; color: #E9B872; font: 500 14px Geist, sans-serif">Enter to focus</button>
+</div>
+<div style="position: absolute; left: 72px; bottom: 64px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 13px; color: #7D8794">Next</span>
+<span style="font-size: 17px">Football training at 16:00</span>
+</div>
+<span style="position: absolute; right: 72px; bottom: 64px; font-size: 13px; color: #56606C">Ctrl K</span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

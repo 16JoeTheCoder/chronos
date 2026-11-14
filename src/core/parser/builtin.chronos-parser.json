@@ -1,0 +1,32 @@
+{
+  "$schema": "chronos-parser-pack/1",
+  "name": "Chronos built-in (English)",
+  "version": 1,
+  "_comment": "Data, not code. allowDateOnly (optional) lets a fixed word become an all-day event with no time. defaultDurationMin applies only to the words that list it.",
+  "rules": [
+    { "id": "b-class", "match": "class", "aliases": ["lesson", "lecture"], "kind": "fixed", "defaultDurationMin": 60, "source": "builtin" },
+    { "id": "b-training", "match": "training", "aliases": ["practice", "session"], "kind": "fixed", "source": "builtin" },
+    { "id": "b-match", "match": "match", "aliases": ["game"], "kind": "fixed", "source": "builtin" },
+    { "id": "b-meeting", "match": "meeting", "kind": "fixed", "source": "builtin" },
+    { "id": "b-call", "match": "call", "kind": "fixed", "defaultDurationMin": 30, "source": "builtin" },
+    { "id": "b-appointment", "match": "appointment", "kind": "fixed", "source": "builtin" },
+    { "id": "b-exam", "match": "exam", "kind": "fixed", "allowDateOnly": true, "source": "builtin" },
+    { "id": "b-test", "match": "test", "kind": "fixed", "allowDateOnly": true, "source": "builtin" },
+    { "id": "b-service", "match": "service", "kind": "fixed", "source": "builtin" },
+    { "id": "b-church", "match": "church", "kind": "fixed", "source": "builtin" },
+    { "id": "b-dinner", "match": "dinner", "kind": "fixed", "source": "builtin" },
+    { "id": "b-flight", "match": "flight", "kind": "fixed", "source": "builtin" },
+    { "id": "b-workout", "match": "workout", "aliases": ["gym"], "kind": "fixed", "source": "builtin" },
+    { "id": "b-restaurant", "match": "restaurant", "kind": "fixed", "source": "builtin" },
+    { "id": "b-birthday", "match": "birthday", "kind": "fixed", "source": "builtin" },
+    { "id": "b-meet", "match": "meet", "kind": "fixed", "source": "builtin" },
+    { "id": "b-padel", "match": "padel", "kind": "fixed", "source": "builtin" },
+
+    { "id": "b-homework", "match": "homework", "aliases": ["hw", "assignment"], "kind": "task", "source": "builtin" },
+    { "id": "b-revise", "match": "revise", "aliases": ["revision", "study"], "kind": "task", "source": "builtin" },
+    { "id": "b-read", "match": "read", "aliases": ["write", "finish", "fix", "build"], "kind": "task", "source": "builtin" },
+    { "id": "b-practise", "match": "practise paper", "kind": "task", "source": "builtin" },
+    { "id": "b-essay", "match": "essay", "aliases": ["project", "email", "reply"], "kind": "task", "source": "builtin" },
+    { "id": "b-work", "match": "work", "aliases": ["wrap"], "kind": "task", "source": "builtin" }
+  ]
+}
