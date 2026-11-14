@@ -107,6 +107,8 @@ export type Command =
   | { type: 'records.revert'; ops: RevertOp[] }
   /** Internal (MCP): log a change Claude made. */
   | { type: 'activity.claude'; taskId: string; reason: string }
+  /** Edit a Log post: new body (text follows), project, and/or the line->task links (`L<line>:<taskId>`, see core/log/links). */
+  | { type: 'idea.edit'; id: string; body?: string; projectId?: string | null; parsedTaskIds?: string[] }
   | { type: 'idea.review'; id: string; reviewed: boolean }
   | { type: 'idea.toTask'; id: string }
   | { type: 'recycle'; coll: Coll; id: string; confirmed: boolean }
@@ -130,8 +132,8 @@ export type Command =
   | { type: 'data.export' }
   | { type: 'data.openFolder' };
 
-/** `undo` (planning commands): pass it to `records.revert` to undo the whole command as one action. */
-export type Result = { ok: true; id?: string; undo?: RevertOp[] } | { ok: false; error: string; fields?: Errors };
+/** `undo` (planning commands) never leaves main: IPC replies carry `undoToken` instead, redeemed with `window.chronos.undo(token)` (D-140). */
+export type Result = { ok: true; id?: string; undo?: RevertOp[]; undoToken?: string } | { ok: false; error: string; fields?: Errors };
 export type Mutation = { ok: true; d: Data; events: TimerEvent[]; id?: string; undo?: RevertOp[] } | { ok: false; error: string; fields?: Errors };
 
 const ok = (d: Data, events: TimerEvent[] = [], id?: string): Mutation => ({ ok: true, d, events, id });
@@ -551,6 +553,26 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
       if (cmd.projectId && !liveProject(d, cmd.projectId)) return fail('Unknown project.', { projectId: 'Unknown project.' });
       const r = create(d, 'ideas', { text: text.slice(0, 1000), body: text, taskId: cmd.taskId && get(d, 'tasks', cmd.taskId) ? cmd.taskId : null, projectId: cmd.projectId ?? null, reviewed: false, parsedTaskIds: [] }, ctx);
       return ok(r.d, [], r.rec.id);
+    }
+    case 'idea.edit': {
+      const n = get(d, 'ideas', cmd.id);
+      if (!n || n.deletedAt !== null) return fail('Note not found.');
+      const patch: Partial<typeof n> = {};
+      if (cmd.body !== undefined) {
+        const body = cmd.body.trim();
+        if (!body || body.length > 20_000) return fail('A post needs some text (up to 20,000 characters).');
+        patch.body = body;
+        patch.text = body.slice(0, 1000);
+      }
+      if (cmd.projectId !== undefined) {
+        if (cmd.projectId && !liveProject(d, cmd.projectId)) return fail('Unknown project.', { projectId: 'Unknown project.' });
+        patch.projectId = cmd.projectId;
+      }
+      if (cmd.parsedTaskIds !== undefined) {
+        if (cmd.parsedTaskIds.length > 500 || !cmd.parsedTaskIds.every(isId)) return fail('Invalid task links.');
+        patch.parsedTaskIds = cmd.parsedTaskIds;
+      }
+      return Object.keys(patch).length ? ok(update(d, 'ideas', n.id, patch, ctx)) : ok(d);
     }
     case 'idea.review':
       return ok(update(d, 'ideas', cmd.id, { reviewed: cmd.reviewed }, ctx));

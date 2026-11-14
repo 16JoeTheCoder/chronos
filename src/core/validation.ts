@@ -174,7 +174,7 @@ export function isValidAccelerator(acc: unknown): boolean {
 
 export function validateDevice(s: DeviceSettings): Errors {
   const e: Errors = {};
-  for (const k of ['launchAtLogin', 'skipLaunchScreen', 'sound', 'notifications'] as const) if (!isBool(s[k])) e[k] = 'Invalid flag.';
+  for (const k of ['launchAtLogin', 'skipLaunchScreen', 'sound', 'notifications', 'liveOnDesktop', 'overlayHideInFullscreen'] as const) if (!isBool(s[k])) e[k] = 'Invalid flag.';
   if (!['taskbar-left', 'taskbar-right', 'free'].includes(s.widgetDock)) e.widgetDock = 'Invalid dock.';
   const sc = s.shortcuts;
   const keys = ['toggle', 'startPause', 'capture'] as const;

@@ -93,6 +93,8 @@ export function defaultDevice(deviceId: string, deviceName: string): DeviceSetti
     launchAtLogin: false,
     skipLaunchScreen: false,
     widgetDock: 'taskbar-left',
+    liveOnDesktop: false,
+    overlayHideInFullscreen: true,
     widgetPos: null,
     shortcuts: { toggle: 'Ctrl+Alt+Space', startPause: 'Ctrl+Alt+P', capture: 'Ctrl+Alt+N' },
     displayId: null,

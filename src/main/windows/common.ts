@@ -5,7 +5,7 @@ import path from 'node:path';
 import { BrowserWindow, type BrowserWindowConstructorOptions } from 'electron';
 import { log } from '../log';
 
-export function secureWindow(opts: BrowserWindowConstructorOptions, page: 'index.html' | 'widget.html', hash = ''): BrowserWindow {
+export function secureWindow(opts: BrowserWindowConstructorOptions, page: 'index.html' | 'windows.html', hash = ''): BrowserWindow {
   const win = new BrowserWindow({
     ...opts,
     show: false,

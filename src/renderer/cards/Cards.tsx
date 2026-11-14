@@ -2,14 +2,16 @@
 // scheduled from the keyboard with S (the "Schedule at" popover). Duration chips
 // set the estimate (default 25). Alt+arrows reorder; Delete recycles; Enter edits.
 
-import { useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { formatHM } from '../../core/format';
 import type { Data, Task } from '../../core/model/types';
 import { deriveQueue, todayOf } from '../../core/tasks/tasks';
 import { hasFinishCondition } from '../../core/validation';
 import { Icon } from '../components/Icon';
 import { recycleWithUndo } from '../components/actions';
-import { beginDrag } from '../components/drag';
+import { beginDrag, registerTarget, useDrag } from '../components/drag';
+import { intentFor, laneAccepts } from '../runway/dnd';
+import { perform } from '../runway/dropActions';
 import { Dialog } from '../components/ui';
 import { run } from '../store';
 import { DEFAULT_DUR, firstFit, freeGaps, place, scheduledMin, type DayModel } from '../runway/model';
@@ -19,12 +21,27 @@ const CHIPS = [15, 25, 45, 90];
 export function Unscheduled({ d, m, now, onEdit, onNew }: { d: Data; m: DayModel; now: number; onEdit: (t: Task) => void; onNew: () => void }) {
   const today = todayOf(d, now);
   const [scheduling, setScheduling] = useState<{ task: Task; dur: number } | null>(null);
+  const box = useRef<HTMLElement>(null);
+  const drag = useDrag();
+  // Dropping a block or a fixed event back here unschedules it ("and back").
+  useEffect(
+    () =>
+      registerTarget('cards', {
+        el: () => box.current,
+        accepts: (it) => laneAccepts('cards', it),
+        drop: (it) => {
+          const intent = intentFor(it, 'cards', null);
+          if (intent) void perform(intent, d, today);
+        },
+      }),
+    [d, today],
+  );
   const cards = deriveQueue(d, now)
     .map((t) => ({ t, rest: (t.estimateMin ?? DEFAULT_DUR) - scheduledMin(d, t.id, today), any: scheduledMin(d, t.id, today) > 0 }))
     .filter((c) => !c.any || c.rest > 0);
 
   return (
-    <section className="cards rv" aria-label="Unscheduled">
+    <section ref={box} className={`cards rv${drag?.target === 'cards' ? ' drop-on' : ''}`} aria-label="Unscheduled">
       <header className="sec-head">
         <h2 className="eyebrow">Unscheduled</h2>
         <button className="btn btn-s btn-ghost" onClick={onNew} aria-keyshortcuts="N">

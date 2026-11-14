@@ -656,7 +656,7 @@ describe('strict input checking', () => {
   });
   it('rejects missing required fields', () => {
     const r = rig();
-    expect(r.err('add_task', {})).toMatch(/args\.title is required/);
+    expect(r.err('add_task', {})).toMatch(/title or text/);
     expect(r.err('get_task', {})).toMatch(/args\.id is required/);
     expect(r.err('place_block', { taskId: 'x', date: TODAY, startMin: 1 })).toMatch(/args\.endMin is required/);
     expect(r.err('undo', {})).toMatch(/args\.undoToken is required/);

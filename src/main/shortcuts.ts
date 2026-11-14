@@ -1,4 +1,4 @@
-// Global shortcuts (only three). Re-registered from scratch whenever they change;
+// Global shortcuts (three configurable, plus the fixed palette key). Re-registered from scratch whenever they change;
 // a failed registration (usually: another app owns that combination) is reported
 // back to Settings instead of failing silently.
 
@@ -8,14 +8,19 @@ import type { DeviceSettings } from '../core/model/types';
 export interface ShortcutActions {
   toggle(): void;
   startPause(): void;
+  /** Opens the notepad (it replaced quick capture; the setting keeps its old name). */
   capture(): void;
+  palette(): void;
 }
+
+/** Fixed global key for the palette (Ctrl+K is the in-app key). */
+export const PALETTE_SHORTCUT = 'Ctrl+Alt+K';
 
 /** Returns a human-readable error, or null when everything registered. */
 export function registerShortcuts(sc: DeviceSettings['shortcuts'], actions: ShortcutActions): string | null {
   globalShortcut.unregisterAll();
   const failed: string[] = [];
-  for (const [accel, fn] of [[sc.toggle, actions.toggle], [sc.startPause, actions.startPause], [sc.capture, actions.capture]] as const) {
+  for (const [accel, fn] of [[sc.toggle, actions.toggle], [sc.startPause, actions.startPause], [sc.capture, actions.capture], [PALETTE_SHORTCUT, actions.palette]] as const) {
     try {
       if (!globalShortcut.register(accel, fn)) failed.push(accel);
     } catch {

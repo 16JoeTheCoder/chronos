@@ -33,3 +33,21 @@ describe('parseCommand', () => {
     expect(parseCommand({ type: 'task.update', id: 'abc', input: { notes: 'n' } })).toEqual({ type: 'task.update', id: 'abc', input: { notes: 'n' } });
   });
 });
+
+import { pickCreated } from '../../src/main/ipc';
+
+describe('pickCreated (notepad close summary)', () => {
+  it('keeps only known collections and well-formed ids', () => {
+    expect(pickCreated({ text: 'Added 2', records: [{ coll: 'tasks', id: 'abc123' }, { coll: 'settings', id: 'main' }, { coll: 'ideas', id: '../x' }, { coll: 'events', id: 'def456', extra: 1 }] })).toEqual({
+      text: 'Added 2',
+      records: [{ coll: 'tasks', id: 'abc123' }, { coll: 'events', id: 'def456' }],
+    });
+    expect(pickCreated({ text: 'x', records: [{ coll: 'settings', id: 'main' }] })).toBeNull();
+    expect(pickCreated('nope')).toBeNull();
+    expect(pickCreated({ text: 'x', records: 'no' })).toBeNull();
+  });
+  it('never accepts records.revert or other internal commands over IPC', () => {
+    expect(parseCommand({ type: 'records.revert', ops: [{ coll: 'tasks', id: 'abc', prev: null }] })).toBeNull();
+    expect(parseCommand({ type: 'activity.claude', taskId: 'abc', reason: 'x' })).toBeNull();
+  });
+});

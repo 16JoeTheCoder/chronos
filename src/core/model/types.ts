@@ -362,6 +362,10 @@ export interface DeviceSettings {
   launchAtLogin: boolean;
   skipLaunchScreen: boolean;
   widgetDock: 'taskbar-left' | 'taskbar-right' | 'free';
+  /** "Live on the desktop": Home sits behind the desktop icons (Windows only; falls back to a normal window). */
+  liveOnDesktop: boolean;
+  /** The overlay hides while another app is full-screen. */
+  overlayHideInFullscreen: boolean;
   widgetPos: { x: number; y: number } | null;
   shortcuts: { toggle: string; startPause: string; capture: string };
   displayId: number | null;

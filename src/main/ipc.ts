@@ -7,8 +7,9 @@ import { ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import { RECYCLABLE, type ClosureInput, type Command, type EventInput, type OccurrencePatch, type Result, type SettingsPatch, type TaskInput, type TagInput } from '../core/commands';
 import { isId } from '../core/model/ids';
 import { COLLS, type Coll, type DeviceSettings, type ShelfItem, type Snapshot, type TimerConfig } from '../core/model/types';
-import { CHANNELS } from '../preload/api';
+import { CHANNELS, type NotepadCreated } from '../preload/api';
 import { isObj } from '../core/validation';
+import { TOKEN_RE } from './undoTokens';
 
 type Obj = Record<string, unknown>;
 const str = (v: unknown, max = 5000): string => (typeof v === 'string' ? v.slice(0, max) : '');
@@ -134,7 +135,7 @@ function pickSettings(v: Obj): SettingsPatch {
 
 function pickDevice(v: Obj): Extract<Command, { type: 'device.update' }>['patch'] {
   const p: Extract<Command, { type: 'device.update' }>['patch'] = {};
-  for (const k of ['launchAtLogin', 'skipLaunchScreen', 'sound', 'notifications', 'experimental'] as const) if (k in v) p[k] = v[k] as boolean;
+  for (const k of ['launchAtLogin', 'skipLaunchScreen', 'sound', 'notifications', 'experimental', 'liveOnDesktop', 'overlayHideInFullscreen'] as const) if (k in v) p[k] = v[k] as boolean;
   if (isObj(v.mcp) && typeof v.mcp.enabled === 'boolean') p.mcp = { enabled: v.mcp.enabled };
   if ('widgetDock' in v) p.widgetDock = v.widgetDock as DeviceSettings['widgetDock'];
   if (isObj(v.shortcuts)) p.shortcuts = { toggle: str(v.shortcuts.toggle, 60), startPause: str(v.shortcuts.startPause, 60), capture: str(v.shortcuts.capture, 60) };
@@ -272,16 +273,28 @@ export function parseCommand(raw: unknown): Command | null {
   }
 }
 
+/** The notepad's close summary: at most 100 known records, short text; anything else is dropped. */
+export function pickCreated(v: unknown): NotepadCreated | null {
+  if (!isObj(v) || !Array.isArray(v.records)) return null;
+  const records = v.records.slice(0, 100).flatMap((r) => (isObj(r) && ['tasks', 'events', 'ideas'].includes(r.coll as string) && isId(r.id) ? [{ coll: r.coll as 'tasks', id: r.id as string }] : []));
+  return records.length ? { text: str(v.text, 120), records } : null;
+}
+
 export interface IpcDeps {
   isOurSender(e: IpcMainEvent | IpcMainInvokeEvent): boolean;
   snapshot(): Snapshot;
   command(cmd: Command): Result | Promise<Result>;
+  /** Raw undo ops from a command result go behind a token (D-140). */
+  seal(res: Result): Result;
+  redeemUndo(token: unknown): Extract<Command, { type: 'records.revert' }> | null;
   hide(): void;
-  widgetClick(): void;
-  widgetMenu(): void;
-  dragStart(): void;
-  dragEnd(): boolean;
-  closeCapture(): void;
+  showHome(view: 'runway' | 'focus' | null): void;
+  overlayClick(): void;
+  overlayExpand(expanded: boolean): void;
+  closeNotepad(created: NotepadCreated | null): void;
+  closePalette(): void;
+  notify(text: string, undoToken: string | undefined): void;
+  askClaude(text: string): Promise<Result>;
   quit(): void;
   restart(reason: string): void;
   mark(name: string, ms: number): void;
@@ -298,17 +311,32 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle(CHANNELS.getSnapshot, guard(null, () => deps.snapshot()));
   ipcMain.handle(
     CHANNELS.command,
-    guard<[unknown], Result | Promise<Result>>(forbidden, (raw) => {
+    guard<[unknown], Promise<Result>>(Promise.resolve(forbidden), async (raw) => {
       const cmd = parseCommand(raw);
-      return cmd ? deps.command(cmd) : { ok: false, error: 'Invalid command.' };
+      return cmd ? deps.seal(await deps.command(cmd)) : { ok: false, error: 'Invalid command.' };
     }),
   );
+  ipcMain.handle(
+    CHANNELS.undo,
+    guard<[unknown], Promise<Result>>(Promise.resolve(forbidden), async (token) => {
+      const cmd = deps.redeemUndo(token);
+      return cmd ? deps.seal(await deps.command(cmd)) : { ok: false, error: 'That change can no longer be undone.' };
+    }),
+  );
+  ipcMain.handle(CHANNELS.askClaude, guard<[unknown], Promise<Result>>(Promise.resolve(forbidden), (text) => {
+    const t = str(text, 20_000).trim();
+    return t ? deps.askClaude(t) : Promise.resolve({ ok: false, error: 'Nothing to send.' });
+  }));
   ipcMain.on(CHANNELS.hide, guard(undefined, () => deps.hide()));
-  ipcMain.on(CHANNELS.widgetClick, guard(undefined, () => deps.widgetClick()));
-  ipcMain.on(CHANNELS.widgetMenu, guard(undefined, () => deps.widgetMenu()));
-  ipcMain.on(CHANNELS.dragStart, guard(undefined, () => deps.dragStart()));
-  ipcMain.handle(CHANNELS.dragEnd, guard(false, () => deps.dragEnd()));
-  ipcMain.on(CHANNELS.closeCapture, guard(undefined, () => deps.closeCapture()));
+  ipcMain.on(CHANNELS.showHome, guard<[unknown], void>(undefined, (v) => deps.showHome(oneOf(v, ['runway', 'focus'] as const) ?? null)));
+  ipcMain.on(CHANNELS.overlayClick, guard(undefined, () => deps.overlayClick()));
+  ipcMain.on(CHANNELS.overlayExpand, guard<[unknown], void>(undefined, (v) => deps.overlayExpand(v === true)));
+  ipcMain.on(CHANNELS.closeNotepad, guard<[unknown], void>(undefined, (v) => deps.closeNotepad(pickCreated(v))));
+  ipcMain.on(CHANNELS.closePalette, guard(undefined, () => deps.closePalette()));
+  ipcMain.on(CHANNELS.notify, guard<[unknown, unknown], void>(undefined, (text, token) => {
+    const t = str(text, 120).trim();
+    if (t) deps.notify(t, typeof token === 'string' && TOKEN_RE.test(token) ? token : undefined);
+  }));
   ipcMain.on(CHANNELS.quit, guard(undefined, () => deps.quit()));
   ipcMain.on(CHANNELS.restart, guard<[unknown], void>(undefined, (reason) => deps.restart(str(reason, 2000))));
   ipcMain.on(CHANNELS.mark, guard<[unknown, unknown], void>(undefined, (name, ms) => {

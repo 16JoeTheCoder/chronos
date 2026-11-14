@@ -1,5 +1,5 @@
 // Vite builds only the renderer (two pages: Home with the launch screen, and the
-// small widget/capture page). base './' so the packaged app loads from file://.
+// small-windows page: overlay, notepad, palette). base './' so the packaged app loads from file://.
 // The strict CSP is injected for production builds only, because the dev server
 // needs inline scripts for React Fast Refresh.
 import { defineConfig, type Plugin } from 'vite';
@@ -24,7 +24,7 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'chrome120',
     assetsInlineLimit: 0,
-    rollupOptions: { input: { index: 'src/renderer/index.html', widget: 'src/renderer/widget.html' } },
+    rollupOptions: { input: { index: 'src/renderer/index.html', windows: 'src/renderer/windows.html' } },
   },
   server: { port: 5173, strictPort: true },
 });
