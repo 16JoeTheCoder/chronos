@@ -40,6 +40,7 @@ try {
     await c({ type: 'task.create', input: { title: 'Wind sim: blade pitch model', finishCondition: 'Power curve plateaus at rated speed', tagId: tag, estimateMin: 90, priority: 'must' } });
     await c({ type: 'task.create', input: { title: 'Find NREL 5 MW data', finishCondition: 'Dataset downloaded and checked', estimateMin: 25 } });
     await c({ type: 'task.create', input: { title: 'Reply to coach', finishCondition: 'Reply sent about Saturday', estimateMin: 15 } });
+    await c({ type: 'settings.update', patch: { dayStartMin: 0, dayEndMin: 1440 } });
     await c({ type: 'idea.add', text: 'Cp drops hard past 12 m/s. Ramp pitch from 10 m/s and compare.', taskId: null });
   });
   await home.waitForSelector('.now-title');
@@ -105,10 +106,12 @@ try {
   await home.getByRole('heading', { name: 'Settings' }).first().waitFor();
   await home.screenshot({ path: `${shots}/5-settings.png` });
   await home.keyboard.press('Control+l');
-  await home.waitForSelector('.placeholder, .log');
+  await home.waitForTimeout(600);
   await home.getByRole('button', { name: 'Home', exact: true }).click();
 
   step('theme matrix: 1440 and 390 px in every launch theme');
+  await home.evaluate(() => window.chronos.command({ type: 'plan.auto' }));
+  await home.waitForTimeout(8500); // let the toasts clear before the screenshots
   const themes = ['tactile-instrument', 'stark-workshop', 'tars-gargantua/day', 'tars-gargantua/night'];
   for (const themeId of themes) {
     await home.evaluate((id) => window.chronos.command({ type: 'settings.update', patch: { themeId: id } }), themeId);

@@ -30,12 +30,12 @@ export function formatClock(sec: number, overrun = false): string {
 
 const clamp01 = (n: number) => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);
 
-/** 0 on first paint, then the real value on the next frame, so rings "charge" on mount and ease between updates. */
+/** 0 on first paint, then the real value shortly after, so rings "charge" on mount and ease between updates. (A timeout, not rAF: nothing animates by frame loop, and a hidden window does no work.) */
 function useCharged(v: number): number {
   const [shown, setShown] = useState(0);
   useEffect(() => {
-    const id = requestAnimationFrame(() => setShown(v));
-    return () => cancelAnimationFrame(id);
+    const id = window.setTimeout(() => setShown(v), 16);
+    return () => window.clearTimeout(id);
   }, [v]);
   return shown;
 }

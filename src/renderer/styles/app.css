@@ -6,7 +6,7 @@
 html, body { margin: 0; height: 100%; }
 ::selection { background: var(--c-selection); color: var(--c-ground); }
 input, textarea { caret-color: var(--c-accent); }
-* { scrollbar-width: thin; scrollbar-color: var(--c-line-strong) transparent; }
+* { scrollbar-width: thin; scrollbar-color: var(--c-line) transparent; }
 body { background: var(--bg); color: var(--text); font: 400 15px/24px var(--font-sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
 #root { height: 100%; }
 button, input, select, textarea { font: inherit; color: inherit; }

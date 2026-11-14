@@ -21,7 +21,8 @@ const MIN = 60_000;
 export function Widgets({ d, m, now, task, dim }: { d: Data; m: DayModel; now: number; task: Task | undefined; dim?: boolean }) {
   const s = settingsOf(d);
   const theme = useOptionalTheme();
-  const reactive = !!theme && !theme.motionOff && theme.energy.reactiveData === true;
+  // Energy layers are Stark's (reactor-ring) and each sits behind its own switch.
+  const reactive = !!theme && !theme.motionOff && theme.theme.motion.signature.kind === 'reactor-ring' && theme.energy.reactiveData === true;
   const w = s.widgets;
   if (!w.day && !w.momentum && !w.notes && !w.wellness) return null;
   return (

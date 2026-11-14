@@ -36,7 +36,10 @@ type Layer = 'drawer' | 'shelf' | 'trash' | 'schedule' | 'editor' | 'palette';
 // Screens built by other parts of the app are mounted by glob so a missing file is a placeholder, not a build break.
 const boards = import.meta.glob('../board/Board.tsx');
 const palettes = import.meta.glob('../palette/Palette.tsx');
-const LazyBoard = lazy(() => (boards['../board/Board.tsx'] ? (boards['../board/Board.tsx']() as Promise<{ default?: ComponentType; Board: ComponentType }>).then((m) => ({ default: m.Board ?? m.default! })) : Promise.resolve({ default: () => <Placeholder name="Board" /> })));
+const logs = import.meta.glob('../log/Log.tsx');
+type BoardP = { onOpenLog?: (projectId: string) => void; onEnterFocus?: (taskId: string) => void };
+const LazyBoard = lazy(() => (boards['../board/Board.tsx'] ? (boards['../board/Board.tsx']() as Promise<{ Board: ComponentType<BoardP> }>).then((m) => ({ default: m.Board })) : Promise.resolve({ default: (_p: BoardP) => <Placeholder name="Board" /> })));
+const LazyLog = lazy(() => (logs['../log/Log.tsx'] ? (logs['../log/Log.tsx']() as Promise<{ Log: ComponentType<{ projectId?: string | null }> }>).then((m) => ({ default: m.Log })) : Promise.resolve({ default: (_p: { projectId?: string | null }) => <Placeholder name="Log" /> })));
 const LazyPalette = lazy(() => (palettes['../palette/Palette.tsx'] ? (palettes['../palette/Palette.tsx']() as Promise<{ Palette: ComponentType<{ open: boolean; onClose: () => void }> }>).then((m) => ({ default: m.Palette })) : Promise.resolve({ default: () => null })));
 
 function Placeholder({ name }: { name: string }) {
@@ -58,6 +61,7 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
   const [guided, setGuided] = useState(false);
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [range, setRange] = useState<'full' | 'next6'>('full');
+  const [logProject, setLogProject] = useState<string | null>(null);
   const m = dayModel(d, now, range);
   const top = layers.at(-1);
   const open = (l: Layer) => setLayers((x) => [...x.filter((y) => y !== l), l]);
@@ -96,6 +100,7 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
       }
       if (e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'l') {
         e.preventDefault();
+        setLogProject(null);
         setScreen('log');
         return;
       }
@@ -154,9 +159,17 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
   ) : screen === 'settings' ? (
     <Settings snap={snap} onSchedule={() => open('schedule')} onClose={() => setScreen('home')} />
   ) : screen === 'board' ? (
-    <Suspense fallback={null}><LazyBoard /></Suspense>
+    <Suspense fallback={null}>
+      <LazyBoard
+        onOpenLog={(id) => {
+          setLogProject(id);
+          setScreen('log');
+        }}
+        onEnterFocus={() => setScreen('focus')}
+      />
+    </Suspense>
   ) : screen === 'log' ? (
-    <Placeholder name="Log" />
+    <Suspense fallback={null}><LazyLog projectId={logProject} /></Suspense>
   ) : screen === 'focus' ? (
     <FocusCore d={d} m={m} now={now} deviceId={snap.device.deviceId} onPlan={() => setScreen('plan')} />
   ) : screen === 'plan' ? (
@@ -173,7 +186,7 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
 
   return (
     <div className={`home${revealed ? ' revealed' : ''}`} data-screen={screen}>
-      <Rail screen={screen} onGo={(x) => setScreen(x)} />
+      <Rail screen={screen} onGo={(x) => (x === 'log' && setLogProject(null), setScreen(x))} />
       <div className="home-main">
         <header className="top">
           <div className="brand-row">

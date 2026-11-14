@@ -11,6 +11,7 @@ import { activeTask, blockSpan, deriveQueue, ownsTimer, todayOf } from '../../co
 import { upcoming } from '../../core/time/schedule';
 import { localParts } from '../../core/time/zone';
 import { Icon } from '../components/Icon';
+import { sizeFor, useWidth } from '../focus/FocusCore';
 import { HoldButton, useHold } from '../focus/HoldButton';
 import { useTimer } from '../focus/TimerDigits';
 import type { DayModel } from '../runway/model';
@@ -44,7 +45,8 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan }: { d: Data; m
   const over = t ? t.overtime : 0;
   const main = t ? (t.remaining !== null ? (over > 0 ? over : t.remaining) : t.elapsed) : 0;
   const kind = theme?.theme.motion.signature.kind;
-  const size = kind === 'reactor-ring' ? 360 : kind === 'slab-monolith' ? 280 : kind === 'accretion-ring' ? 420 : 112;
+  const width = useWidth();
+  const size = sizeFor(kind, width > 760 ? Math.min(width, 1500) * 0.55 : width);
   const tag = task?.tagId ? d.tags[task.tagId] : undefined;
   const [lead, ...rest] = task && task.title.includes(': ') ? task.title.split(': ') : ['', task?.title ?? ''];
 

@@ -171,7 +171,7 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
             )}
           </div>
         </div>
-        <Cushion c={cush} />
+        {s.bufferMin > 0 && <Cushion c={cush} />}
         <p id="hold-hint" className="muted hold-hint">
           Hold Enter for 2 s to finish. Space starts or pauses.
         </p>
@@ -252,13 +252,13 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
 }
 
 /** Signature size for the viewport: the theme's full size, shrunk to fit narrow windows. */
-function sizeFor(kind: string | undefined, width: number): number {
-  const full = kind === 'reactor-ring' ? 380 : kind === 'slab-monolith' ? 300 : kind === 'accretion-ring' ? 440 : 112;
-  const room = kind === 'ticking-digits' || !kind ? width * 0.2 : width - 48;
-  return Math.max(kind === 'ticking-digits' || !kind ? 56 : 220, Math.min(full, room));
+export function sizeFor(kind: string | undefined, width: number): number {
+  const full = kind === 'reactor-ring' ? 380 : kind === 'slab-monolith' ? (width < 760 ? 220 : 300) : kind === 'accretion-ring' ? 440 : 112;
+  const room = kind === 'ticking-digits' || !kind ? width * 0.2 : width - 96;
+  return Math.max(kind === 'ticking-digits' || !kind ? 56 : 200, Math.min(full, room));
 }
 
-function useWidth(): number {
+export function useWidth(): number {
   const [w, setW] = useState(() => window.innerWidth);
   useEffect(() => {
     const on = () => setW(window.innerWidth);

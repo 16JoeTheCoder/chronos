@@ -108,6 +108,23 @@ check('no rAF loops, no sub-250 ms intervals in main', () => {
   return bad;
 });
 
+// No hard-coded colours outside theme files: every colour comes from a theme token (--c-*). Allowed:
+// the theme JSON files, the tag palette in tokens.css (data colours), lines that only define a mask.
+const COLOUR_ALLOW = new Set(['src/renderer/public/tokens.css']);
+check('no hard-coded colours outside theme files', () => {
+  const bad = [];
+  const re = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/;
+  for (const f of files('src/renderer', /\.(tsx?|css|html)$/)) {
+    if (COLOUR_ALLOW.has(f) || f.includes('/themes/')) continue;
+    readFileSync(f, 'utf8').split('\n').forEach((line, n) => {
+      if (/mask|audit-allow|&#\d+;/.test(line)) return;
+      const code = line.replace(/\/\*.*?\*\/|\/\/.*$/g, '');
+      if (re.test(code)) bad.push(`${f}:${n + 1}: ${line.trim().slice(0, 100)}`);
+    });
+  }
+  return bad;
+});
+
 check('bundle budgets', () => {
   const bad = [];
   const gz = (p) => gzipSync(readFileSync(p)).length;
