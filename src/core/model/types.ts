@@ -2,6 +2,8 @@
 // Every synced entity extends Base and is written only through core/repo, which
 // stamps updatedAt/deviceId/v. DeviceSettings is local to one machine and never synced.
 
+import type { ParserRule } from '../parser/types';
+
 /** The schema this build reads and writes. A pulled record with a higher `v` puts sync in read-only mode (D-104). */
 export const SCHEMA_V = 3;
 
@@ -349,7 +351,7 @@ export interface Settings extends Base {
   /** Drag snap in minutes (5/10/15/30); unused by the UI yet. */
   snapMin: number;
   /** Phase 2 parser keywords; empty now. */
-  parserRules: { keyword: string; kind: 'fixed' | 'task' }[];
+  parserRules: ParserRule[];
   accent: string | null;
   runwayPosition: 'top' | 'bottom';
   reduceMotion: boolean | null;

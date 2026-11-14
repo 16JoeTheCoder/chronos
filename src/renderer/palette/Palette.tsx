@@ -30,9 +30,9 @@ export function Palette({ open, onClose, standalone, onOpenHit }: PaletteProps) 
   const index = useRef(new SearchIndex());
 
   useEffect(() => {
-    if (open) { setQ(''); setSel(0); setReport(null); requestAnimationFrame(() => input.current?.focus()); }
+    if (open) { setQ(''); setSel(0); setReport(null); setTimeout(() => input.current?.focus(), 0); }
   }, [open]);
-  useEffect(() => api.win.onOpen(() => { setQ(''); setSel(0); setReport(null); requestAnimationFrame(() => input.current?.focus()); }), []);
+  useEffect(() => api.win.onOpen(() => { setQ(''); setSel(0); setReport(null); setTimeout(() => input.current?.focus(), 0); }), []);
 
   const d = snap?.data;
   const text = q.trim();

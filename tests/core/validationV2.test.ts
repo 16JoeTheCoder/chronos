@@ -214,14 +214,17 @@ describe('settings v2 fields', () => {
   it.each([5, 10, 15, 30])('snapMin %i is fine', (snapMin) => expect(s({ snapMin })).toEqual({}));
   it.each([7, 0, 20, 60, -5, 5.5])('snapMin %s is rejected', (snapMin) => expect(s({ snapMin })).toHaveProperty('snapMin'));
   it('parserRules', () => {
+    const r = (o: Record<string, unknown> = {}) => ({ id: 'u1', match: 'meeting', kind: 'fixed', source: 'user', ...o }) as never;
     expect(s({ parserRules: [] })).toEqual({});
-    expect(s({ parserRules: [{ keyword: 'meeting', kind: 'fixed' }, { keyword: 'todo', kind: 'task' }] })).toEqual({});
-    expect(s({ parserRules: [{ keyword: '', kind: 'fixed' }] })).toHaveProperty('parserRules');
-    expect(s({ parserRules: [{ keyword: '  ', kind: 'fixed' }] })).toHaveProperty('parserRules');
-    expect(s({ parserRules: [{ keyword: 'x', kind: 'other' as never }] })).toHaveProperty('parserRules');
-    expect(s({ parserRules: [{ keyword: 'x'.repeat(61), kind: 'task' }] })).toHaveProperty('parserRules');
+    expect(s({ parserRules: [r(), r({ id: 'u2', match: 'todo', kind: 'task' })] })).toEqual({});
+    expect(s({ parserRules: [{ keyword: 'meeting', kind: 'fixed' } as never] })).toEqual({});
+    expect(s({ parserRules: [r({ match: '' })] })).toHaveProperty('parserRules');
+    expect(s({ parserRules: [r({ match: '  ' })] })).toHaveProperty('parserRules');
+    expect(s({ parserRules: [r({ kind: 'other' })] })).toHaveProperty('parserRules');
+    expect(s({ parserRules: [r({ match: 'x'.repeat(61) })] })).toHaveProperty('parserRules');
+    expect(s({ parserRules: [r({ source: 'x' })] })).toHaveProperty('parserRules');
     expect(s({ parserRules: 'none' as never })).toHaveProperty('parserRules');
-    expect(s({ parserRules: Array.from({ length: 201 }, () => ({ keyword: 'k', kind: 'task' as const })) })).toHaveProperty('parserRules');
+    expect(s({ parserRules: Array.from({ length: 201 }, () => r()) })).toHaveProperty('parserRules');
   });
   it('whole record check reports the failing settings field', () => {
     expect(bad('settings', S.settings, { snapMin: 7 })).toBe('bad snapMin');

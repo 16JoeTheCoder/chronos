@@ -71,14 +71,14 @@ check('renderer never imports main', () =>
 );
 
 check('dependency allowlist', () => {
-  const allow = new Set(['electron', 'react', 'react-dom', 'typescript', 'vite', '@vitejs/plugin-react', 'esbuild', 'electron-builder', 'vitest', 'playwright-core', '@types/node', '@types/react', '@types/react-dom', 'firebase', 'minisearch', '@modelcontextprotocol/sdk', 'chrono-node']);
+  const allow = new Set(['electron', 'react', 'react-dom', 'typescript', 'vite', '@vitejs/plugin-react', 'esbuild', 'electron-builder', 'vitest', 'playwright-core', '@types/node', '@types/react', '@types/react-dom', 'firebase', 'minisearch', '@modelcontextprotocol/sdk', 'chrono-node', 'koffi']);
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
   return Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter((d) => !allow.has(d) && !d.startsWith('@fontsource/')).map((d) => `not allowed: ${d}`);
 });
 
 // Network code lives in exactly these files: sync (Firestore, Google sign-in), the
 // loopback MCP endpoint and the stdio bridge. Firebase only in src/main/sync.
-const NETWORK_FILES = new Set(['src/main/sync/firestore.ts', 'src/main/sync/auth.ts', 'src/main/sync/remote.ts', 'src/main/mcp/server.ts', 'src/bridge/client.ts', 'src/bridge/chronos-mcp.ts']);
+const NETWORK_FILES = new Set(['src/main/sync/firestore.ts', 'src/main/sync/auth.ts', 'src/main/sync/remote.ts', 'src/main/mcp/server.ts', 'src/bridge/client.ts', 'src/bridge/chronos-mcp.ts', 'src/main/askClaude.ts']);
 const FIREBASE_FILES = new Set(['src/main/sync/firestore.ts', 'src/main/sync/auth.ts', 'src/main/sync/remote.ts']);
 check('network code only in the sync, MCP endpoint and bridge modules', () => {
   const bad = [];

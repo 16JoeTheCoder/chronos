@@ -11,6 +11,7 @@ import type { Diagnostics, Snapshot, SyncView } from '../core/model/types';
 import { activeTask } from '../core/tasks/tasks';
 import { CHANNELS, type Notice } from '../preload/api';
 import { readFirebaseConfig } from './config';
+import { askClaude } from './askClaude';
 import { Controller } from './controller';
 import { DesktopLayer, fullscreenAppActive } from './desktopLayer';
 import { registerIpc } from './ipc';
@@ -342,16 +343,7 @@ function boot(): void {
     },
     closePalette: () => palette.close(),
     notify: (text, undoToken) => notice({ text, undoToken }),
-    askClaude: async (text) => {
-      // D-146: no direct text-injection path exists, so copy and open Claude Desktop; fall back to claude.ai.
-      clipboard.writeText(text);
-      try {
-        await shell.openExternal('claude://');
-      } catch {
-        await shell.openExternal('https://claude.ai/new');
-      }
-      return { ok: true };
-    },
+    askClaude,
     quit,
     restart: (reason) => {
       log(`renderer error, restarting: ${reason}`);

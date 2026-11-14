@@ -15,7 +15,8 @@ export function buildParseContext(d: Data, now: number, source: NonNullable<Pars
     defaultBlockMin: s.planning.defaultBlockMin,
     tags: live(d, 'tags').map((t) => ({ id: t.id, name: t.name })),
     projects: live(d, 'projects').map((p) => ({ id: p.id, name: p.name })),
-    rules: s.parserRules.map((r, i) => ({ id: `user-${i}`, match: r.keyword, kind: r.kind, source: 'user' as const })),
+    // Phase 1 rules were {keyword, kind}; the validator still lets them through.
+    rules: s.parserRules.map((r, i) => ('match' in r ? r : { id: `user-${i}`, match: (r as unknown as { keyword: string }).keyword, kind: (r as unknown as { kind: 'fixed' | 'task' }).kind, source: 'user' as const })),
     weekStartsOn: 1,
     source,
     ...extra,

@@ -157,7 +157,7 @@ export function validateSettings(s: Settings): Errors {
   if (!Array.isArray(s.parserReports) || s.parserReports.length > PARSER_REPORTS_MAX || !s.parserReports.every(isParserReport)) e.parserReports = 'Invalid parser reports.';
   const pl = s.planning;
   if (!isObj(pl) || !(Number.isInteger(pl.defaultBlockMin) && inRange(pl.defaultBlockMin, 5, 480)) || !isBool(pl.learnEstimates) || !(Number.isInteger(pl.breakAfterMin) && inRange(pl.breakAfterMin, 15, 240))) e.planning = 'Invalid planning.';
-  if (!Array.isArray(s.parserRules) || s.parserRules.length > 200 || !s.parserRules.every((r) => isObj(r) && isStr(r.keyword) && r.keyword.trim().length > 0 && r.keyword.length <= 60 && (r.kind === 'fixed' || r.kind === 'task'))) e.parserRules = 'Invalid parser rules.';
+  if (!Array.isArray(s.parserRules) || s.parserRules.length > 200 || !s.parserRules.every(isParserRule)) e.parserRules = 'Invalid parser rules.';
   return e;
 }
 
@@ -170,6 +170,24 @@ export function isValidAccelerator(acc: unknown): boolean {
   const key = (parts[parts.length - 1] ?? '').toLowerCase();
   const keyOk = /^([a-z0-9]|f([1-9]|1[0-9]|2[0-4])|space|tab|enter|return|backspace|delete|insert|home|end|pageup|pagedown|up|down|left|right|escape|esc|plus|[`\-=[\];',./\\])$/.test(key);
   return keyOk && !mods.has(key) && parts.slice(0, -1).every((m) => mods.has(m.toLowerCase()));
+}
+
+const optStr = (v: unknown, max: number) => v === undefined || (isStr(v) && v.length <= max);
+const optBool = (v: unknown) => v === undefined || isBool(v);
+
+/** A ParserRule (core/parser/types). The Phase 1 `{keyword, kind}` shape is still accepted on read; the parser maps it. */
+export function isParserRule(r: unknown): boolean {
+  if (!isObj(r)) return false;
+  if ('keyword' in r && !('match' in r)) return isStr(r.keyword) && r.keyword.trim().length > 0 && r.keyword.length <= 60 && (r.kind === 'fixed' || r.kind === 'task');
+  return (
+    isStr(r.id) && r.id.length > 0 && r.id.length <= 80 &&
+    isStr(r.match) && r.match.trim().length > 0 && r.match.length <= 60 &&
+    (r.aliases === undefined || (Array.isArray(r.aliases) && r.aliases.length <= 20 && r.aliases.every((a) => isStr(a) && a.trim().length > 0 && a.length <= 60))) &&
+    (r.kind === undefined || r.kind === 'fixed' || r.kind === 'task' || r.kind === 'note') &&
+    (r.defaultDurationMin === undefined || (Number.isInteger(r.defaultDurationMin) && inRange(r.defaultDurationMin as number, 1, 1440))) &&
+    optBool(r.allowDateOnly) && optBool(r.usesSchedule) && optStr(r.tagId, 160) && optStr(r.projectId, 160) &&
+    (r.source === 'builtin' || r.source === 'user' || r.source === 'learned')
+  );
 }
 
 export function validateDevice(s: DeviceSettings): Errors {

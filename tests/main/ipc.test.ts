@@ -62,3 +62,30 @@ describe('idea.edit', () => {
     expect((parseCommand({ type: 'idea.edit', id: 'abc', parsedTaskIds: Array(900).fill('L0:a') }) as { parsedTaskIds: string[] }).parsedTaskIds).toHaveLength(500);
   });
 });
+
+import { validateSettings } from '../../src/core/validation';
+import { defaultSettings } from '../../src/core/model/defaults';
+
+describe('settings.update: snapMin, parserRules, parserReports', () => {
+  const patch = (p: Record<string, unknown>) => (parseCommand({ type: 'settings.update', patch: p }) as { patch: Record<string, unknown> }).patch;
+  const merged = (p: Record<string, unknown>) => validateSettings({ ...defaultSettings(), ...p } as never);
+
+  it('lets them through, copying known keys only', () => {
+    const rule = { id: 'u1', match: 'lab', kind: 'fixed', defaultDurationMin: 90, source: 'user', evil: 1 };
+    const p = patch({ snapMin: 15, parserRules: [rule], parserReports: [{ at: 5, input: 'a', expected: 'b', actual: 'c', evil: 1 }] });
+    expect(p.snapMin).toBe(15);
+    expect(p.parserRules).toEqual([{ id: 'u1', match: 'lab', source: 'user', kind: 'fixed', defaultDurationMin: 90 }]);
+    expect(p.parserReports).toEqual([{ at: 5, input: 'a', expected: 'b', actual: 'c' }]);
+    expect(merged(p)).toEqual({});
+  });
+
+  it('core validates the values: bad rules, snap and reports are rejected', () => {
+    expect(merged(patch({ snapMin: 7 }))).toHaveProperty('snapMin');
+    expect(merged(patch({ parserRules: [{ id: 'u', match: '', source: 'user' }] }))).toHaveProperty('parserRules');
+    expect(merged(patch({ parserRules: [{ id: 'u', match: 'x', source: 'hacker' }] }))).toHaveProperty('parserRules');
+    expect(merged(patch({ parserRules: [{ id: 'u', match: 'x', source: 'user', kind: 'event' }] }))).toHaveProperty('parserRules');
+    expect(merged(patch({ parserRules: [{ id: 'u', match: 'x', source: 'learned', aliases: ['a', 'b'], tagId: 't1', allowDateOnly: true }] }))).toEqual({});
+    expect(merged(patch({ parserRules: [{ keyword: 'meeting', kind: 'fixed' }] }))).toEqual({});
+    expect(merged(patch({ parserReports: [{ at: 'now', input: 'a', expected: 'b', actual: 'c' }] }))).toHaveProperty('parserReports');
+  });
+});

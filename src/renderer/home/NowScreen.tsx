@@ -49,7 +49,7 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan }: { d: Data; m
   const [lead, ...rest] = task && task.title.includes(': ') ? task.title.split(': ') : ['', task?.title ?? ''];
 
   return (
-    <div className="now" ref={root} style={{ '--c': `var(--${tag?.color ?? 'tag7'})` } as CSSProperties}>
+    <div className="nowscreen" ref={root} style={{ '--c': `var(--${tag?.color ?? 'tag7'})` } as CSSProperties}>
       <div className="now-bar">
         <span className="now-clock">{formatHM(lp.minutes)}</span>
         <span className="muted">{dateLabel(today)}</span>

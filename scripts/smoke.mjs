@@ -27,7 +27,7 @@ try {
   step('Enter reveals Home; finish onboarding (sets the device flag)');
   await home.keyboard.press('Enter');
   await home.getByRole('button', { name: 'Skip setup' }).click();
-  await home.waitForSelector('.now');
+  await home.waitForSelector('.nowscreen');
   await home.waitForTimeout(1100);
 
   step('seed events, tasks and a plan through the command channel');
@@ -102,7 +102,7 @@ try {
 
   step('Settings and Log from the rail');
   await home.getByRole('button', { name: 'Settings', exact: true }).first().click();
-  await home.waitForSelector('.settings');
+  await home.getByRole('heading', { name: 'Settings' }).first().waitFor();
   await home.screenshot({ path: `${shots}/5-settings.png` });
   await home.keyboard.press('Control+l');
   await home.waitForSelector('.placeholder, .log');

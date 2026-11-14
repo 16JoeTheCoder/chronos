@@ -132,7 +132,7 @@ export type Command =
   | { type: 'data.export' }
   | { type: 'data.openFolder' };
 
-/** `undo` (planning commands) never leaves main: IPC replies carry `undoToken` instead, redeemed with `window.chronos.undo(token)` (D-143). */
+/** `undo` (planning commands) never leaves main: IPC replies carry `undoToken` instead, redeemed through the preload `undo(token)` (D-143). */
 export type Result = { ok: true; id?: string; undo?: RevertOp[]; undoToken?: string } | { ok: false; error: string; fields?: Errors };
 export type Mutation = { ok: true; d: Data; events: TimerEvent[]; id?: string; undo?: RevertOp[] } | { ok: false; error: string; fields?: Errors };
 

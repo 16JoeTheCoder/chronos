@@ -56,7 +56,7 @@ export function Notepad({ snap }: { snap: Snapshot }) {
     setText(id ? (s.data.tasks[id]?.notes ?? '') : readGeneral());
     setSaved(true);
     dirty.current = false;
-    requestAnimationFrame(() => area.current?.focus());
+    setTimeout(() => area.current?.focus());
   }, []);
 
   const save = useCallback(async () => {

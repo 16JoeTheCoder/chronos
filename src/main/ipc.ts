@@ -8,6 +8,7 @@ import { RECYCLABLE, type ClosureInput, type Command, type EventInput, type Occu
 import { isId } from '../core/model/ids';
 import { COLLS, type Coll, type DeviceSettings, type ShelfItem, type Snapshot, type TimerConfig } from '../core/model/types';
 import { CHANNELS, type NotepadCreated } from '../preload/api';
+import type { ParserRule } from '../core/parser/types';
 import { isObj } from '../core/validation';
 import { TOKEN_RE } from './undoTokens';
 
@@ -122,6 +123,9 @@ function pickSettings(v: Obj): SettingsPatch {
   if ('runwayPosition' in v) p.runwayPosition = v.runwayPosition as SettingsPatch['runwayPosition'];
   if ('reduceMotion' in v) p.reduceMotion = v.reduceMotion as boolean | null;
   if ('onboarded' in v) p.onboarded = v.onboarded as boolean;
+  if ('snapMin' in v) p.snapMin = num(v.snapMin);
+  if (Array.isArray(v.parserRules)) p.parserRules = v.parserRules.slice(0, 201).map(pickRule);
+  if (Array.isArray(v.parserReports)) p.parserReports = v.parserReports.slice(0, 201).map((x) => ({ at: isObj(x) ? num(x.at) : NaN, input: str(isObj(x) ? x.input : '', 300), expected: str(isObj(x) ? x.expected : '', 500), actual: str(isObj(x) ? x.actual : '', 500) }));
   if ('themeId' in v) p.themeId = str(v.themeId, 40);
   if (Array.isArray(v.themeSchedule)) p.themeSchedule = v.themeSchedule.slice(0, 24).map((x) => ({ from: str(isObj(x) ? x.from : '', 5), themeId: str(isObj(x) ? x.themeId : '', 40) }));
   if ('weeklyFocusTargetH' in v) p.weeklyFocusTargetH = num(v.weeklyFocusTargetH);
@@ -131,6 +135,17 @@ function pickSettings(v: Obj): SettingsPatch {
   if (isObj(v.widgets)) p.widgets = flags(v.widgets, ['day', 'momentum', 'notes', 'wellness'] as const);
   if (isObj(v.planning)) p.planning = { defaultBlockMin: num(v.planning.defaultBlockMin), learnEstimates: v.planning.learnEstimates as boolean, breakAfterMin: num(v.planning.breakAfterMin) };
   return p;
+}
+
+/** Copy a parser rule's known keys; core's isParserRule checks the values. The Phase 1 `{keyword, kind}` shape passes through. */
+function pickRule(v: unknown): ParserRule {
+  const r = isObj(v) ? v : {};
+  if ('keyword' in r && !('match' in r)) return { keyword: str(r.keyword, 61), kind: r.kind } as unknown as ParserRule;
+  const o: Record<string, unknown> = { id: str(r.id, 81), match: str(r.match, 61), source: r.source };
+  if (Array.isArray(r.aliases)) o.aliases = r.aliases.slice(0, 21).map((a) => str(a, 61));
+  for (const k of ['kind', 'defaultDurationMin', 'allowDateOnly', 'usesSchedule'] as const) if (k in r) o[k] = r[k];
+  for (const k of ['tagId', 'projectId'] as const) if (k in r) o[k] = str(r[k], 161);
+  return o as unknown as ParserRule;
 }
 
 function pickDevice(v: Obj): Extract<Command, { type: 'device.update' }>['patch'] {

@@ -267,7 +267,7 @@ input[type="number"] { font-family: var(--font-mono); font-variant-numeric: tabu
 .drawin .rv-ev { animation: rise var(--dur-base) var(--ease-out) calc(240ms + min(var(--i, 0) * 40ms, 160ms)) both; }
 .drawin .rv-now { animation: pulse var(--dur-slow) var(--ease-out) 400ms both; }
 .drawin .rv-card { animation: rise var(--dur-base) var(--ease-out) calc(480ms + min(var(--i, 0) * 30ms, 180ms)) both; }
-.home:not(.revealed) .plan, .home:not(.revealed) .focus, .home:not(.revealed) .now { opacity: 0; }
+.home:not(.revealed) .plan, .home:not(.revealed) .focus, .home:not(.revealed) .nowscreen { opacity: 0; }
 .reduce.drawin * { animation: none !important; }
 .reduce.drawin .home { animation: fade var(--dur-fast) linear both !important; }
 @media (prefers-reduced-motion: reduce) {
