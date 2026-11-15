@@ -10,7 +10,7 @@
 import { BrowserWindow, screen, type Display } from 'electron';
 import { CHANNELS } from '../../preload/api';
 import { startMouseForward, type DesktopLayer, type MouseHook } from '../desktopLayer';
-import { secureWindow } from './common';
+import { lockZoom, secureWindow } from './common';
 
 const FRONT_MS = 1500;
 
@@ -19,8 +19,9 @@ export class HomeWindow {
   private frontTimer: ReturnType<typeof setTimeout> | null = null;
 
   private mouse: MouseHook | null = null;
+  private zoom: { apply(): void };
 
-  constructor(private displayId: () => number | null, onShown: () => void, private layer: DesktopLayer, private layerEnabled: () => boolean, private log: (m: string) => void) {
+  constructor(private displayId: () => number | null, onShown: () => void, private layer: DesktopLayer, private layerEnabled: () => boolean, private log: (m: string) => void, scale: () => number = () => 100) {
     this.win = secureWindow(
       {
         ...this.display().workArea,
@@ -35,11 +36,17 @@ export class HomeWindow {
       },
       'index.html',
     );
+    this.zoom = lockZoom(this.win, () => scale() / 100);
     this.win.once('ready-to-show', onShown);
     const refit = () => this.fit();
     screen.on('display-added', refit);
     screen.on('display-removed', refit);
     screen.on('display-metrics-changed', refit);
+  }
+
+  /** Settings → Look → Size changed. */
+  applyScale(): void {
+    this.zoom.apply();
   }
 
   get visible(): boolean {

@@ -2,6 +2,7 @@
 import { createRoot } from 'react-dom/client';
 import { useMemo } from 'react';
 import './windows.css';
+import './styles/shell.css';
 import { settingsOf } from '../core/repo/repo';
 import { api } from './api';
 import { Notepad } from './notepad/Notepad';

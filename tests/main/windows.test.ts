@@ -3,22 +3,36 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { OPEN, overlayBounds, PILL } from '../../src/main/windows/overlay';
+import { OPEN, overlayBounds, PILL, taskbarBand } from '../../src/main/windows/overlay';
 import { NOTEPAD, notepadBounds, PALETTE, paletteBounds } from '../../src/main/windows/popup';
 import { readFirebaseConfig } from '../../src/main/config';
 
 const wa = { x: 0, y: 0, width: 1920, height: 1032 };
 
 describe('window placement', () => {
-  it('overlay sits bottom-left and grows upward, keeping its bottom edge', () => {
-    const c = overlayBounds(wa, false);
-    const o = overlayBounds(wa, true);
-    expect(c).toEqual({ x: 16, y: 1032 - 16 - PILL.height, ...PILL });
-    expect(o.y + o.height).toBe(c.y + c.height);
+  const disp = { bounds: { x: 0, y: 0, width: 1920, height: 1080 }, workArea: wa };
+  it('overlay docks inside the taskbar band, left by default, as tall as the taskbar', () => {
+    expect(taskbarBand(disp)).toEqual({ x: 0, y: 1032, width: 1920, height: 48 });
+    const c = overlayBounds(disp, false);
+    expect(c).toEqual({ x: 8, y: 1032, width: PILL.width, height: 48 });
+    // never over the desktop: entirely inside the band
+    expect(c.y).toBeGreaterThanOrEqual(wa.y + wa.height);
+  });
+  it('right dock stays clear of the tray; free uses the stored position, clamped', () => {
+    const r = overlayBounds(disp, false, 'taskbar-right');
+    expect(r.x + r.width).toBeLessThanOrEqual(1920 - 300);
+    expect(r.y).toBe(1032);
+    expect(overlayBounds(disp, false, 'free', { x: 5000, y: 10 })).toMatchObject({ x: 1920 - PILL.width, y: 10 });
+  });
+  it('a notice grows the pill upward from the band bottom', () => {
+    const o = overlayBounds(disp, true);
+    expect(o.y + o.height).toBe(1080);
     expect(o.height).toBe(OPEN.height);
   });
-  it('overlay follows a work area that does not start at the origin', () => {
-    expect(overlayBounds({ x: 60, y: 40, width: 1000, height: 600 }, false)).toMatchObject({ x: 76, y: 40 + 600 - 16 - PILL.height });
+  it('top taskbar and hidden taskbar', () => {
+    const top = { bounds: disp.bounds, workArea: { x: 0, y: 40, width: 1920, height: 1040 } };
+    expect(overlayBounds(top, false)).toMatchObject({ y: 0, height: 40 });
+    expect(overlayBounds({ bounds: disp.bounds, workArea: disp.bounds }, false)).toMatchObject({ x: 16, y: 1080 - 16 - PILL.height });
   });
   it('notepad is top-right and the palette is centred', () => {
     expect(notepadBounds(wa)).toEqual({ x: 1920 - NOTEPAD.width - 16, y: 16, ...NOTEPAD });

@@ -201,6 +201,7 @@ input[type="number"] { font-family: var(--font-mono); font-variant-numeric: tabu
 .toast { display: flex; align-items: center; gap: 16px; padding: 8px 8px 8px 16px; min-height: 48px; background: var(--inverse); color: var(--on-inverse); border-radius: var(--r); box-shadow: var(--shadow-float); animation: rise var(--dur-base) var(--ease-out) both; }
 .toast .btn-ghost { color: var(--on-inverse); border-color: currentColor; }
 .toast-err { background: var(--danger); color: var(--c-ground); }
+.toast-count { font: 600 12px/1 var(--font-mono, monospace); padding: 3px 6px; border-radius: 999px; background: color-mix(in srgb, currentColor 18%, transparent); }
 .drag-chip { position: fixed; z-index: 30; left: 0; top: 0; padding: 6px 10px; background: var(--inverse); color: var(--on-inverse); border-radius: 6px; font: 500 13px/16px var(--font-sans); pointer-events: none; }
 
 /* ---- Shelf and trash ---- */

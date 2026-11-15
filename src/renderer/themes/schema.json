@@ -298,6 +298,30 @@
         "disk": {
           "type": "string",
           "description": "CSS colour: #rgb, #rrggbb, #rrggbbaa, rgb() or rgba()"
+        },
+        "pill": {
+          "type": "string",
+          "description": "CSS colour: #rgb, #rrggbb, #rrggbbaa, rgb() or rgba()"
+        },
+        "pillText": {
+          "type": "string",
+          "description": "CSS colour: #rgb, #rrggbb, #rrggbbaa, rgb() or rgba()"
+        },
+        "pillLine": {
+          "type": "string",
+          "description": "CSS colour: #rgb, #rrggbb, #rrggbbaa, rgb() or rgba()"
+        },
+        "best": {
+          "type": "string",
+          "description": "CSS colour: #rgb, #rrggbb, #rrggbbaa, rgb() or rgba()"
+        },
+        "rest": {
+          "type": "string",
+          "description": "CSS colour: #rgb, #rrggbb, #rrggbbaa, rgb() or rgba()"
+        },
+        "scrim": {
+          "type": "string",
+          "description": "CSS colour: #rgb, #rrggbb, #rrggbbaa, rgb() or rgba()"
         }
       }
     },
@@ -382,7 +406,9 @@
                 "reactor-ring",
                 "slab-monolith",
                 "accretion-ring",
-                "ticking-digits"
+                "ticking-digits",
+                "mission-clock",
+                "lap-timer"
               ]
             },
             "respectReducedMotion": {

@@ -13,7 +13,7 @@ body { background-color: var(--c-ground); }
 .rail-nav { width: 76px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 0; border-right: 1px solid var(--c-line); background: color-mix(in srgb, var(--c-ground) 85%, transparent); }
 .rail-mark { width: 34px; height: 34px; margin-bottom: 20px; border: 2px solid var(--c-accent); border-radius: 50%; position: relative; }
 .rail-mark::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: var(--c-accent); }
-.rail-btn { width: 56px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; border-radius: var(--r-md); background: transparent; color: var(--c-text-3); font: 500 10px/12px var(--font-text); cursor: pointer; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.rail-btn { width: 56px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; border-radius: var(--r-md); background: transparent; color: var(--c-text-3); font: 500 12px/14px var(--font-text); cursor: pointer; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .rail-btn:hover { background: color-mix(in srgb, var(--c-accent) 10%, transparent); color: var(--c-text); }
 .rail-btn.on { color: var(--c-text); background: color-mix(in srgb, var(--c-text) 7%, transparent); }
 .rail-btn:focus-visible { outline: 1.5px solid var(--c-text-3); outline-offset: -4px; }

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { parseHM } from '../../core/format';
 import type { Snapshot } from '../../core/model/types';
 import { settingsOf } from '../../core/repo/repo';
+import { UI_SCALES } from '../../core/validation';
 import { composite, contrast, exportTheme, importTheme, minutesOfDay, parseColor, parseThemeId, resolveActiveTheme, type ChronosTheme, type ThemeCheck } from '../../core/theme';
 import { Icon } from '../components/Icon';
 import { playCue } from '../sound/sound';
@@ -186,6 +187,10 @@ export function LookSection({ snap }: { snap: Snapshot }) {
             <Icon name="plus" size={14} /> Add a switch time
           </Btn>
         </div>
+      </Group>
+
+      <Group title="Size" note="Zoom is turned off (Ctrl + and Ctrl − do nothing) so layouts never break. Pick a size here instead. This PC only.">
+        <Seg label="Size" value={String(dev.uiScale) as '100'} options={UI_SCALES.map((n) => [String(n), `${n} %`] as ['100', string])} onChange={(v) => void run({ type: 'device.update', patch: { uiScale: Number(v) } })} />
       </Group>
 
       <Group title="Widgets on the desktop">

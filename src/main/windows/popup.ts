@@ -5,7 +5,7 @@
 
 import { BrowserWindow, screen, type BrowserWindowConstructorOptions, type Rectangle } from 'electron';
 import { CHANNELS } from '../../preload/api';
-import { secureWindow } from './common';
+import { lockZoom, secureWindow } from './common';
 
 export const NOTEPAD = { width: 380, height: 440 };
 export const PALETTE = { width: 640, height: 460 };
@@ -38,6 +38,7 @@ export class PopupWindow {
     let win = this.win;
     if (!win || win.isDestroyed()) {
       win = secureWindow({ ...this.opts, frame: false, resizable: false, maximizable: false, minimizable: false, fullscreenable: false, skipTaskbar: true, alwaysOnTop: true }, 'windows.html', this.hash);
+      lockZoom(win);
       if (this.hideOnBlur) win.on('blur', () => this.close());
       win.on('closed', () => (this.win = null));
       this.win = win;

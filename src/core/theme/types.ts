@@ -3,7 +3,7 @@
 export const THEME_SCHEMA = 'chronos-theme/1';
 
 export type ThemeMode = 'light' | 'dark';
-export type SignatureKind = 'reactor-ring' | 'slab-monolith' | 'accretion-ring' | 'ticking-digits';
+export type SignatureKind = 'reactor-ring' | 'slab-monolith' | 'accretion-ring' | 'ticking-digits' | 'mission-clock' | 'lap-timer';
 
 export interface FontSpec {
   family: string;
@@ -26,8 +26,14 @@ export const REQUIRED_COLORS = [
  *  raised/edge  raised button surface and its hard under-edge (tactile)
  *  ink/onInk    inverted surface (dark card/slab on a light theme) and the text on it
  *  ring/ringBright/disk  accretion-ring palette: faint ring, bright progress ring, turning disk
+ *  pill/pillText/pillLine  the overlay pill on the taskbar (background, text, border). Opaque background;
+ *                 pillText must reach 4.5:1 on it. Missing = panel / text / lineStrong (built-ins define all three).
+ *  best         lap-timer "personal best" (purple) for recent tasks
+ *  rest         mission-clock rest/blueprint colour
+ *  scrim        the dim layer behind dialogs and the palette (translucent)
  */
-export const OPTIONAL_COLORS = ['groundLight', 'raised', 'edge', 'ink', 'onInk', 'ring', 'ringBright', 'disk'] as const;
+export const OPTIONAL_COLORS = ['groundLight', 'raised', 'edge', 'ink', 'onInk', 'ring', 'ringBright', 'disk', 'pill', 'pillText', 'pillLine', 'best', 'rest', 'scrim'] as const;
+export const PILL_COLORS = ['pill', 'pillText', 'pillLine'] as const;
 
 export type RequiredColor = (typeof REQUIRED_COLORS)[number];
 export type OptionalColor = (typeof OPTIONAL_COLORS)[number];

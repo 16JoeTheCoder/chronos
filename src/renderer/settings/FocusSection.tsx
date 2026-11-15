@@ -24,7 +24,8 @@ export function FocusSection({ snap }: { snap: Snapshot }) {
         </div>
       </Group>
 
-      <Group title="Overlay" note="The small timer pill at the bottom left of your screen. Hover it for the title, timer and Hold to finish.">
+      <Group title="Overlay" note="The timer pill sits in the Windows taskbar, so it never covers your desktop or apps. Hover it and click to pause or resume; hold its timer icon for 2 seconds to finish. It hides while Chronos is in front.">
+        <Seg label="Where" value={dev.widgetDock} options={[['taskbar-left', 'Taskbar, left'], ['taskbar-right', 'Taskbar, right'], ['free', 'Free position']]} onChange={(widgetDock) => void D({ widgetDock, ...(widgetDock === 'free' && !dev.widgetPos ? { widgetPos: { x: 24, y: 24 } } : {}) })} />
         <Toggle label="Hide the overlay in full-screen apps" hint="Games, video and presentations stay clean. Needs Windows to report a full-screen app (see the Windows checklist)." checked={dev.overlayHideInFullscreen} onChange={(overlayHideInFullscreen) => D({ overlayHideInFullscreen })} />
         <Toggle label="Notifications" hint="Upcoming fixed events and the end-of-day review." checked={dev.notifications} onChange={(notifications) => D({ notifications })} />
       </Group>

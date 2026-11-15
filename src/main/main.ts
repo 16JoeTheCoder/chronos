@@ -162,8 +162,12 @@ function boot(): void {
     layer,
     () => controller.device.liveOnDesktop,
     log,
+    () => controller.device.uiScale,
   );
-  const overlay = new OverlayWindow(fullscreenAppActive, () => controller.device.overlayHideInFullscreen);
+  const overlay = new OverlayWindow(fullscreenAppActive, () => controller.device.overlayHideInFullscreen, () => ({ dock: controller.device.widgetDock, pos: controller.device.widgetPos }));
+  // The pill hides while Home is focused or in front (not while Home sits on the desktop layer).
+  const homeFront = () => overlay.setHomeInFront(!home.win.isDestroyed() && home.win.isVisible() && home.win.isFocused() && !layer.attached);
+  for (const ev of ['focus', 'blur', 'show', 'hide'] as const) home.win.on(ev as 'focus', homeFront);
   const popupOpts = { backgroundColor: '#00000000', transparent: true, hasShadow: false } as const;
   const notepad = new PopupWindow('#notepad', notepadBounds, { ...popupOpts, ...NOTEPAD, title: 'Chronos notepad' }, false);
   const palette = new PopupWindow('#palette', paletteBounds, { ...popupOpts, ...PALETTE, title: 'Chronos palette' }, true);
@@ -270,6 +274,8 @@ function boot(): void {
     if (!prev || prev.launchAtLogin !== next.launchAtLogin) applyLoginItem(next.launchAtLogin);
     if (prev && prev.liveOnDesktop && !next.liveOnDesktop) home.layerOff();
     if (prev && prev.displayId !== next.displayId) home.fit();
+    if (prev && prev.uiScale !== next.uiScale) home.applyScale();
+    if (prev && (prev.widgetDock !== next.widgetDock || JSON.stringify(prev.widgetPos) !== JSON.stringify(next.widgetPos))) overlay.replace();
     if (prev && prev.mcp.enabled !== next.mcp.enabled) void applyMcp();
   }
 

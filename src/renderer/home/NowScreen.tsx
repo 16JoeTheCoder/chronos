@@ -4,12 +4,10 @@
 // digits, Stark reactor, TARS slabs, Gargantua ring) reshapes it, never a different tree.
 
 import { useRef, type CSSProperties } from 'react';
-import { clockOf, dateLabel, formatHM, formatHuman } from '../../core/format';
+import { clockOf, formatHM, formatHuman } from '../../core/format';
 import type { Data } from '../../core/model/types';
-import { settingsOf } from '../../core/repo/repo';
 import { activeTask, blockSpan, deriveQueue, ownsTimer, todayOf } from '../../core/tasks/tasks';
 import { upcoming } from '../../core/time/schedule';
-import { localParts } from '../../core/time/zone';
 import { Icon } from '../components/Icon';
 import { sizeFor, useWidth } from '../focus/FocusCore';
 import { HoldButton, useHold } from '../focus/HoldButton';
@@ -21,8 +19,7 @@ import { useOptionalTheme } from '../theme/ThemeProvider';
 import { useHolo } from '../moments/holo';
 import { Widgets } from '../widgets/Widgets';
 
-export function NowScreen({ d, m, now, deviceId, onFocus, onPlan }: { d: Data; m: DayModel; now: number; deviceId: string; onFocus: () => void; onPlan: () => void }) {
-  const s = settingsOf(d);
+export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSchedule }: { d: Data; m: DayModel; now: number; deviceId: string; onFocus: () => void; onPlan: () => void; onDone?: () => void; onSchedule?: () => void }) {
   const theme = useOptionalTheme();
   const task = activeTask(d);
   const t = useTimer(task);
@@ -41,7 +38,6 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan }: { d: Data; m
   const queue = deriveQueue(d, now).filter((x) => x.id !== task?.id);
   const block = task ? m.blocks.find((b) => b.taskId === task.id) : undefined;
   const nextText = nextEv ? `${nextEv.event.title} at ${clockOf(nextEv.start, nextEv.event.tz)}` : queue[0] ? queue[0].title : 'Nothing fixed ahead';
-  const lp = localParts(now, s.timezone);
   const over = t ? t.overtime : 0;
   const main = t ? (t.remaining !== null ? (over > 0 ? over : t.remaining) : t.elapsed) : 0;
   const kind = theme?.theme.motion.signature.kind;
@@ -53,10 +49,12 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan }: { d: Data; m
   return (
     <div className="nowscreen" ref={root} style={{ '--c': `var(--${tag?.color ?? 'tag7'})` } as CSSProperties}>
       <div className="now-bar">
-        <span className="now-clock">{formatHM(lp.minutes)}</span>
-        <span className="muted">{dateLabel(today)}</span>
+        <span className="now-free">{formatHuman(m.tl.workableMs)} free today</span>
         <span className="now-bar-gap" />
-        <span className="muted now-free">{formatHuman(m.tl.workableMs)} free today</span>
+        <button className="btn btn-ghost btn-s" onClick={onPlan}><Icon name="calendar" size={14} /> Plan <kbd>P</kbd></button>
+        <button className="btn btn-ghost btn-s" onClick={onFocus}><Icon name="bolt" size={14} /> Focus <kbd>F</kbd></button>
+        {onDone && <button className="btn btn-ghost btn-s" onClick={onDone}><Icon name="list" size={14} /> Done today</button>}
+        {onSchedule && <button className="btn btn-ghost btn-s" onClick={onSchedule}><Icon name="calendar" size={14} /> Schedule</button>}
       </div>
 
       <section className="now-hero holo" aria-label="Current task">

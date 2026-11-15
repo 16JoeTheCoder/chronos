@@ -22,3 +22,26 @@ export function secureWindow(opts: BrowserWindowConstructorOptions, page: 'index
   else void win.loadFile(path.join(__dirname, 'renderer', page), hash ? { hash: hash.slice(1) } : undefined);
   return win;
 }
+
+/** Ctrl + these keys zoom in Chromium; Chronos blocks them (Settings → Look → Size replaces zoom). */
+export const ZOOM_KEYS = new Set(['=', '+', '-', '_', '0', 'add', 'subtract', 'numpadadd', 'numpadsubtract', 'plus', 'minus']);
+export const isZoomInput = (i: { control: boolean; meta: boolean; alt: boolean; key: string; type: string }): boolean =>
+  i.type === 'keyDown' && (i.control || i.meta) && !i.alt && ZOOM_KEYS.has(i.key.toLowerCase());
+
+/**
+ * Disable Electron zoom (Ctrl+= / Ctrl+- / Ctrl+0, Ctrl+wheel, pinch) and hold the window at
+ * `factor()` (the Size preset, 1 for popups). Call `apply()` again when the preset changes.
+ */
+export function lockZoom(win: BrowserWindow, factor: () => number = () => 1): { apply(): void } {
+  const wc = win.webContents;
+  const apply = () => {
+    if (wc.isDestroyed()) return;
+    void wc.setVisualZoomLevelLimits(1, 1);
+    if (Math.abs(wc.getZoomFactor() - factor()) > 0.001) wc.setZoomFactor(factor());
+  };
+  wc.on('before-input-event', (e, input) => { if (isZoomInput(input)) e.preventDefault(); });
+  // Ctrl+wheel changes the zoom without a key event: snap it back.
+  wc.on('zoom-changed', () => setTimeout(apply, 0));
+  wc.on('did-finish-load', apply);
+  return { apply };
+}

@@ -340,3 +340,26 @@ Energy layers (living reactor, holographic depth, reactive data) apply to the re
 
 ### D-157 One Focus layout, container-sized timers
 Focus is a grid with areas top / stage / side / more / foot; no absolute positioning, so nothing can sit under anything. Stage is a flex column (meta, title, criterion, timer, cushion, hint) whose timer area takes the height left; the signature timer sits in a `.sig-slot` (`container-type: size`) and sizes itself from the slot (`cqw`/`cqh`), never overflowing. Home's hero uses the same slot. Single column for Gargantua and at 1000 px or narrower; the dimmed widgets are left out there. Tactile's hero sizes to its content. A smoke-only hook (`CHRONOS_SMOKE=1` exposes `openNotepad`/`openPalette` on `globalThis`) lets `scripts/smoke.mjs` open the popups, since global shortcuts cannot be pressed under Xvfb. Note: numbers D-312 to D-315 never existed in this file (the "main-side gaps" decision is D-151); numbering is unique and ascending as of D-157.
+
+## Phase 3.5 (fix pass)
+
+### D-158 IPC allow-list covers every Command, enforced by type
+`parseCommand` in `src/main/ipc.ts` had no case for `project.create` or `task.moveCard`, so every project action came back "Invalid command". Both are added with field-by-field validation (name string ≤100, colour in `TAG_COLORS`, ≤12 string columns; `columnId` non-empty string ≤60, `beforeId` null or an id). `tests/main/ipcAllowList.test.ts` holds a `Record<Command['type'], example | null>`: a new Command without an example is a type error, and every example must parse (null = internal, must be rejected: `records.revert`, `activity.claude`). Error toasts now read "Couldn't <what>: <reason>." (`describeError` in `renderer/store.ts`); identical toasts without Undo collapse into one with a ×N count. The empty-name message is "Name is empty."
+
+### D-159 One navigate(): a screen plus at most one layer
+`renderer/home/nav.ts` (pure, tested) holds `{ screen, layer }`. Every navigation (rail, top bar, P/F, Ctrl+L, palette commands, Board "Open in Log") calls `navigate()`, which drops the layer first; opening a layer replaces any other; Esc closes the layer, then leaves a non-Home screen, then hides Home. The old layer stack let Schedule and the palette sit on top of whatever screen the rail switched to. Done today and Schedule moved from the header to the Home and Plan toolbars.
+
+### D-160 Zoom off, Size presets instead
+`lockZoom()` (`main/windows/common.ts`) on every window: `setVisualZoomLevelLimits(1,1)`, Ctrl + `= + - _ 0` blocked in `before-input-event`, and `zoom-changed` (Ctrl+wheel) snaps back. Home holds `device.uiScale` (90/100/110/125, Settings → Look → Size) via `setZoomFactor`; popups stay at 1. Per device.
+
+### D-161 The one palette and the slim top bar
+`palette/Palette.tsx` is the only palette, mounted in Home (centred, 720 px, 140 px from the top, theme scrim + 6 px backdrop blur) and in the standalone window (same component, no scrim). The top bar's search field is a button that opens it. `palette/commands.ts` (pure) lists the `>` commands: go to each screen, start/pause, plan, re-plan, switch project (Board), switch theme, report misparse, ask. Focus is trapped on the input (Tab = Ask Claude), Esc returns focus to the element that had it. The palette styles moved from `windows.css` to `styles/shell.css` (loaded by both pages); before this the in-app palette rendered unstyled at the bottom left. The mockup `TopSearch.dc.html` was not in the handoff (only the Flight* and PitWall files were), so the layout follows the prompt text and `Palette.dc.html`.
+
+### D-162 Palette blur check without animation frames
+rAF is banned (idle CPU). `palette/blurCheck.ts` paints a near-invisible full-window blurred layer for ~0.5 s while a 16 ms timeout loop runs, once per device; a median tick above 26 ms stores `device.paletteBlur = false` and the scrim is dim-only (`html[data-blur="off"]`). A proxy, not a frame-time measurement; recorded so a Windows run can tune it.
+
+### D-163 Overlay pill in the taskbar band
+`overlayBounds(display, expanded, dock, pos)` puts the pill inside `bounds − workArea` (the taskbar strip), full strip height (clamped 32–72), left (x+8) or right (360 px clear of the tray), or at `device.widgetPos` when `widgetDock = 'free'` (the old unused widget fields are reused). No band (auto-hide or vertical taskbar) = bottom-left of the work area. Hover no longer expands: the title crossfades to Pause/Resume and a click toggles the timer; holding the mini timer 2 s finishes (createHold fill and drain). It grows upward only for a notice. It hides while Home is visible, focused and not on the desktop layer. Themes gain optional `pill`, `pillText`, `pillLine` (all built-ins define them per variant); the validator requires an opaque pill and pillText ≥ 4.5:1 on it. Dragging the pill to set the free position is not built (free uses the stored position).
+
+### D-164 Theme scrim and new optional colours
+Optional colours `scrim` (dialog/palette dim), `best` (lap-timer purple) and `rest` (mission-clock blueprint blue); `best`/`rest` must reach 4.5:1 on ground and panel when present. `--ease-snap` no longer overshoots (`cubic-bezier(.16,1,.3,1)`). Rail labels are 12 px.

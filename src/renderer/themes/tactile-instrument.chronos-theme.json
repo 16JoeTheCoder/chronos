@@ -54,7 +54,11 @@
     "raised": "#F9FAFB",
     "edge": "#A9ACB1",
     "ink": "#15171A",
-    "onInk": "#FFFFFF"
+    "onInk": "#FFFFFF",
+    "pill": "#F2F3F5",
+    "pillText": "#15171A",
+    "pillLine": "rgba(21,23,26,0.40)",
+    "scrim": "rgba(21,23,26,0.36)"
   },
   "shape": {
     "radiusSm": 10,
