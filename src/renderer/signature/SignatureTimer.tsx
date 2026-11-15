@@ -217,7 +217,7 @@ function LapTimer({ root, p, text, size, mini, elapsed, remaining, overrun, runn
         </span>
       </div>
       <div className="lt-side">
-        <span className="lt-label">Gap to plan</span>
+        <span className="lt-label">Gap to plan · {gap > 0 ? 'behind' : 'ahead'}</span>
         <span className="lt-gap" data-over={String(gap > 0)}>{gap > 0 ? '+' : '−'}{formatClock(Math.abs(gap))}</span>
         <span className="lt-label">Elapsed</span>
         <span className="lt-el">{formatClock(elapsed)}</span>

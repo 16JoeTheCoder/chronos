@@ -118,10 +118,16 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
       }
       if (e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'l') {
         e.preventDefault();
+        if (nav.layer === 'editor') return; // never drop a task being edited
         go('log');
         return;
       }
       if (e.key === 'Escape') {
+        // Esc in a text field leaves the field first (a draft is never lost to a stray Esc); the next Esc navigates.
+        if (typing && !askOpen() && !document.querySelector('[aria-modal="true"]')) {
+          (e.target as HTMLElement).blur();
+          return;
+        }
         if (askOpen()) closeAsk();
         else {
           const next = escape(nav);

@@ -1,4 +1,5 @@
-/* Phase 3.5 shell: slim top bar, the one palette (in-app and standalone), shared control states.
+/* NOTE: Vite may load this file before screens.css (shared chunk); overrides need higher specificity.
+   Phase 3.5 shell: slim top bar, the one palette (in-app and standalone), shared control states.
    Theme tokens only. Loaded by main.tsx and windows.tsx. */
 
 /* ---- Top bar (56 px, every screen except Focus) ---- */
@@ -75,10 +76,10 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex]:focus-visible { 
 .screen, .st-body, .st-nav, .feed, .plan { scrollbar-gutter: stable; }
 
 /* Morning plan as a one-line strip; the block list opens on request. */
-.morning-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 20px; }
-.morning-strip .morning-head { flex: 1 1 420px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: 0; }
-.morning-strip .morning-head h2 { font-size: 16px; margin: 0; }
-.morning-strip .morning-list { flex-basis: 100%; order: 3; margin: 0; }
+.morning.morning-strip { flex: none; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 12px 20px; padding: 14px 20px; text-align: left; }
+.morning.morning-strip .morning-head { flex: 1 1 420px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: 0; }
+.morning.morning-strip .morning-head h2 { font-size: 16px; margin: 0; }
+.morning.morning-strip .morning-list { flex-basis: 100%; order: 3; margin: 0; }
 
 .tb-help { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--c-line); border-radius: 50%; background: transparent; color: var(--c-text-2); font: 600 15px/1 var(--font-text); cursor: pointer; }
 .tb-help:hover { border-color: var(--c-line-strong); color: var(--c-text); }
@@ -88,3 +89,11 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex]:focus-visible { 
 .help-list > div { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--c-line); }
 .help-list dt { font-weight: 600; color: var(--c-text); }
 .help-list dd { margin: 0; color: var(--c-text-2); font-size: 14px; }
+
+/* Detector pass: readable placeholders and segmented options, no stragglers in notes. */
+input::placeholder, textarea::placeholder { color: var(--c-text-3); opacity: 1; }
+.seg button:not(.on) { color: var(--c-text); }
+p, .st-note, .w-sub { text-wrap: pretty; }
+/* Key hints inside filled buttons take the button's text colour. */
+.btn:not(.btn-ghost) kbd, .btn-accent kbd, .log-btn-primary kbd { color: inherit; border-color: color-mix(in srgb, currentColor 55%, transparent); background: transparent; }
+.now-title, .focus-title, .bd-head h2 { text-wrap: balance; }

@@ -1,4 +1,35 @@
-# Build report: Chronos (Phase 2+3)
+# Build report: Chronos (Phase 3.5 fix pass)
+
+## Status (2026-11-15)
+
+`npm run typecheck` clean · `npm test` 860 passed (63 files) · `npm run audit` passed · `npm run smoke` passed (Xvfb; now also checks silent Focus, palette centring and focus return, `>` commands, navigation after Schedule, project create/switch/pin, help sheet, and no horizontal overflow at 90/100/110/125 % × 1366×768 / 1920×1080).
+
+Windows-only behaviour (taskbar band, z-order, desktop layer, zoom accelerators in the packaged app) is **unverified**: `docs/WINDOWS_CHECKLIST.md` 43-50.
+
+## Impeccable
+
+### Detector (`impeccable detect`)
+
+- Source scan of `src/renderer`: 0 findings (regex-only; it cannot read `tokens.css`/`launch.css`, so it undercounts).
+- Live app over CDP (`--cdp 9222 --target index.html`), Home / Board / Log / Settings / palette / Focus in all six theme variants (36 scans). First real pass found: nested cards (Board columns), low contrast (Log "Add as task?" chip, out-of-month calendar days, placeholders, segmented options, key hints on filled buttons, a TARS Log note), stragglers, an unbalanced heading. All fixed. Left by decision: `ai-color-palette` on Stark's reactor plasma (6) and `cream-palette` on TARS day's ground (6): those are the themes' identities, not defaults.
+- Note: an earlier run of my CDP driver silently failed (two windows open, no `--target`) and recorded "0 findings"; Assessment B caught it. The numbers above are from the corrected driver, which records detector errors as errors.
+
+### Critique (two isolated sub-agents, A then B, desktop single-window order)
+
+| Run | Total /40 | Excl. heuristic 10 (/36) | Notes |
+| --- | --- | --- | --- |
+| Previous build (Josef's run) | n/a | 18/36 | |
+| Run 1 | 29/40 | 27/36 | H8 Minimalism 2, H10 Help 2 |
+| Run 2 (after fixes) | 30/40 | 27/36 | H8 Minimalism 2; H10 Help 3 |
+
+**Target (≥ 30/36, no heuristic below 3) is not met**: Aesthetic and minimalist design scores 2. Both runs reviewed screenshots in which the morning "Plan your day" strip was stretched to ~500 px by a CSS ordering bug (Vite loads `shell.css` before `screens.css`); that was the reviewers' top issue in both runs and is fixed after run 2 (`docs/screens/2-home.png`), but no third run was made (the brief allows one re-run). Other fixes after run 2: Esc in a text field leaves the field before it navigates; Ctrl+L is ignored while a task is being edited; the overlay time no longer truncates; Pit wall labels the gap "ahead"/"behind" (not colour alone); the Focus placeholder fits.
+
+Open issues from run 2, not fixed: Home still shows four toolbar buttons plus the widget stack (density); Undo toasts can sit over dialog bottoms for 8 s; the help sheet is static and can overflow at small sizes; Flight plan's "Step 1 of 12" reads as decoration before start; jargon ("Runway", "Parser rules").
+
+
+---
+
+# Previous: Phase 2+3
 
 ## Status (2026-11-14)
 

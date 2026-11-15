@@ -134,3 +134,9 @@
 .bd-pin { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 4px; font-size: 14px; color: var(--c-text-2); cursor: pointer; }
 .bd-pin input { width: 18px; height: 18px; min-height: 0; accent-color: var(--c-accent); }
 .bd-empty .bd-new, .bd-empty .bd-ghost { max-width: 360px; margin-top: 16px; }
+
+/* Columns are lanes, not cards: a rule under the heading, no panel behind (no cards inside cards). */
+.bd-col { background: transparent; padding: 4px 0 0; border-radius: 0; border: 0; border-top: 2px solid var(--c-line-strong); }
+.bd-col-head { padding-top: 10px; }
+.bd-col[data-over="true"] { border-top-color: var(--c-accent); background: color-mix(in srgb, var(--c-text) 4%, transparent); }
+.bd-card { background: var(--c-panel); }

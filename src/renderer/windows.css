@@ -21,7 +21,7 @@ kbd { font-family: var(--font-num); font-size: 11px; color: var(--c-text-3); bor
 .ov-t-act { opacity: 0; }
 .ov-title[data-hover="true"] .ov-t-name { opacity: 0; }
 .ov-title[data-hover="true"] .ov-t-act { opacity: 1; }
-.ov-time { font-family: var(--font-num); font-variant-numeric: var(--num-variant, tabular-nums); font-size: 14px; color: inherit; }
+.ov-time { flex: none; white-space: nowrap; font-family: var(--font-num); font-variant-numeric: var(--num-variant, tabular-nums); font-size: 14px; color: inherit; }
 .ov-idle { margin: 0 0 0 12px; align-self: flex-start; margin-block: auto; }
 .ov-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .ov-notice button { min-height: 44px; padding: 0 16px; border: 1px solid var(--c-pill-line, var(--c-line-strong)); border-radius: var(--r-md); background: transparent; color: inherit; cursor: pointer; font-weight: 600; }

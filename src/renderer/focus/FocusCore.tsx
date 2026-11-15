@@ -178,7 +178,7 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
           }}
         >
           <Icon name="idea" />
-          <input value={thought} onChange={(e) => setThought(e.target.value)} placeholder="Stray thought? Type it, press Enter, keep going." aria-label="Stray thought" maxLength={1000} />
+          <input value={thought} onChange={(e) => setThought(e.target.value)} placeholder="Stray thought? Type, then Enter" aria-label="Stray thought" maxLength={1000} />
         </form>
       </aside>
       <div className="focus-more">
