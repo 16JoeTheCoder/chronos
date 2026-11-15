@@ -27,10 +27,11 @@ import { TimeLeft } from '../runway/TimeLeft';
 import { ScheduleEditor } from '../schedule/ScheduleEditor';
 import { Settings } from '../settings/Settings';
 import { RecentlyDeleted, ShelfPanel, TrashButton } from '../shelf/Shelf';
-import { run, undoLast, useAlignedNow } from '../store';
+import { clearInfoToasts, run, undoLast, useAlignedNow } from '../store';
 import { DoneDrawer } from './DoneDrawer';
 import { closeLayer, escape, navigate, openLayer, toggle, toggleLayer, type Layer, type NavState } from './nav';
 import { TopBar } from './TopBar';
+import { Help } from './Help';
 import { measureBlurOnce } from '../palette/blurCheck';
 import { BeforeClass, HeadsUp } from './Strips';
 import { SyncDot } from './SyncDot';
@@ -72,6 +73,7 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
   const go = (to: Screen, opts: { logProject?: string | null; projectId?: string } = {}) => {
     if (to === 'log') setLogProject(opts.logProject ?? null);
     if (to === 'board' && opts.projectId) setBoardProject(opts.projectId);
+    clearInfoToasts();
     setNav((x) => navigate(x, to));
   };
   const open = (l: Layer) => setNav((x) => openLayer(x, l));
@@ -129,7 +131,10 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
         return;
       }
       if (typing || e.ctrlKey || e.altKey || e.metaKey || top || document.querySelector('[aria-modal="true"]')) return;
-      if (e.key === 'f' || e.key === 'F') toggleScreen('focus');
+      if (e.key === '?') {
+        e.preventDefault();
+        open('help');
+      } else if (e.key === 'f' || e.key === 'F') toggleScreen('focus');
       else if (e.key === 'p' || e.key === 'P') toggleScreen('plan');
       else if (e.key === 'n' || e.key === 'N') {
         e.preventDefault();
@@ -208,7 +213,7 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
     <div className={`home${revealed ? ' revealed' : ''}`} data-screen={screen}>
       {screen !== 'focus' && <Rail screen={screen} onGo={(x) => go(x)} />}
       <div className="home-main">
-        {screen !== 'focus' && <TopBar d={d} now={now} onPalette={() => open('palette')} onFocus={() => go('focus')} sync={<SyncDot sync={snap.sync} />} />}
+        {screen !== 'focus' && <TopBar d={d} now={now} onPalette={() => open('palette')} onFocus={() => go('focus')} onHelp={() => open('help')} sync={<SyncDot sync={snap.sync} />} />}
 
         <div className="screen">{body}</div>
 
@@ -225,6 +230,7 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
       {top === 'drawer' && <DoneDrawer d={d} now={now} onClose={() => close('drawer')} />}
       {top === 'shelf' && <ShelfPanel onClose={() => close('shelf')} />}
       {top === 'trash' && <RecentlyDeleted d={d} onClose={() => close('trash')} />}
+      {top === 'help' && <Help onClose={() => close('help')} />}
       {top === 'editor' && <TaskEditor d={d} task={editing} now={now} onClose={() => close('editor')} />}
       <Suspense fallback={null}>
         <LazyPalette open={top === 'palette'} onClose={() => close('palette')} onNavigate={(to, opts) => go(to, opts)} />

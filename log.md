@@ -1,8 +1,36 @@
 # Chronos build log
 
-A fresh session can resume from this file alone. Newest state first. Decisions: `decision.md` (D-001..D-157, unique and ascending). Spec for this build: `docs/PHASE23_PROMPT.md`. Evidence per requirement: `docs/SPEC_MATRIX.md`.
+A fresh session can resume from this file alone. Newest state first. Decisions: `decision.md` (D-001..D-170, unique and ascending). Spec for Phase 3.5: the prompt in the PR description (sections 0-15); Phase 2+3 spec: `docs/PHASE23_PROMPT.md`.
 
-## State (2026-11-14, end of the Phase 2+3 build)
+## State (2026-11-15, end of the Phase 3.5 fix pass)
+
+Branch `claude/chronos-phase-3-5-build-ya77ix` (the prompt said `phase-3-5`; the session's branch rule wins). Checks: `npm run typecheck` clean; `npm test` 859 passed (62 files); `npm run audit` passed; `npm run smoke` passed (Xvfb). Impeccable detector (`detect --cdp`, live app): 0 findings on Home, Board, Log, Settings, palette and Focus in all six theme variants. Critique scores: `docs/BUILD_REPORT.md`.
+
+### Done in Phase 3.5 (by prompt section)
+
+- 2.1 IPC allow-list: `project.create`, `task.moveCard`; type-enforced test over every Command (D-158). Plain-words error toasts that collapse with ×N.
+- 2.2 One `navigate()` in `renderer/home/nav.ts` (D-159).
+- 2.3 Zoom locked on every window, Settings → Look → Size and layout presets 90-125 % per device (D-160).
+- 3 One palette: centred, dim + blur (measured once, D-162), top-bar field is a button, `>` commands, focus trap and return (D-161).
+- 4 Silent Focus (D-165). 5 Log: composer, chips, calendar + "This month", states (D-166). 6 Projects: header switcher, optional pinned list (D-167).
+- 7 Overlay in the taskbar band, hover → Pause, hold icon 2 s → finish, hidden while Home is in front, pill colours + contrast check (D-163, D-164).
+- 8 Tilt max 3° (was 9°, only while over a panel, unchanged rule) and no inner scroll on Home (D-170). 9 Smoke bug: blocks ≥ 28 px wide (D-170).
+- 10 Desktop layer trace, status in Settings → Experimental, Win+1 tip (D-169). 11 Flight plan and Pit wall (D-168). 12 Rail labels 12 px, no-overshoot ease, control states, no Settings jump.
+- After the first critique: toasts 5 s (errors/Undo 8 s), cleared on navigation, at most 2; morning plan is a one-line strip; ? help sheet (keys and words).
+
+### Deferred (with reason)
+
+- Handoff mockups `TopSearch.dc.html`, `Log.dc.html`, `Board.dc.html` and `josef-feedback/*.png` were not in the repo or anywhere on disk; built from the prompt text and the existing mockups.
+- `PRODUCT.md` does not exist at the repo root (the prompt said Impeccable wrote it); not invented.
+- Overlay free position: no drag-to-place yet (uses the stored position, default 24,24).
+- Pit wall "stints today" bars, Flight plan's left flight-plan column and debrief list: the themes use the shared Home layout with their own tokens, timer, moments, laps widget and copy.
+- Lively's extra 24H2 z-order step: cannot be verified off Windows (D-169).
+- `/impeccable polish` as a separate pass was folded into the critique fixes.
+- Windows-only behaviour (taskbar band maths, z-order, desktop layer, zoom accelerators in packaged Electron) is unverified: `docs/WINDOWS_CHECKLIST.md` 43-50.
+
+## Previous state
+
+### State (2026-11-14, end of the Phase 2+3 build)
 
 Branch `claude/sweet-maxwell-h63n40` (the prompt said `phase-2-3`; the hub commits and opens the PR). Electron 33 + Vite + React 18 + TS. Checks: `npm run typecheck` clean; `npm test` 779 passed (55 files); `npm run audit` passed; smoke run passed.
 

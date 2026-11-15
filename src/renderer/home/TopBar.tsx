@@ -10,7 +10,7 @@ import { localParts } from '../../core/time/zone';
 import { Icon } from '../components/Icon';
 import { TimerDigits } from '../focus/TimerDigits';
 
-export function TopBar({ d, now, onPalette, onFocus, sync }: { d: Data; now: number; onPalette: () => void; onFocus: () => void; sync?: ReactNode }) {
+export function TopBar({ d, now, onPalette, onFocus, onHelp, sync }: { d: Data; now: number; onPalette: () => void; onFocus: () => void; onHelp?: () => void; sync?: ReactNode }) {
   const s = settingsOf(d);
   const task = activeTask(d);
   const lp = localParts(now, s.timezone);
@@ -36,6 +36,9 @@ export function TopBar({ d, now, onPalette, onFocus, sync }: { d: Data; now: num
           </button>
         ) : (
           <span className="tb-idle">No task in focus</span>
+        )}
+        {onHelp && (
+          <button type="button" className="tb-help" onClick={onHelp} aria-label="Shortcuts and help" title="Shortcuts and help (?)" aria-keyshortcuts="Shift+Slash">?</button>
         )}
       </div>
     </header>

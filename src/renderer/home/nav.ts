@@ -4,7 +4,7 @@
 // Pure so it can be unit-tested; Home.tsx routes every rail, top-bar, key and command nav through it.
 import type { Screen } from '../components/Rail';
 
-export type Layer = 'drawer' | 'shelf' | 'trash' | 'schedule' | 'editor' | 'palette';
+export type Layer = 'drawer' | 'shelf' | 'trash' | 'schedule' | 'editor' | 'palette' | 'help';
 export interface NavState { screen: Screen; layer: Layer | null }
 
 export const navigate = (_s: NavState, to: Screen): NavState => ({ screen: to, layer: null });

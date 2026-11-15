@@ -442,6 +442,8 @@ export interface Snapshot {
   device: DeviceSettings;
   pendingGap: Gap | null;
   shortcutError: string | null;
+  /** Desktop layer (Live on the desktop): last attach result, or null when never tried. */
+  desktopLayer: string | null;
   isPackaged: boolean;
   version: string;
   platform: string;

@@ -240,6 +240,7 @@ function boot(): void {
       device: controller.device,
       pendingGap: controller.pendingGap,
       shortcutError,
+      desktopLayer: layer.status,
       isPackaged: app.isPackaged,
       version: app.getVersion(),
       platform: `${process.platform} ${os.release()} · Electron ${process.versions.electron} · sync config ${syncConfig}`,
@@ -335,7 +336,11 @@ function boot(): void {
     },
     seal: (r) => undoTokens.seal(r),
     redeemUndo: (t) => undoTokens.redeem(t),
-    hide: () => home.hide(),
+    hide: () => {
+      const before = layer.status;
+      home.hide();
+      if (layer.status !== before) broadcast();
+    },
     showHome: (view) => {
       palette.close();
       home.show(view);

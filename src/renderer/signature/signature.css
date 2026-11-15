@@ -106,7 +106,7 @@
 .lt-label { font-family: var(--font-text); font-size: max(13px, calc(var(--s) * .09)); color: var(--c-text-2); }
 .lt-big { font-weight: 900; font-size: var(--s); line-height: .85; letter-spacing: 0; white-space: nowrap; }
 .sig-lap-timer[data-overrun="true"] .lt-big { color: var(--c-warn); }
-.lt-tenths { display: inline-flex; font-size: .43em; color: var(--c-text-2); }
+.lt-tenths { display: inline-flex; font-size: .43em; font-weight: 600; color: var(--c-text-2); }
 .lt-reel { display: inline-block; height: 1em; overflow: hidden; line-height: 1em; vertical-align: top; }
 .lt-reel i { display: block; font-style: normal; height: 1em; line-height: 1em; }
 .lt-tenths[data-run="true"] .lt-reel i { animation: lt-tick 1s steps(10) infinite; }

@@ -132,6 +132,14 @@ try {
   await home.waitForSelector('textarea[aria-label="Write a post"]');
   if (await home.locator('.pal').count()) throw new Error('palette stayed open after navigating');
 
+  step('? opens the help sheet; Esc closes it');
+  await home.getByRole('button', { name: 'Home', exact: true }).click();
+  await home.locator('.tb-help').click();
+  await home.waitForSelector('[role="dialog"][aria-label="Shortcuts and words"]');
+  await home.screenshot({ path: `${shots}/13-help.png` });
+  await home.keyboard.press('Escape');
+  await home.waitForSelector('[role="dialog"][aria-label="Shortcuts and words"]', { state: 'detached' });
+
   step('navigation closes layers: Schedule open, then Board, Log, Home each render');
   await home.getByRole('button', { name: 'Home', exact: true }).click();
   for (const [name, sel] of [['Board', '.bd-shell'], ['Log', '.log'], ['Home', '.nowscreen']]) {

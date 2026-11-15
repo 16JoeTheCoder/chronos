@@ -171,7 +171,7 @@ body { background-color: var(--c-ground); }
 /* ---- Energy layers (Stark): each behind its own switch; ThemeProvider sets the data flags ---- */
 html:not([data-living-reactor]) .sig-plasma, html:not([data-living-reactor]) .sig-core, html:not([data-living-reactor]) .sig-ticks { animation: none; }
 html:not([data-living-reactor]) .sig-plasma { opacity: .5; }
-html[data-holographic-depth="on"]:not([data-motion="off"]) .holo { transform: perspective(1400px) rotateY(calc(var(--tx, 0) * 9deg)) rotateX(calc(var(--ty, 0) * -9deg)); transition: transform 260ms var(--ease); }
+html[data-holographic-depth="on"]:not([data-motion="off"]) .holo { transform: perspective(1400px) rotateY(calc(var(--tx, 0) * 6deg)) rotateX(calc(var(--ty, 0) * -6deg)); transition: transform 260ms var(--ease); }
 html[data-holographic-depth="on"]:not([data-motion="off"]) .now-hero { animation: hd-scan 900ms var(--ease) both; }
 html[data-holographic-depth="on"]:not([data-motion="off"]) .now-side .widget { animation: hd-scan 900ms var(--ease) 160ms both; }
 html[data-holographic-depth="on"]:not([data-motion="off"]) .now-hero::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--c-accent-hover), transparent); pointer-events: none; animation: hd-line 900ms var(--ease) both; }
@@ -290,7 +290,7 @@ html[data-reactive-data="on"]:not([data-motion="off"]) .w-momentum.ignited .w-su
 :is([data-signature="mission-clock"], [data-signature="lap-timer"]) :is(.now-actions, .controls) { justify-content: flex-start; }
 :is([data-signature="mission-clock"], [data-signature="lap-timer"]) .timer-row { flex: none; min-height: 0; }
 :is([data-signature="mission-clock"], [data-signature="lap-timer"]) .focus { grid-template-rows: auto auto minmax(0, 1fr) auto; }
-[data-signature="mission-clock"] .now-hero { border: 1px solid var(--c-line); border-left: 4px solid var(--c-now); border-radius: var(--r-md); background: var(--c-panel); }
+[data-signature="mission-clock"] .now-hero { border: 1px solid var(--c-line-strong); border-radius: var(--r-md); background: var(--c-panel); }
 [data-signature="mission-clock"] .now-title, [data-signature="mission-clock"] .focus-title { font-family: var(--font-display); font-weight: 700; letter-spacing: .01em; }
 [data-signature="mission-clock"] .eyebrow, [data-signature="mission-clock"] .widget h2 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .08em; }
 [data-signature="lap-timer"] .now-hero { border: 0; background: transparent; padding-left: 0; padding-right: 0; }

@@ -100,10 +100,20 @@ const toastListeners = new Set<() => void>();
 let seq = 0;
 
 const toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
+/** Info toasts leave after 5 s, errors and toasts with Undo after 8 s. */
 function armDismiss(id: number): void {
   const old = toastTimers.get(id);
   if (old) clearTimeout(old);
-  toastTimers.set(id, setTimeout(() => dismissToast(id), 8000));
+  const t = toasts.find((x) => x.id === id);
+  toastTimers.set(id, setTimeout(() => dismissToast(id), t?.error || t?.undo ? 8000 : 5000));
+}
+
+/** Navigation clears plain info toasts (errors and Undo offers stay until they time out). */
+export function clearInfoToasts(): void {
+  const keep = toasts.filter((t) => t.error || t.undo);
+  if (keep.length === toasts.length) return;
+  toasts = keep;
+  toastListeners.forEach((l) => l());
 }
 
 export function toast(text: string, opts: { undo?: () => void; error?: boolean } = {}): void {
@@ -116,7 +126,7 @@ export function toast(text: string, opts: { undo?: () => void; error?: boolean }
     return;
   }
   const t = { id: ++seq, text, ...opts };
-  toasts = [...toasts.slice(-2), t];
+  toasts = [...toasts.slice(-1), t];
   toastListeners.forEach((l) => l());
   if (opts.undo) pushUndo(opts.undo);
   armDismiss(t.id);
