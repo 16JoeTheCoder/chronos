@@ -55,3 +55,18 @@
 .link:hover { color: var(--c-text); text-decoration: underline; }
 button:disabled, .btn[aria-disabled="true"] { cursor: not-allowed; opacity: .55; }
 button:focus-visible, [role="button"]:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--c-accent-hover, var(--c-accent)); outline-offset: 2px; }
+
+/* Drag surfaces never select text (a drag used to paint selection over the lane labels). */
+.runway, .cards, .board, html.dragging body { -webkit-user-select: none; user-select: none; }
+.runway input, .runway textarea, .cards input, .board input, .board textarea { -webkit-user-select: text; user-select: text; }
+/* Toast actions read on the toast's own colours. */
+.toast .btn-ghost { color: inherit; border-color: currentColor; background: transparent; }
+.toast .btn-ghost:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
+
+/* The palette input is the dialog's headline, not a form field. */
+.pal .pal-input, .pal .pal-input:hover, .pal .pal-input:focus-visible { min-height: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; padding: 0; }
+
+/* One scroll container per screen: the page scrolls as a whole, never an inner widget column. */
+.screen { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 20px; overflow: hidden auto; scrollbar-width: thin; scrollbar-color: var(--c-line-strong) transparent; }
+.screen > .nowscreen { flex: 1 0 auto; min-height: 0; overflow: visible; }
+.screen .now-side { overflow: visible; }

@@ -5,11 +5,10 @@
 // input at the bottom saves an Idea without leaving focus.
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { clockOf, formatHM, formatHuman, modeLabel } from '../../core/format';
+import { formatHuman, modeLabel } from '../../core/format';
 import type { Data, Task, TimerMode } from '../../core/model/types';
 import { checkpointDue } from '../../core/tasks/sprints';
-import { activeTask, blockSpan, isLocked, ownsTimer, todayOf } from '../../core/tasks/tasks';
-import { upcoming } from '../../core/time/schedule';
+import { activeTask, isLocked, ownsTimer } from '../../core/tasks/tasks';
 import { isDropReason } from '../../core/validation';
 import { live, settingsOf, timerOf } from '../../core/repo/repo';
 import { Icon } from '../components/Icon';
@@ -18,9 +17,6 @@ import { run, toast } from '../store';
 import type { DayModel } from '../runway/model';
 import { SignatureTimer } from '../signature/SignatureTimer';
 import { useOptionalTheme } from '../theme/ThemeProvider';
-import { Widgets } from '../widgets/Widgets';
-import { Cushion } from './Cushion';
-import { cushion, overrunMs } from './cushionModel';
 import { HoldButton, useHold } from './HoldButton';
 import { keyAction, targetOf } from './keys';
 import { useTimer } from './TimerDigits';
@@ -54,10 +50,7 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
   const tag = task.tagId ? d.tags[task.tagId] : undefined;
   const running = task.runtime.status === 'running';
   const owner = ownsTimer(d, deviceId);
-  const next = upcoming(d, now, todayOf(d, now), 24)[0];
   const due = checkpointDue(task, now);
-  const block = m.blocks.find((b) => b.taskId === task.id);
-  const blockEnd = block ? blockSpan(block)[1] : null;
   const width = useWidth();
 
   const reduce = useReduceMotion(s.reduceMotion) || !!theme?.motionOff;
@@ -114,26 +107,15 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
 
   const ritualOk = isDropReason(text);
   const over = t ? t.overtime : 0;
-  const cush = cushion(s.bufferMin, overrunMs(over, now, blockEnd, running));
   const notes = live(d, 'ideas').filter((i) => i.taskId === task.id).sort((a, b) => b.createdAt - a.createdAt).slice(0, 3);
   const [lead, ...rest] = task.title.includes(': ') ? task.title.split(': ') : ['', task.title];
   const main = t ? (t.remaining !== null ? (over > 0 ? over : t.remaining) : t.elapsed) : 0;
   const sigSize = sizeFor(theme?.theme.motion.signature.kind, width);
-  const freeAfter = formatHuman(m.tl.workableMs);
 
   return (
     <section className="focus" aria-label="Focus" style={{ '--c': `var(--${tag?.color ?? 'tag7'})` } as CSSProperties}>
-      <div className="focus-top">
-        <span className="eyebrow">Focus</span>
-        <span className="muted">{next ? `${next.event.title} at ${clockOf(next.start, next.event.tz)} · ${freeAfter} free after this` : `${freeAfter} free today`}</span>
-      </div>
       <div className="stage hold-target">
-        <div className="stage-meta">
-          {tag && <span className="chip-tag">{tag.name}</span>}
-          {task.kind === 'sprint' && <span className="prio">sprint</span>}
-          {task.timer.mode === 'pomodoro' && t && <span className="muted">Pomodoro {t.cycle} of {task.timer.pomodoro.sessionsBeforeLongBreak}</span>}
-          {block && <span className="chip-time">{formatHM(block.startMin)} to {formatHM(block.endMin)}</span>}
-        </div>
+        {task.timer.mode === 'pomodoro' && t && <div className="stage-meta"><span className="muted">Pomodoro {t.cycle} of {task.timer.pomodoro.sessionsBeforeLongBreak}</span></div>}
         <h2 className="focus-title" tabIndex={0} aria-describedby="hold-hint">
           {lead && <span className="light">{lead}: </span>}
           <span className="strong">{rest.join(': ')}</span>
@@ -173,7 +155,6 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
             )}
           </div>
         </div>
-        {s.bufferMin > 0 && <Cushion c={cush} />}
         <p id="hold-hint" className="muted hold-hint">
           Hold Enter for 2 s to finish. Space starts or pauses.
         </p>
@@ -197,7 +178,6 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
           <Icon name="idea" />
           <input value={thought} onChange={(e) => setThought(e.target.value)} placeholder="Stray thought? Type it, press Enter, keep going." aria-label="Stray thought" maxLength={1000} />
         </form>
-        <Widgets d={d} m={m} now={now} task={task} dim />
       </aside>
       <div className="focus-more">
         <div className="stage-more">
@@ -249,7 +229,7 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
           </form>
         )}
       </div>
-      <p className="focus-foot">No other tasks are shown here. Esc returns to the desktop.</p>
+      <p className="sr-only">Esc leaves Focus.</p>
     </section>
   );
 }

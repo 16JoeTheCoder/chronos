@@ -210,7 +210,7 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
       <div className="home-main">
         {screen !== 'focus' && <TopBar d={d} now={now} onPalette={() => open('palette')} onFocus={() => go('focus')} sync={<SyncDot sync={snap.sync} />} />}
 
-        {body}
+        <div className="screen">{body}</div>
 
         {!full && screen === 'plan' && (
           <footer className="foot">

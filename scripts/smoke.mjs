@@ -97,11 +97,11 @@ try {
     const bb = await home.locator('.blk-body').first().boundingBox();
     const cards = await home.locator('.cards').boundingBox();
     if (bb && cards) {
-      await home.mouse.move(bb.x + 20, bb.y + 10);
+      await home.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2);
       await home.mouse.down();
-      await home.mouse.move(cards.x + 100, cards.y + 60, { steps: 8 });
+      await home.mouse.move(cards.x + Math.min(100, cards.width / 2), cards.y + Math.min(60, cards.height / 2), { steps: 8 });
       await home.mouse.up();
-      await home.waitForTimeout(400);
+      await home.waitForTimeout(600);
       if ((await home.locator('.blk').count()) >= blocks) throw new Error('dropping a block on the cards did not unschedule it');
     }
   }
@@ -110,10 +110,10 @@ try {
   step('Ctrl+K in Home opens the palette (verified), Esc closes it');
   await home.keyboard.press('Escape');
   await home.keyboard.press('Control+k');
-  await home.waitForSelector('[role="dialog"][aria-label="Palette"]');
+  await home.waitForSelector('.pal[role="dialog"]');
   await home.screenshot({ path: `${shots}/8-palette-in-home.png` });
   await home.keyboard.press('Escape');
-  await home.waitForSelector('[role="dialog"][aria-label="Palette"]', { state: 'detached' });
+  await home.waitForSelector('.pal[role="dialog"]', { state: 'detached' });
 
   step('notepad and palette windows (windows.html#notepad, #palette)');
   await app.evaluate(() => globalThis.__chronosSmoke.openNotepad());
