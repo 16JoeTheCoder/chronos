@@ -11,7 +11,8 @@ import { live, settingsOf } from '../../core/repo/repo';
 import { useOptionalTheme } from '../theme/ThemeProvider';
 import type { DayModel } from '../runway/model';
 import { minuteOf } from '../runway/model';
-import { arc, daySegments, estimateDriftPct, focusStreak, weekFocus } from './stats';
+import { arc, daySegments, estimateDriftPct, focusStreak, recentLaps, weekFocus } from './stats';
+import { formatClock } from '../signature/SignatureTimer';
 
 const R = 80;
 const C = 2 * Math.PI * R;
@@ -27,11 +28,37 @@ export function Widgets({ d, m, now, task, dim }: { d: Data; m: DayModel; now: n
   if (!w.day && !w.momentum && !w.notes && !w.wellness) return null;
   return (
     <div className={`widgets${dim ? ' dim' : ''}`} aria-label="Widgets" aria-hidden={dim ? true : undefined}>
+      {theme?.theme.motion.signature.kind === 'lap-timer' && <LapsWidget d={d} />}
       {w.day && <DayWidget d={d} m={m} now={now} reactive={reactive} />}
       {w.momentum && <MomentumWidget d={d} now={now} reactive={reactive} />}
       {w.notes && <NotesWidget d={d} task={task} />}
       {w.wellness && <WellnessWidget d={d} m={m} now={now} />}
     </div>
+  );
+}
+
+function LapsWidget({ d }: { d: Data }) {
+  const laps = recentLaps(d);
+  return (
+    <section className="widget w-laps" aria-labelledby="laps-h">
+      <h2 id="laps-h">Recent laps vs estimate</h2>
+      {laps.length === 0 ? (
+        <p className="w-sub">Finish a task that has an estimate and its lap shows here.</p>
+      ) : (
+        <ul className="laps">
+          {laps.map((l) => (
+            <li key={l.id} data-lap={l.kind}>
+              <span className="lap-flag" aria-hidden="true" />
+              <span className="lap-name">{l.title}</span>
+              <span className="lap-gap">
+                <span className="sr-only">{l.kind === 'best' ? 'Personal best, ' : l.kind === 'under' ? 'Under estimate, ' : 'Over estimate, '}</span>
+                {l.gapMs > 0 ? '+' : '−'}{formatClock(Math.abs(l.gapMs) / 1000)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

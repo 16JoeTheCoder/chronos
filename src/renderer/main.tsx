@@ -5,6 +5,7 @@ import { Component, StrictMode, useEffect, useState, type ReactNode } from 'reac
 import { createRoot } from 'react-dom/client';
 import './styles/app.css';
 import './styles/screens.css';
+import './styles/shell.css';
 import { api } from './api';
 import { Home } from './home/Home';
 import { settingsOf } from '../core/repo/repo';

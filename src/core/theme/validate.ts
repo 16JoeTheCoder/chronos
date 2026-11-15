@@ -2,7 +2,7 @@ import { composite, contrast, parseColor, type RGBA } from './color';
 import { OPTIONAL_COLORS, REQUIRED_COLORS, THEME_SCHEMA, type ChronosTheme, type ResolvedTheme, type ThemeCheck } from './types';
 import { resolveVariant } from './variants';
 
-const KINDS = ['reactor-ring', 'slab-monolith', 'accretion-ring', 'ticking-digits'];
+const KINDS = ['reactor-ring', 'slab-monolith', 'accretion-ring', 'ticking-digits', 'mission-clock', 'lap-timer'];
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const BODY = ['text', 'text2', 'text3', 'muted'] as const;
 const STATUS = ['now', 'wellness', 'ok', 'warn', 'danger'] as const;
@@ -134,6 +134,20 @@ function contrastCheck(c: Ctx, t: ResolvedTheme) {
   if (ink && onInk) {
     const r = contrast(composite(onInk, ink), ink);
     if (r < 4.5) c.err(`contrast: "color.onInk" on ink is ${r.toFixed(2)}:1, needs at least 4.5:1`);
+  }
+  // The overlay pill sits on the taskbar (any colour), so its own background must carry the text.
+  const pill = parseColor(col.pill ?? col.panel);
+  const pillText = parseColor(col.pillText ?? col.text);
+  if (pill && pillText) {
+    if (pill[3] < 1) c.err('contrast: "color.pill" must be opaque (the pill sits on the taskbar, whose colour is unknown)');
+    else {
+      const r = contrast(composite(pillText, pill), pill);
+      if (r < 4.5) c.err(`contrast: "color.pillText" on pill is ${r.toFixed(2)}:1, needs at least 4.5:1`);
+    }
+  }
+  for (const key of ['best', 'rest']) for (const [gn, g] of grounds.slice(0, 2)) {
+    const r = ratio(key, g);
+    if (r !== null && r < 4.5) c.err(`contrast: "color.${key}" on ${gn} is ${r.toFixed(2)}:1, text needs at least 4.5:1`);
   }
   for (const key of [...STATUS, 'fixedBlock']) for (const [gn, g] of grounds.slice(0, 2)) {
     const r = ratio(key, g);

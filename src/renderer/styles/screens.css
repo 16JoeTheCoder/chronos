@@ -13,7 +13,7 @@ body { background-color: var(--c-ground); }
 .rail-nav { width: 76px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 0; border-right: 1px solid var(--c-line); background: color-mix(in srgb, var(--c-ground) 85%, transparent); }
 .rail-mark { width: 34px; height: 34px; margin-bottom: 20px; border: 2px solid var(--c-accent); border-radius: 50%; position: relative; }
 .rail-mark::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: var(--c-accent); }
-.rail-btn { width: 56px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; border-radius: var(--r-md); background: transparent; color: var(--c-text-3); font: 500 10px/12px var(--font-text); cursor: pointer; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.rail-btn { width: 56px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; border-radius: var(--r-md); background: transparent; color: var(--c-text-3); font: 500 12px/14px var(--font-text); cursor: pointer; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .rail-btn:hover { background: color-mix(in srgb, var(--c-accent) 10%, transparent); color: var(--c-text); }
 .rail-btn.on { color: var(--c-text); background: color-mix(in srgb, var(--c-text) 7%, transparent); }
 .rail-btn:focus-visible { outline: 1.5px solid var(--c-text-3); outline-offset: -4px; }
@@ -171,7 +171,7 @@ body { background-color: var(--c-ground); }
 /* ---- Energy layers (Stark): each behind its own switch; ThemeProvider sets the data flags ---- */
 html:not([data-living-reactor]) .sig-plasma, html:not([data-living-reactor]) .sig-core, html:not([data-living-reactor]) .sig-ticks { animation: none; }
 html:not([data-living-reactor]) .sig-plasma { opacity: .5; }
-html[data-holographic-depth="on"]:not([data-motion="off"]) .holo { transform: perspective(1400px) rotateY(calc(var(--tx, 0) * 9deg)) rotateX(calc(var(--ty, 0) * -9deg)); transition: transform 260ms var(--ease); }
+html[data-holographic-depth="on"]:not([data-motion="off"]) .holo { transform: perspective(1400px) rotateY(calc(var(--tx, 0) * 6deg)) rotateX(calc(var(--ty, 0) * -6deg)); transition: transform 260ms var(--ease); }
 html[data-holographic-depth="on"]:not([data-motion="off"]) .now-hero { animation: hd-scan 900ms var(--ease) both; }
 html[data-holographic-depth="on"]:not([data-motion="off"]) .now-side .widget { animation: hd-scan 900ms var(--ease) 160ms both; }
 html[data-holographic-depth="on"]:not([data-motion="off"]) .now-hero::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--c-accent-hover), transparent); pointer-events: none; animation: hd-line 900ms var(--ease) both; }
@@ -279,5 +279,32 @@ html[data-reactive-data="on"]:not([data-motion="off"]) .w-momentum.ignited .w-su
   .runway .rw { margin-right: 8px; padding-left: 52px; }
 }
 
-.btn kbd { color: inherit; border-color: currentColor; opacity: .7; }
+.btn kbd { color: inherit; border-color: color-mix(in srgb, currentColor 55%, transparent); }
 .focus-more .mode { flex-wrap: wrap; }
+
+/* ---- Flight plan (mission-clock) and Pit wall (lap-timer): text-based timers, laid out like Tactile ---- */
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) .nowscreen { grid-template-columns: minmax(0, 1fr) 400px; }
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) .now-hero { align-self: start; gap: 24px; padding: 36px 40px; }
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) .now-timer { flex: none; min-height: 0; align-items: flex-start; gap: 28px; }
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) .sig-slot { flex: none; container-type: normal; place-items: center start; }
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) :is(.now-actions, .controls) { justify-content: flex-start; }
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) .timer-row { flex: none; min-height: 0; }
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) .focus { grid-template-rows: auto auto minmax(0, 1fr) auto; }
+[data-signature="mission-clock"] .now-hero { border: 1px solid var(--c-line-strong); border-radius: var(--r-md); background: var(--c-panel); }
+[data-signature="mission-clock"] .now-title, [data-signature="mission-clock"] .focus-title { font-family: var(--font-display); font-weight: 700; letter-spacing: .01em; }
+[data-signature="mission-clock"] .eyebrow, [data-signature="mission-clock"] .widget h2 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .08em; }
+[data-signature="lap-timer"] .now-hero { border: 0; background: transparent; padding-left: 0; padding-right: 0; }
+[data-signature="lap-timer"] .now-title, [data-signature="lap-timer"] .focus-title { font-weight: 700; }
+[data-signature="lap-timer"] .widget { border: 0; background: var(--c-panel); border-radius: var(--r-lg); }
+[data-signature="lap-timer"] .btn-accent { border-radius: var(--r-md); }
+@media (max-width: 1000px) { :is([data-signature="mission-clock"], [data-signature="lap-timer"]) .nowscreen { grid-template-columns: minmax(0, 1fr); } }
+
+/* Recent laps (Pit wall): purple = personal best for the project or tag, green = under estimate, yellow = over. */
+.laps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.laps li { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.lap-flag { width: 10px; height: 24px; border-radius: 2px; background: var(--lap); flex: none; }
+.lap-name { flex: 1; min-width: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lap-gap { font-weight: 700; font-size: 16px; color: var(--lap); font-variant-numeric: var(--num-variant, tabular-nums); }
+.laps [data-lap="best"] { --lap: var(--c-best, var(--c-accent)); }
+.laps [data-lap="under"] { --lap: var(--c-ok); }
+.laps [data-lap="over"] { --lap: var(--c-warn); }

@@ -107,6 +107,7 @@ export function Toasts() {
       {list.map((t) => (
         <div key={t.id} className={`toast${t.error ? ' toast-err' : ''}`}>
           <span>{t.text}</span>
+          {(t.count ?? 1) > 1 && <span className="toast-count" aria-label={`${t.count} times`}>×{t.count}</span>}
           {t.undo && (
             <button
               className="btn btn-s btn-ghost"

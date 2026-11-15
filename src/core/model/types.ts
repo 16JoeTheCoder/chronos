@@ -363,7 +363,16 @@ export interface DeviceSettings {
   deviceName: string;
   launchAtLogin: boolean;
   skipLaunchScreen: boolean;
+  /** Where the overlay pill sits (Phase 3.5): docked in the taskbar band, left or right, or at `widgetPos`. */
   widgetDock: 'taskbar-left' | 'taskbar-right' | 'free';
+  /** Settings → Look → Size: the app's zoom factor in percent (90, 100, 110, 125). */
+  uiScale: number;
+  /** Palette backdrop blur: null until measured once at startup (frame-time check), then on/off. */
+  paletteBlur: boolean | null;
+  /** Board project list: the header dropdown only ('hidden'), pinned full sidebar, or pinned icon strip. */
+  projectList: 'hidden' | 'full' | 'icons';
+  /** The one-time "Pin Chronos to the taskbar and press Win+1" tip was dismissed. */
+  desktopTipSeen: boolean;
   /** "Live on the desktop": Home sits behind the desktop icons (Windows only; falls back to a normal window). */
   liveOnDesktop: boolean;
   /** The overlay hides while another app is full-screen. */
@@ -433,6 +442,8 @@ export interface Snapshot {
   device: DeviceSettings;
   pendingGap: Gap | null;
   shortcutError: string | null;
+  /** Desktop layer (Live on the desktop): last attach result, or null when never tried. */
+  desktopLayer: string | null;
   isPackaged: boolean;
   version: string;
   platform: string;

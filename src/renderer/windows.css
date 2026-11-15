@@ -8,19 +8,24 @@ button, input, textarea { font: inherit; color: inherit; }
 kbd { font-family: var(--font-num); font-size: 11px; color: var(--c-text-3); border: 1px solid var(--c-line); border-radius: var(--r-sm); padding: 1px 6px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
-/* ---- overlay ---- */
-.ov { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 8px 14px; background: var(--c-panel); border: 1px solid var(--c-line-strong); border-radius: var(--r-pill); box-shadow: var(--depth-float); }
-.ov[data-open="true"] { border-radius: var(--r-lg); padding: 14px; }
-.ov-row { display: flex; align-items: center; gap: 12px; min-height: 36px; }
-.ov-title { flex: 1; min-width: 0; background: none; border: 0; padding: 0; text-align: left; font-family: var(--font-display); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-.ov-time { font-family: var(--font-num); font-variant-numeric: var(--num-variant, tabular-nums); color: var(--c-text-2); }
-.ov-idle { margin: 0; color: var(--c-text-2); }
-.ov-hold { position: relative; overflow: hidden; min-height: 44px; border: 1px solid var(--c-line-strong); border-radius: var(--r-md); background: var(--c-panel-hero); cursor: pointer; touch-action: none; }
-.ov-hold-fill { position: absolute; inset: 0; background: var(--c-accent); opacity: .35; transform-origin: left; transform: scaleX(var(--p, 0)); }
-.ov-hold span { position: relative; font-weight: 600; }
+/* ---- overlay pill (on the taskbar) ---- */
+.ov { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 4px 12px 4px 4px; background: var(--c-pill, var(--c-panel)); color: var(--c-pill-text, var(--c-text)); border: 1px solid var(--c-pill-line, var(--c-line-strong)); border-radius: var(--r-pill); }
+.ov[data-open="true"] { border-radius: var(--r-lg); padding: 14px; box-shadow: var(--depth-float); }
+.ov-row { display: flex; align-items: center; gap: 10px; flex: 1; min-height: 0; max-height: 64px; }
+.ov-icon { position: relative; flex: none; height: 100%; aspect-ratio: 1; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; overflow: hidden; touch-action: none; }
+.ov-icon > :first-child { max-width: 100%; max-height: 100%; }
+.ov-icon-fill { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; background: conic-gradient(var(--c-accent) calc(var(--p, 0) * 360deg), transparent 0); opacity: .45; }
+.ov-icon:hover { box-shadow: inset 0 0 0 1px var(--c-pill-line, var(--c-line-strong)); }
+.ov-title { position: relative; flex: 1; min-width: 0; height: 100%; background: none; border: 0; padding: 0; text-align: left; font-family: var(--font-display); font-weight: 600; font-size: 14px; color: inherit; cursor: pointer; }
+.ov-t-name, .ov-t-act { position: absolute; inset: 0; display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity var(--dur-base) var(--ease); }
+.ov-t-act { opacity: 0; }
+.ov-title[data-hover="true"] .ov-t-name { opacity: 0; }
+.ov-title[data-hover="true"] .ov-t-act { opacity: 1; }
+.ov-time { flex: none; white-space: nowrap; font-family: var(--font-num); font-variant-numeric: var(--num-variant, tabular-nums); font-size: 14px; color: inherit; }
+.ov-idle { margin: 0 0 0 12px; align-self: flex-start; margin-block: auto; }
 .ov-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.ov-notice button { min-height: 44px; padding: 0 16px; border: 1px solid var(--c-line-strong); border-radius: var(--r-md); background: var(--c-panel-hero); cursor: pointer; font-weight: 600; }
-.ov-notice button:hover, .ov-hold:hover { border-color: var(--c-accent); }
+.ov-notice button { min-height: 44px; padding: 0 16px; border: 1px solid var(--c-pill-line, var(--c-line-strong)); border-radius: var(--r-md); background: transparent; color: inherit; cursor: pointer; font-weight: 600; }
+.ov-notice button:hover { border-color: var(--c-accent); }
 
 /* ---- notepad ---- */
 .np { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--c-panel); border: 1px solid var(--c-line-strong); border-radius: var(--r-lg); box-shadow: var(--depth-float); overflow: hidden; }
@@ -33,17 +38,3 @@ kbd { font-family: var(--font-num); font-size: 11px; color: var(--c-text-3); bor
 .np-foot { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--c-line); font-size: 12px; color: var(--c-text-3); }
 .np-foot span:first-child { flex: 1; }
 
-/* ---- palette ---- */
-.pal-scrim { position: fixed; inset: 0; display: flex; align-items: flex-start; justify-content: center; }
-.pal { width: min(640px, 100%); max-height: 100%; display: flex; flex-direction: column; background: var(--c-panel); border: 1px solid var(--c-line-strong); border-radius: var(--r-lg); box-shadow: var(--depth-float); overflow: hidden; }
-.pal-input { border: 0; border-bottom: 1px solid var(--c-line); background: transparent; padding: 18px 20px; font: 500 18px var(--font-display); caret-color: var(--c-accent); }
-.pal-input::placeholder { color: var(--c-text-3); }
-.pal-input:focus-visible { outline: none; }
-.pal-note { margin: 0; padding: 8px 20px; font-size: 12px; color: var(--c-text-3); }
-.pal-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--c-line-strong) transparent; }
-.pal-list li { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 6px 14px; border-radius: var(--r-md); cursor: pointer; }
-.pal-list li[data-sel="true"] { background: var(--c-panel-hero); box-shadow: inset 0 0 0 1px var(--c-line-strong); }
-.pal-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pal-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.pal-chips b { font-weight: 500; font-size: 12px; padding: 2px 10px; border: 1px solid var(--c-line-strong); border-radius: var(--r-pill); color: var(--c-text-2); }
-.pal-list .pal-empty { color: var(--c-text-3); cursor: default; }

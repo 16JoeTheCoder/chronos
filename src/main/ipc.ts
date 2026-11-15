@@ -6,7 +6,7 @@
 import { ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import { RECYCLABLE, type ClosureInput, type Command, type EventInput, type OccurrencePatch, type Result, type SettingsPatch, type TaskInput, type TagInput } from '../core/commands';
 import { isId } from '../core/model/ids';
-import { COLLS, type Coll, type DeviceSettings, type ShelfItem, type Snapshot, type TimerConfig } from '../core/model/types';
+import { COLLS, TAG_COLORS, type Coll, type DeviceSettings, type ShelfItem, type Snapshot, type TimerConfig } from '../core/model/types';
 import { CHANNELS, type NotepadCreated } from '../preload/api';
 import type { ParserRule } from '../core/parser/types';
 import { isObj } from '../core/validation';
@@ -153,6 +153,11 @@ function pickDevice(v: Obj): Extract<Command, { type: 'device.update' }>['patch'
   for (const k of ['launchAtLogin', 'skipLaunchScreen', 'sound', 'notifications', 'experimental', 'liveOnDesktop', 'overlayHideInFullscreen'] as const) if (k in v) p[k] = v[k] as boolean;
   if (isObj(v.mcp) && typeof v.mcp.enabled === 'boolean') p.mcp = { enabled: v.mcp.enabled };
   if ('widgetDock' in v) p.widgetDock = v.widgetDock as DeviceSettings['widgetDock'];
+  if ('widgetPos' in v) p.widgetPos = isObj(v.widgetPos) ? { x: num(v.widgetPos.x), y: num(v.widgetPos.y) } : null;
+  if ('uiScale' in v) p.uiScale = num(v.uiScale);
+  if ('paletteBlur' in v) p.paletteBlur = v.paletteBlur === null ? null : (v.paletteBlur as boolean);
+  if ('projectList' in v) p.projectList = v.projectList as DeviceSettings['projectList'];
+  if ('desktopTipSeen' in v) p.desktopTipSeen = v.desktopTipSeen as boolean;
   if (isObj(v.shortcuts)) p.shortcuts = { toggle: str(v.shortcuts.toggle, 60), startPause: str(v.shortcuts.startPause, 60), capture: str(v.shortcuts.capture, 60) };
   if ('displayId' in v) p.displayId = v.displayId === null ? null : num(v.displayId);
   if ('stackFolder' in v) p.stackFolder = v.stackFolder === null ? null : str(v.stackFolder, 1000);
@@ -186,6 +191,20 @@ export function parseCommand(raw: unknown): Command | null {
       return rid ? { type: 'task.drop', id: rid, reason: str(raw.reason, 500) } : null;
     case 'task.reopen':
       return rid ? { type: 'task.reopen', id: rid } : null;
+    case 'task.moveCard': {
+      if (!rid || typeof raw.columnId !== 'string' || !raw.columnId.trim()) return null;
+      const beforeId = raw.beforeId === null || raw.beforeId === undefined ? null : id(raw.beforeId);
+      if (raw.beforeId != null && !beforeId) return null;
+      return { type: 'task.moveCard', id: rid, columnId: str(raw.columnId, 60), beforeId };
+    }
+    case 'project.create': {
+      if (typeof raw.name !== 'string') return null;
+      const color = raw.color === undefined ? undefined : oneOf(raw.color, TAG_COLORS);
+      if (raw.color !== undefined && !color) return null;
+      const columns = raw.columns === undefined ? undefined : Array.isArray(raw.columns) && raw.columns.length <= 12 && raw.columns.every((c) => typeof c === 'string') ? raw.columns.map((c) => str(c, 60)) : null;
+      if (columns === null) return null;
+      return { type: 'project.create', name: str(raw.name, 100), ...(color ? { color } : {}), ...(columns ? { columns } : {}) };
+    }
     case 'timer': {
       const action = oneOf(raw.action, ['start', 'pause', 'resume', 'reset', 'skipPhase'] as const);
       return action ? { type: 'timer', action } : null;

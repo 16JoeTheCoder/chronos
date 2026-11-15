@@ -1,0 +1,101 @@
+{
+  "$schema": "chronos-theme/1",
+  "id": "pit-wall",
+  "name": "Pit wall",
+  "mode": "dark",
+  "fonts": {
+    "display": {
+      "family": "Titillium Web",
+      "weights": [
+        600,
+        700,
+        900
+      ],
+      "source": "fontsource"
+    },
+    "text": {
+      "family": "Titillium Web",
+      "weights": [
+        400,
+        600
+      ],
+      "source": "fontsource"
+    },
+    "numerals": "display",
+    "tabularNumbers": true
+  },
+  "color": {
+    "ground": "#0B0C0F",
+    "panel": "#13151A",
+    "panelHero": "#13151A",
+    "line": "#1C1F25",
+    "lineStrong": "#3A404A",
+    "text": "#E8EAEE",
+    "text2": "#B4BAC4",
+    "text3": "#9AA1AC",
+    "muted": "#9AA1AC",
+    "accent": "#E10600",
+    "accentHover": "#FF2A1F",
+    "onAccent": "#FFFFFF",
+    "now": "#E10600",
+    "wellness": "#00C853",
+    "ok": "#00C853",
+    "warn": "#FFD12E",
+    "danger": "#FF5A4F",
+    "fixedBlock": "#6E7581",
+    "selection": "#E10600",
+    "best": "#C565EC",
+    "ink": "#E8EAEE",
+    "onInk": "#0B0C0F",
+    "pill": "#13151A",
+    "pillText": "#E8EAEE",
+    "pillLine": "#3A404A",
+    "scrim": "rgba(0,0,0,0.62)"
+  },
+  "shape": {
+    "radiusSm": 4,
+    "radiusMd": 6,
+    "radiusLg": 10,
+    "pill": 999
+  },
+  "depth": {
+    "float": "0 16px 36px rgba(0,0,0,0.6)"
+  },
+  "motion": {
+    "ease": "cubic-bezier(.2,0,0,1)",
+    "fast": 90,
+    "base": 160,
+    "signature": {
+      "kind": "lap-timer",
+      "respectReducedMotion": true
+    }
+  },
+  "focus": {
+    "widgetOpacity": 0.3,
+    "widgetBlurPx": 1
+  },
+  "widgets": {
+    "day": {
+      "style": "dial"
+    },
+    "momentum": {
+      "style": "week-bars"
+    },
+    "notes": {
+      "style": "latest-two"
+    },
+    "wellness": {
+      "style": "card",
+      "breakAfterMin": 75
+    }
+  },
+  "sound": {
+    "enabled": true,
+    "volume": 0.3,
+    "muteInFocus": false,
+    "cues": {
+      "blockStart": "soft-rise",
+      "blockFinish": "chord"
+    }
+  }
+}

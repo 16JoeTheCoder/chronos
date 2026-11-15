@@ -1,0 +1,99 @@
+/* NOTE: Vite may load this file before screens.css (shared chunk); overrides need higher specificity.
+   Phase 3.5 shell: slim top bar, the one palette (in-app and standalone), shared control states.
+   Theme tokens only. Loaded by main.tsx and windows.tsx. */
+
+/* ---- Top bar (56 px, every screen except Focus) ---- */
+.topbar { flex: none; height: 56px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 520px) minmax(0, 1fr); align-items: center; gap: 16px; }
+.tb-clock { margin: 0; display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.tb-time { font: 600 22px/1 var(--font-num); font-variant-numeric: var(--num-variant); color: var(--c-text); }
+.tb-date { font-size: 14px; color: var(--c-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-search { height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 14px; border: 1px solid var(--c-line-strong); border-radius: var(--r-pill); background: var(--c-panel); color: var(--c-text-2); font: 400 14px var(--font-text); cursor: text; text-align: left; transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
+.tb-search-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-search:hover { border-color: var(--c-text-2); color: var(--c-text); }
+.tb-search:active { background: color-mix(in srgb, var(--c-text) 7%, var(--c-panel)); }
+.tb-search:focus-visible { outline: 2px solid var(--c-accent-hover, var(--c-accent)); outline-offset: 2px; }
+.tb-right { display: flex; justify-content: flex-end; align-items: center; gap: 12px; min-width: 0; }
+.tb-task { max-width: 100%; height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border: 1px solid var(--c-line); border-radius: var(--r-pill); background: transparent; color: var(--c-text); cursor: pointer; transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
+.tb-task:hover { border-color: var(--c-line-strong); background: color-mix(in srgb, var(--c-text) 7%, var(--c-panel)); }
+.tb-task:active { background: color-mix(in srgb, var(--c-text) 13%, var(--c-panel)); }
+.tb-task-title { min-width: 0; max-width: 260px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-task .digits { font-size: 15px; color: var(--c-text-2); }
+.tb-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c-text-3); }
+.tb-task.live .tb-dot { background: var(--c-now); }
+.tb-idle { font-size: 14px; color: var(--c-text-3); white-space: nowrap; }
+@media (max-width: 900px) { .tb-date, .tb-search kbd { display: none; } .topbar { grid-template-columns: auto minmax(0, 1fr) auto; } .tb-task-title { max-width: 140px; } }
+
+/* Focus is silent: no rail, no top bar; the main column takes the full width. */
+.home[data-screen="focus"] { grid-template-columns: minmax(0, 1fr); }
+
+/* ---- Palette: one dialog, centred, ~720 px, 140 px from the top ---- */
+.pal-scrim { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 0 16px; }
+.pal-scrim.in-app { padding-top: min(140px, 14vh); background: var(--c-scrim, color-mix(in srgb, var(--c-ground) 70%, transparent)); animation: pal-fade var(--dur-fast) var(--ease) both; }
+:root:not([data-blur="off"]) .pal-scrim.in-app { backdrop-filter: blur(6px); }
+@keyframes pal-fade { from { opacity: 0; } }
+.pal { width: min(720px, 100%); max-height: min(560px, 100%); display: flex; flex-direction: column; background: var(--c-panel); border: 1px solid var(--c-line-strong); border-radius: var(--r-lg); box-shadow: var(--depth-float); overflow: hidden; color: var(--c-text); }
+.in-app .pal { max-height: calc(100vh - min(140px, 14vh) - 40px); }
+.pal-head { display: flex; flex-direction: column; gap: 10px; padding: 18px 22px 14px; border-bottom: 1px solid var(--c-line); }
+.pal-eyebrow { margin: 0; font: 600 12px/1 var(--font-text); letter-spacing: .08em; text-transform: uppercase; color: var(--c-text-2); }
+.pal-input { width: 100%; border: 0; background: transparent; padding: 0; font: 500 21px/1.4 var(--font-num); color: var(--c-text); caret-color: var(--c-accent); }
+.pal-input::placeholder { color: var(--c-text-3); }
+.pal-input:focus-visible { outline: none; }
+.pal-chips { display: flex; gap: 6px; flex-wrap: wrap; min-height: 24px; }
+.pal-chips b { font-weight: 500; font-size: 13px; padding: 3px 10px; border: 1px solid var(--c-line-strong); border-radius: var(--r-pill); color: var(--c-text-2); }
+.pal-chips b:first-child { border-color: var(--c-accent); color: var(--c-text); }
+.pal-note { margin: 0; padding: 8px 22px; font-size: 13px; color: var(--c-text-2); }
+.pal-list { list-style: none; margin: 0; padding: 8px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--c-line-strong) transparent; }
+.pal-list li { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 14px; border-radius: var(--r-md); cursor: pointer; }
+.pal-list li[data-sel="true"] { background: color-mix(in srgb, var(--c-text) 7%, var(--c-panel)); box-shadow: inset 0 0 0 1px var(--c-line-strong); }
+.pal-list li.pal-group { min-height: 0; padding: 12px 14px 4px; cursor: default; font: 600 12px/1 var(--font-text); letter-spacing: .08em; text-transform: uppercase; color: var(--c-text-2); }
+.pal-label { flex: 1; min-width: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pal-hint { font-size: 13px; color: var(--c-text-2); white-space: nowrap; }
+.pal-list .pal-empty { color: var(--c-text-2); cursor: default; }
+.pal-foot { display: flex; justify-content: space-between; gap: 12px; padding: 10px 22px; border-top: 1px solid var(--c-line); font: 400 12px var(--font-num); color: var(--c-text-2); }
+
+/* ---- Shared control states: hover, pressed, focus on every clickable control ---- */
+.btn:active:not(:disabled), .link:active, .rail-btn:active { transform: translateY(1px); }
+.link:hover { color: var(--c-text); text-decoration: underline; }
+button:disabled, .btn[aria-disabled="true"] { cursor: not-allowed; opacity: .55; }
+button:focus-visible, [role="button"]:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--c-accent-hover, var(--c-accent)); outline-offset: 2px; }
+
+/* Drag surfaces never select text (a drag used to paint selection over the lane labels). */
+.runway, .cards, .board, html.dragging body { -webkit-user-select: none; user-select: none; }
+.runway input, .runway textarea, .cards input, .board input, .board textarea { -webkit-user-select: text; user-select: text; }
+/* Toast actions read on the toast's own colours. */
+.toast .btn-ghost { color: inherit; border-color: currentColor; background: transparent; }
+.toast .btn-ghost:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
+
+/* The palette input is the dialog's headline, not a form field. */
+.pal .pal-input, .pal .pal-input:hover, .pal .pal-input:focus-visible { min-height: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; padding: 0; }
+
+/* One scroll container per screen: the page scrolls as a whole, never an inner widget column. */
+.screen { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 20px; overflow: hidden auto; scrollbar-width: thin; scrollbar-color: var(--c-line-strong) transparent; }
+.screen > .nowscreen { flex: 1 0 auto; min-height: 0; overflow: visible; }
+.screen .now-side { overflow: visible; }
+
+/* No layout jump when a scrollbar appears (Settings moved its content on open). */
+.screen, .st-body, .st-nav, .feed, .plan { scrollbar-gutter: stable; }
+
+/* Morning plan as a one-line strip; the block list opens on request. */
+.morning.morning-strip { flex: none; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 12px 20px; padding: 14px 20px; text-align: left; }
+.morning.morning-strip .morning-head { flex: 1 1 420px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: 0; }
+.morning.morning-strip .morning-head h2 { font-size: 16px; margin: 0; }
+.morning.morning-strip .morning-list { flex-basis: 100%; order: 3; margin: 0; }
+
+.tb-help { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--c-line); border-radius: 50%; background: transparent; color: var(--c-text-2); font: 600 15px/1 var(--font-text); cursor: pointer; }
+.tb-help:hover { border-color: var(--c-line-strong); color: var(--c-text); }
+.help { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px 40px; }
+.help h3 { margin: 0 0 8px; font: 600 15px/20px var(--font-display); color: var(--c-text); }
+.help-list { margin: 0; display: flex; flex-direction: column; }
+.help-list > div { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--c-line); }
+.help-list dt { font-weight: 600; color: var(--c-text); }
+.help-list dd { margin: 0; color: var(--c-text-2); font-size: 14px; }
+
+/* Detector pass: readable placeholders and segmented options, no stragglers in notes. */
+input::placeholder, textarea::placeholder { color: var(--c-text-3); opacity: 1; }
+.seg button:not(.on) { color: var(--c-text); }
+p, .st-note, .w-sub { text-wrap: pretty; }
+/* Key hints inside filled buttons take the button's text colour. */
+.btn:not(.btn-ghost) kbd, .btn-accent kbd, .log-btn-primary kbd { color: inherit; border-color: color-mix(in srgb, currentColor 55%, transparent); background: transparent; }
+.now-title, .focus-title, .bd-head h2 { text-wrap: balance; }

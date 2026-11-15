@@ -44,7 +44,11 @@
     "warn": "#FFB547",
     "danger": "#FF5A6A",
     "fixedBlock": "#5F7D8E",
-    "selection": "#4FD8FF"
+    "selection": "#4FD8FF",
+    "pill": "#07111B",
+    "pillText": "#F2FBFF",
+    "pillLine": "rgba(79,216,255,0.40)",
+    "scrim": "rgba(1,4,8,0.62)"
   },
   "shape": {
     "radiusSm": 10,

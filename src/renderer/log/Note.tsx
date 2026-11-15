@@ -167,6 +167,9 @@ function NoteCard({ note, data, label, projectName, q, flash, onHeight }: NotePr
             })}
           </div>
         )}
+        {!editing && links.size > 0 && (
+          <p className="note-foot">{links.size} {links.size === 1 ? 'task' : 'tasks'} added to your queue</p>
+        )}
       </article>
     </div>
   );

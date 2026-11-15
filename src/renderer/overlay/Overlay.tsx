@@ -1,6 +1,7 @@
-// Overlay (D-145): collapsed pill = mini signature timer + task title + time; expanded on hover =
-// title, timer, Hold to finish. The window is focusable:false, so only the pointer reaches it.
-// Also shows notices with Undo (Claude's changes, notepad results) when Home is not in front.
+// Overlay pill (D-145, Phase 3.5 §7): mini signature timer + task title + time, docked in the
+// taskbar. Hover never expands it: the title crossfades to Pause/Resume (click toggles the timer).
+// Holding the mini timer for 2 s finishes the task (fill while held, drain on early release).
+// The window is focusable:false, so only the pointer reaches it. It grows only for a notice with Undo.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Notice } from '../../preload/api';
 import type { Snapshot } from '../../core/model/types';
@@ -33,7 +34,7 @@ export function Overlay({ snap }: { snap: Snapshot }) {
     return () => clearTimeout(t);
   }, [notice]);
 
-  const open = hover || !!notice;
+  const open = !!notice;
   useEffect(() => api.win.overlayExpand(open), [open]);
 
   hold.current = useMemo(() => createHold({ onProgress: setP, onComplete: () => taskId && void api.command({ type: 'task.finish', id: taskId }) }), [taskId]);
@@ -54,24 +55,25 @@ export function Overlay({ snap }: { snap: Snapshot }) {
       {task && t ? (
         <>
           <div className="ov-row">
-            <SignatureTimer mini progress={t.progress ?? 0} remainingSec={ms / 1000} running={running} overrun={over} />
-            <button type="button" className="ov-title" onClick={() => api.win.overlayClick()} title="Open Chronos">{task.title}</button>
-            {kind !== 'ticking-digits' && <span className="ov-time" role="timer">{time}</span>}
-          </div>
-          {open && !notice && (
             <button
               type="button"
-              className="ov-hold"
+              className="ov-icon"
               style={{ '--p': p } as React.CSSProperties}
-              aria-label={`Hold to finish ${task.title}`}
+              aria-label={`Hold 2 seconds to finish ${task.title}`}
+              title="Hold to finish"
               onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); hold.current?.press('pointer'); }}
               onPointerUp={() => hold.current?.release()}
               onPointerCancel={() => hold.current?.release()}
             >
-              <i className="ov-hold-fill" />
-              <span>{p > 0 ? `${Math.max(1, Math.ceil((1 - p) * HOLD_MS / 1000))}s` : 'Hold to finish'}</span>
+              <SignatureTimer mini progress={t.progress ?? 0} remainingSec={ms / 1000} running={running} overrun={over} />
+              <i className="ov-icon-fill" aria-hidden="true" />
             </button>
-          )}
+            <button type="button" className="ov-title" data-hover={hover} onClick={() => void api.command({ type: 'timer', action: running ? 'pause' : task.runtime.status === 'paused' ? 'resume' : 'start' })} aria-label={running ? 'Pause' : 'Resume'}>
+              <span className="ov-t-name">{p > 0 ? `Finishing… ${Math.max(1, Math.ceil((1 - p) * HOLD_MS / 1000))}s` : task.title}</span>
+              <span className="ov-t-act" aria-hidden="true">{running ? 'Pause' : 'Resume'}</span>
+            </button>
+            {kind !== 'ticking-digits' && <span className="ov-time" role="timer">{time}</span>}
+          </div>
         </>
       ) : (
         !notice && <p className="ov-idle">Nothing in focus</p>

@@ -64,31 +64,70 @@ export function BoardView({ snap, projectId, onOpenLog, onEnterFocus, onOpenTask
   const setView = (v: View) => { setViewState(v); try { localStorage.setItem(VIEW_KEY, v); } catch { /* best effort */ } };
   const [said, setSaid] = useState('');
 
+  const listMode = snap.device.projectList;
+  const setListMode = (projectList: typeof listMode) => void run({ type: 'device.update', patch: { projectList } });
+  const [switcher, setSwitcher] = useState(false);
+  // Ctrl+Shift+P opens the project switcher (the Log composer's own Ctrl+Shift+P stays inside its text box).
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p' && !(e.target as HTMLElement).closest('textarea, input')) { e.preventDefault(); setSwitcher((v) => !v); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  const openCount = (p: Project) => { const sm = summarize(d, p, s.planning.defaultBlockMin); return sm.total - sm.done; };
+
   return (
-    <div className="bd-shell">
-      <nav className="bd-nav" aria-label="Projects">
-        <h1>Projects</h1>
-        <ul>
-          {projects.map((p) => {
-            const sm = summarize(d, p, s.planning.defaultBlockMin);
-            const n = sm.total - sm.done;
-            return (
+    <div className="bd-shell" data-list={listMode}>
+      {listMode !== 'hidden' && (
+        <nav className="bd-nav" aria-label="Projects">
+          <div className="bd-nav-head">
+            {listMode === 'full' && <h1>Projects</h1>}
+            <button type="button" className="bd-icon-btn" onClick={() => setListMode(listMode === 'full' ? 'icons' : 'full')} aria-label={listMode === 'full' ? 'Collapse the project list to icons' : 'Expand the project list'} title={listMode === 'full' ? 'Collapse' : 'Expand'}>
+              <Icon name="chevronUp" size={16} />
+            </button>
+            {listMode === 'full' && (
+              <button type="button" className="bd-icon-btn" onClick={() => setListMode('hidden')} aria-label="Hide the project list" title="Hide (the project name in the header still switches)">
+                <Icon name="x" size={16} />
+              </button>
+            )}
+          </div>
+          <ul>
+            {projects.map((p) => (
               <li key={p.id}>
-                <button type="button" className="bd-proj" aria-current={project?.id === p.id ? 'page' : undefined} onClick={() => setPicked(p.id)}>
-                  <span className="bd-dot" style={{ ['--sw' as string]: `var(--${p.color}, var(--c-accent))` }} aria-hidden="true" />
-                  <span className="bd-proj-name">{p.name}</span>
-                  <span className="bd-proj-n">{n} open</span>
+                <button type="button" className="bd-proj" aria-current={project?.id === p.id ? 'page' : undefined} onClick={() => setPicked(p.id)} title={listMode === 'icons' ? `${p.name}, ${openCount(p)} open` : undefined} aria-label={listMode === 'icons' ? `${p.name}, ${openCount(p)} open` : undefined}>
+                  <span className="bd-dot" style={{ ['--sw' as string]: `var(--${p.color}, var(--c-accent))` }} aria-hidden="true">{listMode === 'icons' ? p.name.slice(0, 1).toUpperCase() : ''}</span>
+                  {listMode === 'full' && <><span className="bd-proj-name">{p.name}</span><span className="bd-proj-n">{openCount(p)} open</span></>}
                 </button>
               </li>
-            );
-          })}
-        </ul>
-        <NewProject onCreated={setPicked} />
-      </nav>
+            ))}
+          </ul>
+          {listMode === 'full' && <NewProject onCreated={setPicked} />}
+        </nav>
+      )}
       <main className="bd-main">
         {project ? (
           <>
-            <Header snap={snap} project={project} view={view} onView={setView} onOpenLog={onOpenLog} defaultBlockMin={s.planning.defaultBlockMin} />
+            <Header
+              snap={snap}
+              project={project}
+              view={view}
+              onView={setView}
+              onOpenLog={onOpenLog}
+              defaultBlockMin={s.planning.defaultBlockMin}
+              switcher={
+                <ProjectSwitcher
+                  projects={projects}
+                  current={project}
+                  open={switcher}
+                  setOpen={setSwitcher}
+                  counts={openCount}
+                  pinned={listMode !== 'hidden'}
+                  onPin={(on) => setListMode(on ? 'full' : 'hidden')}
+                  onPick={(id) => { setPicked(id); setSwitcher(false); }}
+                />
+              }
+            />
             {view === 'board' ? (
               <Columns snap={snap} project={project} announce={setSaid} onEnterFocus={onEnterFocus} onOpenTask={onOpenTask} />
             ) : (
@@ -98,7 +137,8 @@ export function BoardView({ snap, projectId, onOpenLog, onEnterFocus, onOpenTask
         ) : (
           <div className="bd-empty">
             <h2>No projects yet</h2>
-            <p>A project is a board of tasks that belong together. Make one on the left, then add tasks to it.</p>
+            <p>A project is a board of tasks that belong together. Name your first one to start.</p>
+            <NewProject onCreated={setPicked} startOpen />
           </div>
         )}
         <p className="bd-live" role="status" aria-live="polite">{said}</p>
@@ -107,16 +147,80 @@ export function BoardView({ snap, projectId, onOpenLog, onEnterFocus, onOpenTask
   );
 }
 
-function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
+/** The project name in the board header is the switcher: a dropdown with search, counts, New project and Pin. */
+function ProjectSwitcher({ projects, current, open, setOpen, counts, pinned, onPin, onPick }: {
+  projects: Project[]; current: Project; open: boolean; setOpen: (v: boolean) => void; counts: (p: Project) => number; pinned: boolean; onPin: (on: boolean) => void; onPick: (id: string) => void;
+}) {
+  const [q, setQ] = useState('');
+  const [sel, setSel] = useState(0);
+  const listId = useId();
+  const box = useRef<HTMLDivElement>(null);
+  const shown = projects.filter((p) => !q.trim() || p.name.toLowerCase().includes(q.trim().toLowerCase()));
+  useEffect(() => { if (open) { setQ(''); setSel(Math.max(0, projects.findIndex((p) => p.id === current.id))); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    window.addEventListener('pointerdown', away);
+    return () => window.removeEventListener('pointerdown', away);
+  }, [open, setOpen]);
+  return (
+    <div className="bd-switch" ref={box}>
+      <button type="button" className="bd-switch-btn" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)} aria-keyshortcuts="Control+Shift+P" title="Switch project (Ctrl+Shift+P)">
+        <h2>{current.name}</h2>
+        <Icon name="chevronDown" size={20} />
+      </button>
+      {open && (
+        <div className="bd-drop" role="dialog" aria-label="Switch project">
+          <input
+            autoFocus
+            className="bd-input"
+            placeholder="Find a project"
+            aria-label="Find a project"
+            role="combobox"
+            aria-expanded="true"
+            aria-controls={listId}
+            aria-activedescendant={shown[sel] ? `${listId}-${shown[sel]!.id}` : undefined}
+            value={q}
+            onChange={(e) => { setQ(e.target.value); setSel(0); }}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') { e.preventDefault(); setSel((x) => Math.min(x + 1, shown.length - 1)); }
+              else if (e.key === 'ArrowUp') { e.preventDefault(); setSel((x) => Math.max(x - 1, 0)); }
+              else if (e.key === 'Enter' && shown[sel]) { e.preventDefault(); onPick(shown[sel]!.id); }
+              else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setOpen(false); }
+            }}
+          />
+          <ul id={listId} role="listbox" aria-label="Projects" className="bd-drop-list">
+            {shown.map((p, i) => (
+              <li key={p.id} id={`${listId}-${p.id}`} role="option" aria-selected={i === sel} data-sel={i === sel} onMouseEnter={() => setSel(i)} onMouseDown={(e) => { e.preventDefault(); onPick(p.id); }}>
+                <span className="bd-dot" style={{ ['--sw' as string]: `var(--${p.color}, var(--c-accent))` }} aria-hidden="true" />
+                <span className="bd-proj-name">{p.name}</span>
+                <span className="bd-proj-n">{counts(p)} open</span>
+              </li>
+            ))}
+            {!shown.length && <li className="bd-drop-empty" role="presentation">No project matches</li>}
+          </ul>
+          <div className="bd-drop-foot">
+            <NewProject onCreated={onPick} initialName={shown.length ? '' : q} />
+            <label className="bd-pin">
+              <input type="checkbox" checked={pinned} onChange={(e) => onPin(e.target.checked)} /> Pin project list
+            </label>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NewProject({ onCreated, startOpen = false, initialName = '' }: { onCreated: (id: string) => void; startOpen?: boolean; initialName?: string }) {
+  const [open, setOpen] = useState(startOpen);
+  const [name, setName] = useState(initialName);
   const id = useId();
   async function create() {
     if (!name.trim()) return;
     const r = await run({ type: 'project.create', name });
     if (r.ok && r.id) { toast(`Project ${name.trim()} created.`); setName(''); setOpen(false); onCreated(r.id); }
   }
-  if (!open) return <button type="button" className="bd-ghost" onClick={() => setOpen(true)}>New project</button>;
+  if (!open) return <button type="button" className="bd-ghost" onClick={() => { setName(initialName); setOpen(true); }}><Icon name="plus" size={14} /> New project</button>;
   return (
     <form className="bd-new" onSubmit={(e) => { e.preventDefault(); void create(); }}>
       <label htmlFor={id} className="bd-sr">Project name</label>
@@ -129,23 +233,23 @@ function NewProject({ onCreated }: { onCreated: (id: string) => void }) {
   );
 }
 
-function Header({ snap, project, view, onView, onOpenLog, defaultBlockMin }: { snap: Snapshot; project: Project; view: View; onView: (v: View) => void; onOpenLog?: (id: string) => void; defaultBlockMin: number }) {
+function Header({ snap, project, view, onView, onOpenLog, defaultBlockMin, switcher }: { snap: Snapshot; project: Project; view: View; onView: (v: View) => void; onOpenLog?: (id: string) => void; defaultBlockMin: number; switcher: React.ReactNode }) {
   const d = snap.data;
   const sum = summarize(d, project, defaultBlockMin);
   const today = todayOf(d, Date.now());
   const ids = new Set(Object.values(boardCards(d, project)).flat().map((t) => t.id));
   const plannedMin = live(d, 'blocks').filter((b) => b.date === today && b.taskId && ids.has(b.taskId) && b.kind !== 'break').reduce((m, b) => m + (b.endMin - b.startMin), 0);
-  const parts = [`${sum.done} of ${sum.total} done`, sum.leftMin > 0 ? `${formatHuman(sum.leftMin * 60_000)} estimated left` : null, plannedMin > 0 ? `${formatHuman(plannedMin * 60_000)} planned today` : null].filter(Boolean);
+  const parts = [`${sum.done} of ${sum.total} done`, sum.leftMin > 0 ? `${formatHuman(sum.leftMin * 60_000)} left` : null, plannedMin > 0 ? `${formatHuman(plannedMin * 60_000)} planned today` : null].filter(Boolean);
   return (
     <header className="bd-head">
       <div className="bd-head-text">
-        <h2>{project.name}</h2>
+        {switcher}
         <p>{sum.total === 0 ? 'No tasks yet' : parts.join(' · ')}</p>
       </div>
       <div className="bd-head-ctl">
         {onOpenLog && (
           <button type="button" className="bd-btn" onClick={() => onOpenLog(project.id)}>
-            <Icon name="idea" size={16} /> Project log
+            <Icon name="log" size={16} /> Open in Log
           </button>
         )}
         <div className="bd-tabs" role="tablist" aria-label="View">

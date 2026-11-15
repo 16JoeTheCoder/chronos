@@ -497,7 +497,8 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
 
     case 'project.create': {
       const name = (cmd.name ?? '').trim();
-      if (!name || name.length > 80) return fail('Name the project (1-80 characters).', { name: 'Name must be 1-80 characters.' });
+      if (!name) return fail('Name is empty.', { name: 'Name is empty.' });
+      if (name.length > 80) return fail('Name is too long (80 characters at most).', { name: 'Name must be 1-80 characters.' });
       if (cmd.color !== undefined && !TAG_COLORS.includes(cmd.color)) return fail('Pick a colour.', { color: 'Pick a colour.' });
       const names = cmd.columns?.map((c) => c.trim()).filter(Boolean) ?? [];
       if (names.length > 12 || names.some((c) => c.length > 40)) return fail('Up to 12 columns of 1-40 characters.', { columns: 'Up to 12 columns of 1-40 characters.' });

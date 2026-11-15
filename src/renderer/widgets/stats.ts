@@ -1,7 +1,7 @@
 // Numbers behind the home widgets, pure and unit-tested: the last seven days of focus
 // time, the focus streak, estimate drift, and the day dial's segments.
 
-import type { Data } from '../../core/model/types';
+import type { Data, Task } from '../../core/model/types';
 import { live, settingsOf } from '../../core/repo/repo';
 import { blocksOn, liveWorkMs, todayOf } from '../../core/tasks/tasks';
 import { addDays, dayBounds, localParts } from '../../core/time/zone';
@@ -102,4 +102,32 @@ export function daySegments(fixed: [number, number][], d: Data, date: string): {
 export function arc(from: number, to: number, c: number): { dash: string; rot: number } {
   const len = Math.max(0, ((to - from) / 1440) * c);
   return { dash: `${len.toFixed(2)} ${(c - len).toFixed(2)}`, rot: (from / 1440) * 360 - 90 };
+}
+
+export interface Lap { id: string; title: string; gapMs: number; kind: 'best' | 'under' | 'over' }
+
+/**
+ * Pit wall "Recent laps vs estimate": the latest finished tasks that had an estimate.
+ * gap = time worked − estimate. Purple ("best") = the best ratio (worked / estimate) of all
+ * finished tasks in the same project, else the same tag, when it came in under estimate;
+ * green = under, yellow = over.
+ */
+export function recentLaps(d: Data, limit = 5): Lap[] {
+  const done = live(d, 'tasks').filter((t) => t.status === 'done' && t.outcome !== 'killed' && (t.estimateMin ?? 0) > 0 && t.completedAt !== null);
+  const ratio = (t: Task) => t.workMs / ((t.estimateMin ?? 1) * MIN);
+  const group = (t: Task) => (t.projectId ? `p:${t.projectId}` : t.tagId ? `t:${t.tagId}` : null);
+  const best = new Map<string, number>();
+  for (const t of done) {
+    const g = group(t);
+    if (g) best.set(g, Math.min(best.get(g) ?? Infinity, ratio(t)));
+  }
+  return done
+    .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
+    .slice(0, limit)
+    .map((t) => {
+      const gapMs = t.workMs - (t.estimateMin ?? 0) * MIN;
+      const g = group(t);
+      const isBest = gapMs <= 0 && g !== null && ratio(t) <= (best.get(g) ?? Infinity) && done.filter((x) => group(x) === g).length > 1;
+      return { id: t.id, title: t.title, gapMs, kind: isBest ? 'best' : gapMs <= 0 ? 'under' : 'over' };
+    });
 }

@@ -23,6 +23,9 @@ const P: Record<string, ReactElement> = {
   board: <><rect x="3" y="4" width="5" height="16" rx="1.5" /><rect x="10" y="4" width="5" height="10" rx="1.5" /><rect x="17" y="4" width="4" height="13" rx="1.5" /></>,
   log: <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />,
   copy: <><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M4 16V4h12" /></>,
+  search: <><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5L21 21" /></>,
+  chevronDown: <path d="M6 9l6 6 6-6" />,
+  pin: <path d="M9 3h6l-1 6 4 3v2H6v-2l4-3zM12 14v7" />,
 };
 
 export type IconName = keyof typeof P;

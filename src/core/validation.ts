@@ -190,10 +190,18 @@ export function isParserRule(r: unknown): boolean {
   );
 }
 
+/** Settings → Look → Size presets (percent). */
+export const UI_SCALES = [90, 100, 110, 125];
+
 export function validateDevice(s: DeviceSettings): Errors {
   const e: Errors = {};
   for (const k of ['launchAtLogin', 'skipLaunchScreen', 'sound', 'notifications', 'liveOnDesktop', 'overlayHideInFullscreen'] as const) if (!isBool(s[k])) e[k] = 'Invalid flag.';
   if (!['taskbar-left', 'taskbar-right', 'free'].includes(s.widgetDock)) e.widgetDock = 'Invalid dock.';
+  if (!UI_SCALES.includes(s.uiScale)) e.uiScale = 'Pick 90, 100, 110 or 125 %.';
+  if (s.paletteBlur !== null && !isBool(s.paletteBlur)) e.paletteBlur = 'Invalid flag.';
+  if (!['hidden', 'full', 'icons'].includes(s.projectList)) e.projectList = 'Invalid choice.';
+  if (!isBool(s.desktopTipSeen)) e.desktopTipSeen = 'Invalid flag.';
+  if (s.widgetPos !== null && !(isObj(s.widgetPos) && isNum(s.widgetPos.x) && isNum(s.widgetPos.y))) e.widgetPos = 'Invalid position.';
   const sc = s.shortcuts;
   const keys = ['toggle', 'startPause', 'capture'] as const;
   for (const k of keys) if (!isValidAccelerator(sc[k])) e[`shortcuts.${k}`] = 'Use a format like Ctrl+Alt+Space.';

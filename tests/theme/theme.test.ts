@@ -30,8 +30,28 @@ describe('launch themes', () => {
     expect(findTheme('tars-gargantua/night').name).toBe('Gargantua');
     expect(findTheme('nope').id).toBe('tactile-instrument');
     expect(listThemeChoices().map((c) => c.id)).toEqual([
-      'tactile-instrument', 'stark-workshop', 'tars-gargantua/day', 'tars-gargantua/night',
+      'tactile-instrument', 'stark-workshop', 'tars-gargantua/day', 'tars-gargantua/night', 'flight-plan', 'pit-wall',
     ]);
+    expect(sig('flight-plan')).toBe('mission-clock');
+    expect(sig('pit-wall')).toBe('lap-timer');
+  });
+  it('every launch theme and variant defines an opaque overlay pill with readable text (4.5:1)', () => {
+    for (const choice of listThemeChoices()) {
+      const t = findTheme(choice.id);
+      const { pill, pillText, pillLine } = t.color;
+      expect(pill && pillText && pillLine, choice.id).toBeTruthy();
+      const bg = parseColor(pill!)!;
+      expect(bg[3], `${choice.id} pill opacity`).toBe(1);
+      expect(contrast(composite(parseColor(pillText!)!, bg), bg), choice.id).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+  it('the validator rejects a transparent pill and unreadable pill text', () => {
+    const t = tactile() as any;
+    t.color.pill = 'rgba(255,255,255,0.04)';
+    expect(validateTheme(t).errors.join('\n')).toMatch(/"color.pill" must be opaque/);
+    t.color.pill = '#FFFFFF';
+    t.color.pillText = '#EEEEEE';
+    expect(validateTheme(t).errors.join('\n')).toMatch(/"color.pillText" on pill/);
   });
   it('schema.json declares chronos-theme/1', () => {
     expect(JSON.stringify(schema)).toContain('chronos-theme/1');

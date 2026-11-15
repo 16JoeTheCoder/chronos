@@ -53,6 +53,7 @@ try {
   await home.waitForSelector('button:has-text("Pause")');
   await home.waitForTimeout(1500);
   await home.screenshot({ path: `${shots}/3-focus.png` });
+  for (const sel of ['.topbar', '.rail-nav', '.widget']) if (await home.locator(sel).count()) throw new Error(`Focus is not silent: ${sel} is shown`);
 
   step('overlay (windows.html#overlay): the timer pill shows while a task runs');
   const overlay = await waitForWindow(app, 'windows.html#overlay');
@@ -97,23 +98,58 @@ try {
     const bb = await home.locator('.blk-body').first().boundingBox();
     const cards = await home.locator('.cards').boundingBox();
     if (bb && cards) {
-      await home.mouse.move(bb.x + 20, bb.y + 10);
+      await home.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2);
       await home.mouse.down();
-      await home.mouse.move(cards.x + 100, cards.y + 60, { steps: 8 });
+      await home.mouse.move(cards.x + Math.min(100, cards.width / 2), cards.y + Math.min(60, cards.height / 2), { steps: 8 });
       await home.mouse.up();
-      await home.waitForTimeout(400);
+      await home.waitForTimeout(600);
       if ((await home.locator('.blk').count()) >= blocks) throw new Error('dropping a block on the cards did not unschedule it');
     }
   }
   await home.keyboard.press('Escape');
 
-  step('Ctrl+K in Home opens the palette (verified), Esc closes it');
+  step('Ctrl+K opens the centred palette; the top-bar field opens the same one; Esc restores focus; > commands run');
   await home.keyboard.press('Escape');
   await home.keyboard.press('Control+k');
-  await home.waitForSelector('[role="dialog"][aria-label="Palette"]');
+  await home.waitForSelector('.pal[role="dialog"][aria-modal="true"]');
+  await home.keyboard.type('reply to coach friday 4pm');
+  await home.waitForTimeout(300);
   await home.screenshot({ path: `${shots}/8-palette-in-home.png` });
+  const box = await home.locator('.pal').boundingBox();
+  const vw = await home.evaluate(() => innerWidth);
+  if (!box || Math.abs(box.x + box.width / 2 - vw / 2) > 4) throw new Error('palette is not centred');
   await home.keyboard.press('Escape');
-  await home.waitForSelector('[role="dialog"][aria-label="Palette"]', { state: 'detached' });
+  await home.waitForSelector('.pal[role="dialog"]', { state: 'detached' });
+  await home.locator('.tb-search').click();
+  await home.waitForSelector('.pal[role="dialog"]');
+  if (!(await home.evaluate(() => document.activeElement?.id === 'pal-input'))) throw new Error('palette input is not focused');
+  await home.keyboard.press('Escape');
+  await home.waitForTimeout(100);
+  if (!(await home.evaluate(() => document.activeElement?.classList.contains('tb-search')))) throw new Error('Esc did not return focus to the top-bar field');
+  await home.keyboard.press('Control+k');
+  await home.keyboard.type('>go log');
+  await home.keyboard.press('Enter');
+  await home.waitForSelector('textarea[aria-label="Write a post"]');
+  if (await home.locator('.pal').count()) throw new Error('palette stayed open after navigating');
+
+  step('? opens the help sheet; Esc closes it');
+  await home.getByRole('button', { name: 'Home', exact: true }).click();
+  await home.locator('.tb-help').click();
+  await home.waitForSelector('[role="dialog"][aria-label="Shortcuts and words"]');
+  await home.screenshot({ path: `${shots}/13-help.png` });
+  await home.keyboard.press('Escape');
+  await home.waitForSelector('[role="dialog"][aria-label="Shortcuts and words"]', { state: 'detached' });
+
+  step('navigation closes layers: Schedule open, then Board, Log, Home each render');
+  await home.getByRole('button', { name: 'Home', exact: true }).click();
+  for (const [name, sel] of [['Board', '.bd-shell'], ['Log', '.log'], ['Home', '.nowscreen']]) {
+    await home.getByRole('button', { name: 'Home', exact: true }).click();
+    await home.getByRole('button', { name: 'Schedule' }).first().click();
+    await home.waitForTimeout(250);
+    if (!(await home.locator('.home-main').getByText(/schedule|timetable/i).count())) throw new Error('Schedule did not open');
+    await home.getByRole('button', { name, exact: true }).click();
+    await home.waitForSelector(sel, { timeout: 4000 }).catch(() => { throw new Error(`${name} did not render after Schedule`); });
+  }
 
   step('notepad and palette windows (windows.html#notepad, #palette)');
   await app.evaluate(() => globalThis.__chronosSmoke.openNotepad());
@@ -147,14 +183,58 @@ try {
   await home.locator('.note-head').getByRole('button', { name: 'Done' }).first().click();
   await home.getByRole('button', { name: 'Home', exact: true }).click();
 
-  step('theme matrix: 1440 and 390 px in every launch theme');
+  step('Board: create a project from the header switcher, pin and unpin the list');
+  await home.getByRole('button', { name: 'Board', exact: true }).click();
+  await home.locator('.bd-empty .bd-input').fill('Wind turbine');
+  await home.locator('.bd-empty').getByRole('button', { name: 'Create' }).click();
+  await home.waitForSelector('.bd-switch-btn:has-text("Wind turbine")');
+  await home.locator('.bd-switch-btn').click();
+  await home.locator('.bd-drop').getByRole('button', { name: /New project/ }).click();
+  await home.locator('.bd-drop .bd-input').last().fill('Thesis');
+  await home.locator('.bd-drop').getByRole('button', { name: 'Create' }).click();
+  await home.waitForSelector('.bd-switch-btn:has-text("Thesis")');
+  await home.keyboard.press('Control+Shift+P');
+  await home.waitForSelector('.bd-drop');
+  await home.waitForTimeout(300);
+  await home.screenshot({ path: `${shots}/11-board-switcher.png` });
+  await home.locator('.bd-pin input').check();
+  await home.waitForSelector('.bd-nav');
+  await home.locator('.bd-nav').getByRole('button', { name: 'Hide the project list' }).click();
+  await home.waitForSelector('.bd-nav', { state: 'detached' });
+  await home.getByRole('button', { name: 'Log', exact: true }).click();
+  await home.waitForSelector('.stats');
+  await home.screenshot({ path: `${shots}/12-log.png` });
+
+  step('size presets 90/100/110/125 at 1366x768 and 1920x1080: no horizontal overflow on any screen');
+  mkdirSync(`${shots}/sizes`, { recursive: true });
+  for (const scale of [90, 100, 110, 125]) {
+    await home.evaluate((n) => window.chronos.command({ type: 'device.update', patch: { uiScale: n } }), scale);
+    for (const [w, h] of [[1366, 768], [1920, 1080]]) {
+      await home.setViewportSize({ width: w, height: h });
+      for (const [name, go] of [['home', 'Home'], ['board', 'Board'], ['log', 'Log'], ['settings', 'Settings']]) {
+        await home.getByRole('button', { name: go, exact: true }).first().click();
+        await home.waitForTimeout(350);
+        const over = await home.evaluate(() => {
+          const el = document.scrollingElement;
+          const scr = document.querySelector('.screen');
+          return Math.max(el.scrollWidth - el.clientWidth, scr ? scr.scrollWidth - scr.clientWidth : 0);
+        });
+        if (over > 1) throw new Error(`${name} overflows horizontally by ${over}px at ${scale}% ${w}x${h}`);
+        await home.screenshot({ path: `${shots}/sizes/${scale}-${w}-${name}.jpg`, type: 'jpeg', quality: 55 });
+      }
+    }
+  }
+  await home.evaluate(() => window.chronos.command({ type: 'device.update', patch: { uiScale: 100 } }));
+  await home.getByRole('button', { name: 'Home', exact: true }).click();
+
+  step('theme matrix: 1440 and 1366 px in every launch theme');
   await home.evaluate(() => window.chronos.command({ type: 'plan.auto' }));
   await home.waitForTimeout(8500); // let the toasts clear before the screenshots
-  const themes = ['tactile-instrument', 'stark-workshop', 'tars-gargantua/day', 'tars-gargantua/night'];
+  const themes = ['tactile-instrument', 'stark-workshop', 'tars-gargantua/day', 'tars-gargantua/night', 'flight-plan', 'pit-wall'].filter((id) => !process.env.CHRONOS_SMOKE_THEMES || process.env.CHRONOS_SMOKE_THEMES.split(',').includes(id));
   for (const themeId of themes) {
     await home.evaluate((id) => window.chronos.command({ type: 'settings.update', patch: { themeId: id } }), themeId);
     await home.waitForFunction((id) => document.documentElement.dataset.themeId === id, themeId);
-    for (const [w, h] of [[1440, 900], [390, 844]]) {
+    for (const [w, h] of [[1440, 900], [1366, 768]]) {
       await home.setViewportSize({ width: w, height: h });
       await home.waitForTimeout(1300);
       const tag = themeId.replace('/', '-');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arc, daySegments, estimateDriftPct, focusStreak, weekFocus } from '../../src/renderer/widgets/stats';
+import { arc, daySegments, estimateDriftPct, focusStreak, recentLaps, weekFocus } from '../../src/renderer/widgets/stats';
 import { emptyData } from '../../src/core/model/defaults';
 import type { Data } from '../../src/core/model/types';
 import { TZ, at } from '../helpers';
@@ -65,5 +65,20 @@ describe('day dial', () => {
     expect(a.dash).toBe('50.00 50.00');
     expect(a.rot).toBe(-90);
     expect(arc(360, 720, 100).rot).toBe(0);
+  });
+});
+
+describe('recentLaps (Pit wall)', () => {
+  const MIN = 60_000;
+  const done = (title: string, estimateMin: number, workMin: number, completedAt: number, projectId: string | null = 'p') => ({ title, status: 'done', outcome: 'finished', estimateMin, workMs: workMin * MIN, completedAt, projectId, tagId: null });
+  it('purple for the best ratio in the project, green under, yellow over, newest first', () => {
+    const d = dataWith([], [done('A', 60, 50, 1), done('B', 30, 20, 2), done('C', 20, 30, 3), done('D', 10, 0, 4, null)]);
+    const laps = recentLaps(d);
+    expect(laps.map((l) => [l.title, l.kind])).toEqual([['D', 'under'], ['C', 'over'], ['B', 'best'], ['A', 'under']]);
+    expect(laps.find((l) => l.title === 'C')!.gapMs).toBe(10 * MIN);
+  });
+  it('skips tasks without an estimate and killed tasks', () => {
+    const d = dataWith([], [{ ...done('X', 0, 10, 1) }, { ...done('Y', 10, 5, 2), outcome: 'killed' }]);
+    expect(recentLaps(d)).toEqual([]);
   });
 });

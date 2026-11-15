@@ -1,6 +1,7 @@
-// Chronos Home (§9.2): header with the Plan │ Focus toggle, the Runway view or
-// Focus Core, the Desktop shelf and Trash, and the layers above them. Esc closes
-// the topmost layer; at the root it hides Home. F toggles Plan/Focus, N adds a task.
+// Chronos Home (§9.2, Phase 3.5): rail + slim top bar over one screen (Home, Plan, Focus,
+// Board, Log, Settings) and at most one layer. Every navigation goes through go() (nav.ts),
+// which closes the open layer first. Esc closes the layer, then leaves the screen, then hides.
+// Focus is silent: no rail, no top bar.
 
 import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react';
 import type { Snapshot, Task } from '../../core/model/types';
@@ -26,21 +27,24 @@ import { TimeLeft } from '../runway/TimeLeft';
 import { ScheduleEditor } from '../schedule/ScheduleEditor';
 import { Settings } from '../settings/Settings';
 import { RecentlyDeleted, ShelfPanel, TrashButton } from '../shelf/Shelf';
-import { run, undoLast, useAlignedNow } from '../store';
+import { clearInfoToasts, run, undoLast, useAlignedNow } from '../store';
 import { DoneDrawer } from './DoneDrawer';
+import { closeLayer, escape, navigate, openLayer, toggle, toggleLayer, type Layer, type NavState } from './nav';
+import { TopBar } from './TopBar';
+import { Help } from './Help';
+import { measureBlurOnce } from '../palette/blurCheck';
 import { BeforeClass, HeadsUp } from './Strips';
 import { SyncDot } from './SyncDot';
-
-type Layer = 'drawer' | 'shelf' | 'trash' | 'schedule' | 'editor' | 'palette';
 
 // Screens built by other parts of the app are mounted by glob so a missing file is a placeholder, not a build break.
 const boards = import.meta.glob('../board/Board.tsx');
 const palettes = import.meta.glob('../palette/Palette.tsx');
 const logs = import.meta.glob('../log/Log.tsx');
-type BoardP = { onOpenLog?: (projectId: string) => void; onEnterFocus?: (taskId: string) => void };
+type BoardP = { projectId?: string | null; onOpenLog?: (projectId: string) => void; onEnterFocus?: (taskId: string) => void };
 const LazyBoard = lazy(() => (boards['../board/Board.tsx'] ? (boards['../board/Board.tsx']() as Promise<{ Board: ComponentType<BoardP> }>).then((m) => ({ default: m.Board })) : Promise.resolve({ default: (_p: BoardP) => <Placeholder name="Board" /> })));
 const LazyLog = lazy(() => (logs['../log/Log.tsx'] ? (logs['../log/Log.tsx']() as Promise<{ Log: ComponentType<{ projectId?: string | null }> }>).then((m) => ({ default: m.Log })) : Promise.resolve({ default: (_p: { projectId?: string | null }) => <Placeholder name="Log" /> })));
-const LazyPalette = lazy(() => (palettes['../palette/Palette.tsx'] ? (palettes['../palette/Palette.tsx']() as Promise<{ Palette: ComponentType<{ open: boolean; onClose: () => void }> }>).then((m) => ({ default: m.Palette })) : Promise.resolve({ default: () => null })));
+type PalP = { open: boolean; onClose: () => void; onNavigate?: (to: Screen, opts?: { projectId?: string; logProject?: string | null }) => void };
+const LazyPalette = lazy(() => (palettes['../palette/Palette.tsx'] ? (palettes['../palette/Palette.tsx']() as Promise<{ Palette: ComponentType<PalP> }>).then((m) => ({ default: m.Palette })) : Promise.resolve({ default: (_p: PalP) => null })));
 
 function Placeholder({ name }: { name: string }) {
   return (
@@ -55,30 +59,44 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
   const d = snap.data;
   const s = settingsOf(d);
   const now = useAlignedNow(15_000);
-  const [screen, setScreen] = useState<Screen>(() => (activeTask(d)?.runtime.status === 'running' ? 'focus' : 'home'));
-  const [layers, setLayers] = useState<Layer[]>([]);
+  const [nav, setNav] = useState<NavState>(() => ({ screen: activeTask(d)?.runtime.status === 'running' ? 'focus' : 'home', layer: null }));
+  const { screen } = nav;
+  const top = nav.layer ?? undefined;
   const [editing, setEditing] = useState<Task | null>(null);
   const [guided, setGuided] = useState(false);
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [range, setRange] = useState<'full' | 'next6'>('full');
   const [logProject, setLogProject] = useState<string | null>(null);
+  const [boardProject, setBoardProject] = useState<string | null>(null);
   const m = dayModel(d, now, range);
-  const top = layers.at(-1);
-  const open = (l: Layer) => setLayers((x) => [...x.filter((y) => y !== l), l]);
-  const close = (l: Layer) => setLayers((x) => x.filter((y) => y !== l));
+  /** Every navigation (rail, top bar, keys, palette commands) goes through here: it closes the open layer first. */
+  const go = (to: Screen, opts: { logProject?: string | null; projectId?: string } = {}) => {
+    if (to === 'log') setLogProject(opts.logProject ?? null);
+    if (to === 'board' && opts.projectId) setBoardProject(opts.projectId);
+    clearInfoToasts();
+    setNav((x) => navigate(x, to));
+  };
+  const open = (l: Layer) => setNav((x) => openLayer(x, l));
+  const close = (l: Layer) => setNav((x) => closeLayer(x, l));
   const editTask = (t: Task | null) => {
     setEditing(t);
     open('editor');
   };
-  const toggleScreen = (to: Screen) => setScreen((v) => (v === to ? 'home' : to));
+  const toggleScreen = (to: Screen) => setNav((x) => toggle(x, to));
 
-  useEffect(() => api.onShow((v) => setScreen(v === 'focus' ? 'focus' : v === 'runway' ? 'plan' : 'home')), []);
+  useEffect(() => api.onShow((v) => setNav((x) => navigate(x, v === 'focus' ? 'focus' : v === 'runway' ? 'plan' : x.screen))), []);
 
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('reduce', s.reduceMotion === true);
     root.classList.toggle('full-motion', s.reduceMotion === false);
   }, [s.reduceMotion]);
+
+  // Palette blur: measured once per device; dim-only when it would drop frames.
+  useEffect(() => {
+    if (snap.device.paletteBlur === null && revealed) measureBlurOnce();
+    document.documentElement.dataset.blur = snap.device.paletteBlur === false ? 'off' : 'on';
+  }, [snap.device.paletteBlur, revealed]);
 
   // A device that never saw onboarding but whose account has (another PC) is marked silently.
   useEffect(() => {
@@ -95,24 +113,34 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
       }
       if (e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setLayers((x) => (x.includes('palette') ? x.filter((y) => y !== 'palette') : [...x, 'palette']));
+        setNav((x) => toggleLayer(x, 'palette'));
         return;
       }
       if (e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'l') {
         e.preventDefault();
-        setLogProject(null);
-        setScreen('log');
+        if (nav.layer === 'editor') return; // never drop a task being edited
+        go('log');
         return;
       }
       if (e.key === 'Escape') {
+        // Esc in a text field leaves the field first (a draft is never lost to a stray Esc); the next Esc navigates.
+        if (typing && !askOpen() && !document.querySelector('[aria-modal="true"]')) {
+          (e.target as HTMLElement).blur();
+          return;
+        }
         if (askOpen()) closeAsk();
-        else if (top) setLayers((x) => x.slice(0, -1));
-        else if (screen !== 'home') setScreen('home');
-        else if (!snap.pendingGap) api.win.hide();
+        else {
+          const next = escape(nav);
+          if (next !== 'hide') setNav(next);
+          else if (!snap.pendingGap) api.win.hide();
+        }
         return;
       }
       if (typing || e.ctrlKey || e.altKey || e.metaKey || top || document.querySelector('[aria-modal="true"]')) return;
-      if (e.key === 'f' || e.key === 'F') toggleScreen('focus');
+      if (e.key === '?') {
+        e.preventDefault();
+        open('help');
+      } else if (e.key === 'f' || e.key === 'F') toggleScreen('focus');
       else if (e.key === 'p' || e.key === 'P') toggleScreen('plan');
       else if (e.key === 'n' || e.key === 'N') {
         e.preventDefault();
@@ -121,7 +149,7 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [top, snap.pendingGap, screen]);
+  }, [nav, snap.pendingGap]);
 
   const planSections = [
     <TimeLeft key="tl" tl={m.tl} />,
@@ -157,61 +185,43 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
       }}
     />
   ) : screen === 'settings' ? (
-    <Settings snap={snap} onSchedule={() => open('schedule')} onClose={() => setScreen('home')} />
+    <Settings snap={snap} onSchedule={() => open('schedule')} onClose={() => go('home')} />
   ) : screen === 'board' ? (
     <Suspense fallback={null}>
       <LazyBoard
-        onOpenLog={(id) => {
-          setLogProject(id);
-          setScreen('log');
-        }}
-        onEnterFocus={() => setScreen('focus')}
+        projectId={boardProject}
+        onOpenLog={(id) => go('log', { logProject: id })}
+        onEnterFocus={() => go('focus')}
       />
     </Suspense>
   ) : screen === 'log' ? (
     <Suspense fallback={null}><LazyLog projectId={logProject} /></Suspense>
   ) : screen === 'focus' ? (
-    <FocusCore d={d} m={m} now={now} deviceId={snap.device.deviceId} onPlan={() => setScreen('plan')} />
+    <FocusCore d={d} m={m} now={now} deviceId={snap.device.deviceId} onPlan={() => go('plan')} />
   ) : screen === 'plan' ? (
     <main className="plan">
-      <div className="plan-back"><button className="link" onClick={() => setScreen('home')}>Back to Home <kbd>P</kbd></button></div>
+      <div className="plan-back">
+        <button className="link" onClick={() => go('home')}>Back to Home <kbd>P</kbd></button>
+        <span className="plan-back-gap" />
+        <button className="btn btn-ghost btn-s" onClick={() => open('drawer')}><Icon name="list" size={14} /> Done today</button>
+        <button className="btn btn-ghost btn-s" onClick={() => open('schedule')}><Icon name="calendar" size={14} /> Schedule</button>
+      </div>
       {planSections}
     </main>
   ) : (
     <>
       <MorningStart d={d} now={now} active deviceId={snap.device.deviceId} />
-      <NowScreen d={d} m={m} now={now} deviceId={snap.device.deviceId} onFocus={() => setScreen('focus')} onPlan={() => setScreen('plan')} />
+      <NowScreen d={d} m={m} now={now} deviceId={snap.device.deviceId} onFocus={() => go('focus')} onPlan={() => go('plan')} onDone={() => open('drawer')} onSchedule={() => open('schedule')} />
     </>
   );
 
   return (
     <div className={`home${revealed ? ' revealed' : ''}`} data-screen={screen}>
-      <Rail screen={screen} onGo={(x) => (x === 'log' && setLogProject(null), setScreen(x))} />
+      {screen !== 'focus' && <Rail screen={screen} onGo={(x) => go(x)} />}
       <div className="home-main">
-        <header className="top">
-          <div className="brand-row">
-            <p className="brand">
-              <span className="wordmark">CHRONOS</span>
-            </p>
-            <SyncDot sync={snap.sync} />
-          </div>
-          <nav className="top-nav" aria-label="Home">
-            <button className="btn btn-ghost btn-s" onClick={() => toggleScreen('plan')} aria-pressed={screen === 'plan'}>
-              <Icon name="calendar" size={14} /> Plan <kbd>P</kbd>
-            </button>
-            <button className="btn btn-ghost btn-s" onClick={() => toggleScreen('focus')} aria-pressed={screen === 'focus'}>
-              <Icon name="bolt" size={14} /> Focus <kbd>F</kbd>
-            </button>
-            <button className="btn btn-ghost btn-s" onClick={() => open('drawer')}>
-              <Icon name="list" size={14} /> Done
-            </button>
-            <button className="btn btn-ghost btn-s" onClick={() => open('schedule')}>
-              <Icon name="calendar" size={14} /> Schedule
-            </button>
-          </nav>
-        </header>
+        {screen !== 'focus' && <TopBar d={d} now={now} onPalette={() => open('palette')} onFocus={() => go('focus')} onHelp={() => open('help')} sync={<SyncDot sync={snap.sync} />} />}
 
-        {body}
+        <div className="screen">{body}</div>
 
         {!full && screen === 'plan' && (
           <footer className="foot">
@@ -221,19 +231,15 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
             <TrashButton onOpen={() => open('trash')} />
           </footer>
         )}
-        {!full && screen !== 'plan' && (
-          <footer className="foot foot-quiet">
-            <button className="link" onClick={() => open('palette')}>Ctrl K to add, search or ask</button>
-          </footer>
-        )}
       </div>
 
-      {layers.includes('drawer') && <DoneDrawer d={d} now={now} onClose={() => close('drawer')} />}
+      {top === 'drawer' && <DoneDrawer d={d} now={now} onClose={() => close('drawer')} />}
       {top === 'shelf' && <ShelfPanel onClose={() => close('shelf')} />}
       {top === 'trash' && <RecentlyDeleted d={d} onClose={() => close('trash')} />}
+      {top === 'help' && <Help onClose={() => close('help')} />}
       {top === 'editor' && <TaskEditor d={d} task={editing} now={now} onClose={() => close('editor')} />}
       <Suspense fallback={null}>
-        <LazyPalette open={layers.includes('palette')} onClose={() => close('palette')} />
+        <LazyPalette open={top === 'palette'} onClose={() => close('palette')} onNavigate={(to, opts) => go(to, opts)} />
       </Suspense>
       {revealed && !s.onboarded && !snap.device.onboarded && (
         <Onboarding

@@ -16,8 +16,12 @@ export interface SignatureTimerProps {
   onComplete?: boolean;
   /** Override the theme's signature kind (theme previews). */
   kind?: SignatureKind;
-  /** Pixel size. Full: reactor/accretion diameter, slab height, digit font-size. Mini: height. */
+  /** Pixel size. Full: reactor/accretion diameter, slab height, digit / big-number font-size. Mini: height. */
   size?: number;
+  /** Seconds worked so far (mission-clock T+, lap-timer elapsed). */
+  elapsedSec?: number;
+  /** Planned length in seconds (lap-timer "gap to plan"). Default elapsed + remaining. */
+  estimateSec?: number;
   className?: string;
 }
 
@@ -40,7 +44,7 @@ function useCharged(v: number): number {
   return shown;
 }
 
-interface Inner { p: number; text: string; cfg: SignatureConfig; size?: number; mini: boolean; flare: boolean }
+interface Inner { p: number; text: string; cfg: SignatureConfig; size?: number; mini: boolean; flare: boolean; elapsed: number; remaining: number; overrun: boolean; running: boolean; estimate: number | null }
 
 export function SignatureTimer(props: SignatureTimerProps) {
   const theme = useOptionalTheme();
@@ -49,7 +53,8 @@ export function SignatureTimer(props: SignatureTimerProps) {
   const p = clamp01(props.progress);
   const mini = !!props.mini;
   const text = formatClock(props.remainingSec, props.overrun);
-  const inner: Inner = { p, text, cfg, size: props.size, mini, flare: !!props.onComplete };
+  const elapsed = Math.max(0, props.elapsedSec ?? 0);
+  const inner: Inner = { p, text, cfg, size: props.size, mini, flare: !!props.onComplete, elapsed, remaining: props.remainingSec, overrun: !!props.overrun, running: props.running, estimate: props.estimateSec ?? null };
   const root = {
     className: `sig sig-${kind}${mini ? ' sig-mini' : ''}${props.className ? ' ' + props.className : ''}`,
     'data-running': String(props.running),
@@ -62,6 +67,8 @@ export function SignatureTimer(props: SignatureTimerProps) {
     case 'reactor-ring': return <Reactor root={root} {...inner} />;
     case 'slab-monolith': return <Slabs root={root} {...inner} />;
     case 'accretion-ring': return <Accretion root={root} {...inner} />;
+    case 'mission-clock': return <MissionClock root={root} {...inner} />;
+    case 'lap-timer': return <LapTimer root={root} {...inner} />;
     default: return <Digits root={root} {...inner} />;
   }
 }
@@ -168,5 +175,54 @@ function Digits({ root, text, size, mini }: P) {
         <span key={`${i}${c}`} className={`sig-digit${changed[i] && /\d/.test(c) ? ' sig-tick' : ''}`} aria-hidden="true">{c}</span>
       ))}
     </span>
+  );
+}
+
+/* ---------- mission-clock (Flight plan): T+ elapsed small, T– remaining large, a thin step bar ---------- */
+const STEPS = 12;
+function MissionClock({ root, p, text, size, mini, elapsed, overrun }: P) {
+  const px = size ?? (mini ? 24 : 112);
+  const done = Math.floor(p * STEPS + 1e-6);
+  const cells = (n: number) => Array.from({ length: n }, (_, i) => <i key={i} className={`mc-cell${i < Math.round((p * n)) ? ' on' : ''}`} />);
+  if (mini) return <span {...root} style={{ '--s': `${px}px` } as CSSProperties}><span className="mc-steps">{cells(5)}</span></span>;
+  return (
+    <div {...root} style={{ '--s': `${px}px` } as CSSProperties}>
+      <span className="mc-plus"><b>T+</b> {formatClock(elapsed)}</span>
+      <span className="mc-minus"><b>{overrun ? 'T+' : 'T–'}</b>{text.replace('+', '')}</span>
+      <span className="mc-steps" aria-hidden="true">{cells(STEPS)}</span>
+      <span className="mc-step-label">Step {Math.min(STEPS, done + 1)} of {STEPS}</span>
+    </div>
+  );
+}
+
+/* ---------- lap-timer (Pit wall): huge remaining with a ticking tenths digit, gap to plan, elapsed, red bar ---------- */
+function LapTimer({ root, p, text, size, mini, elapsed, remaining, overrun, running, estimate }: P) {
+  const px = size ?? (mini ? 24 : 140);
+  if (mini) {
+    return (
+      <span {...root} style={{ '--s': `${px}px` } as CSSProperties}>
+        <i className="lt-bar"><b style={{ width: `${Math.round(p * 100)}%` }} /></i>
+      </span>
+    );
+  }
+  const plan = estimate ?? elapsed + (overrun ? -remaining : remaining);
+  const gap = elapsed - plan; // negative = under plan (green), positive = over (yellow)
+  return (
+    <div {...root} style={{ '--s': `${px}px` } as CSSProperties}>
+      <div className="lt-main">
+        <span className="lt-label">{overrun ? 'Over' : 'Remaining'}</span>
+        <span className="lt-big">
+          {text}
+          <span className="lt-tenths" data-run={String(running && !overrun)} aria-hidden="true">.<span className="lt-reel"><i>0</i><i>9</i><i>8</i><i>7</i><i>6</i><i>5</i><i>4</i><i>3</i><i>2</i><i>1</i></span></span>
+        </span>
+      </div>
+      <div className="lt-side">
+        <span className="lt-label">Gap to plan · {gap > 0 ? 'behind' : 'ahead'}</span>
+        <span className="lt-gap" data-over={String(gap > 0)}>{gap > 0 ? '+' : '−'}{formatClock(Math.abs(gap))}</span>
+        <span className="lt-label">Elapsed</span>
+        <span className="lt-el">{formatClock(elapsed)}</span>
+      </div>
+      <i className="lt-bar" aria-hidden="true"><b style={{ width: `${Math.round(p * 100)}%` }} /></i>
+    </div>
   );
 }

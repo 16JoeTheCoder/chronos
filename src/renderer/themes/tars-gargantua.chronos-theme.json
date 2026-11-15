@@ -55,7 +55,11 @@
     "fixedBlock": "#7A776F",
     "selection": "#1A1C1F",
     "ink": "#1A1C1F",
-    "onInk": "#E9E7E1"
+    "onInk": "#E9E7E1",
+    "pill": "#F4F2EC",
+    "pillText": "#1A1C1F",
+    "pillLine": "#1A1C1F",
+    "scrim": "rgba(26,28,31,0.34)"
   },
   "shape": {
     "radiusSm": 4,
@@ -159,7 +163,11 @@
         "onInk": "#F5F7FA",
         "ring": "#F4E7D0",
         "ringBright": "#FFF4E2",
-        "disk": "#FFE9C4"
+        "disk": "#FFE9C4",
+        "pill": "#0B0B0C",
+        "pillText": "#F5F7FA",
+        "pillLine": "#FFF4E2",
+        "scrim": "rgba(0,0,0,0.66)"
       },
       "shape": {
         "radiusSm": 12,

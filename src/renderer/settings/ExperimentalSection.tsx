@@ -8,7 +8,7 @@ import { settingsOf } from '../../core/repo/repo';
 import { ask } from '../components/ask';
 import { run, toast } from '../store';
 import { when } from './AccountSection';
-import { Btn, Group, NumField, Toggle, saveSettings } from './rows';
+import { Btn, Group, NumField, Row, Toggle, saveSettings } from './rows';
 
 const short = (v: unknown, n = 60) => {
   const t = JSON.stringify(v) ?? 'undefined';
@@ -28,6 +28,9 @@ export function ExperimentalSection({ snap }: { snap: Snapshot }) {
     <>
       <Group title="Diagnostics" note="Things for finding out why something went wrong. Safe to leave off.">
         <Toggle label="Show diagnostics" hint="Sync internals, snapshots, conflicts and the Claude token. Per PC." checked={dev.experimental} onChange={(experimental) => run({ type: 'device.update', patch: { experimental } })} />
+        <Row label="Desktop layer" hint="The result of the last attempt to put Chronos behind the desktop icons (Live on the desktop, Look). Every step is in the app log (Account → Export log).">
+          <span className="st-value" data-testid="desktop-layer">{snap.desktopLayer ? `Desktop layer: ${snap.desktopLayer}` : dev.liveOnDesktop ? 'Desktop layer: not tried yet (press Esc on Home)' : 'Desktop layer: off'}</span>
+        </Row>
       </Group>
 
       {dev.experimental && (

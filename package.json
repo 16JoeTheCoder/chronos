@@ -67,7 +67,10 @@
     "vitest": "^2.1.8"
   },
   "dependencies": {
+    "@fontsource/barlow": "^5.3.0",
+    "@fontsource/barlow-condensed": "^5.3.0",
     "@fontsource/chakra-petch": "^5.3.0",
+    "@fontsource/courier-prime": "^5.3.0",
     "@fontsource/hanken-grotesk": "^5.3.0",
     "@fontsource/martian-mono": "^5.3.0",
     "@fontsource/michroma": "^5.3.0",
@@ -75,6 +78,7 @@
     "@fontsource/red-hat-mono": "^5.3.0",
     "@fontsource/red-hat-text": "^5.3.0",
     "@fontsource/sora": "^5.3.0",
+    "@fontsource/titillium-web": "^5.3.0",
     "koffi": "3.3.8"
   }
 }

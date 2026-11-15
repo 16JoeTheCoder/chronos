@@ -111,3 +111,10 @@ After writing it, check every text colour against ground and panel and fix any t
 ```
 
 If import rejects the file, paste the error list back to the AI and ask it to fix only those tokens.
+
+## Phase 3.5 additions
+
+- Five launch themes: Tactile instrument (default), Stark workshop, TARS / Gargantua (one file, two variants), **Flight plan** (`flight-plan`, `mission-clock`) and **Pit wall** (`pit-wall`, `lap-timer`).
+- New signature kinds: `mission-clock` (T+ elapsed small, T– remaining large, 12-cell step bar; mini = 5 cells) and `lap-timer` (huge remaining with a CSS tenths reel, gap to plan in `ok`/`warn`, elapsed, accent bar; mini = the bar). The tenths digit is a CSS `steps(10)` animation, not a 100 ms timer (idle-CPU rule); it stops with motion off.
+- New optional colours: `pill`, `pillText`, `pillLine` (the overlay pill on the taskbar; the validator requires an opaque `pill` and `pillText` ≥ 4.5:1 on it; missing = panel / text / lineStrong), `scrim` (the dim behind the palette), `best` (lap-timer purple) and `rest` (mission-clock blueprint blue); `best` and `rest` must reach 4.5:1 on ground and panel.
+- Flight plan uses the darker orange `#C2410C` for text and the accent (the bright `#FF6A13` is 2.9:1 on white); Pit wall uses the lighter purple `#C565EC` (6.3:1 on its ground).

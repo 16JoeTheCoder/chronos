@@ -5,6 +5,10 @@
 // UNVERIFIED-ON-WINDOWS: see docs/WINDOWS_CHECKLIST.md "Desktop layer".
 
 import { createRequire } from 'node:module';
+import os from 'node:os';
+
+/** "10.0.26100" = Windows 11 24H2. */
+const osBuild = (): string => os.release();
 
 export interface Rect { left: number; top: number; right: number; bottom: number }
 
@@ -23,27 +27,37 @@ export interface Native {
 export type Attach = { ok: true; parent: number; mode: 'classic' | 'progman-child' } | { ok: false; reason: string };
 
 /** Locate the window to parent to. Pre-24H2: the WorkerW sibling after the one holding SHELLDLL_DefView. 24H2: WorkerW is a child of Progman. */
-export function findDesktopParent(n: Native): Attach {
+export function findDesktopParent(n: Native, trace: (step: string) => void = () => undefined): Attach {
   const prog = n.progman();
+  trace(prog ? `found Progman ${hex(prog)}` : 'Progman not found');
   if (!prog) return { ok: false, reason: 'Progman not found' };
   n.spawnWorkerW(prog);
+  trace('sent 0x052C to Progman (wParam 0xD, lParam 0 then 1)');
+  // Windows 11 24H2+: SHELLDLL_DefView and the new WorkerW are both children of Progman (the structure Lively handles).
   if (n.find(prog, 0, 'SHELLDLL_DefView')) {
     const w = n.find(prog, 0, 'WorkerW');
+    trace(w ? `24H2 layout: WorkerW ${hex(w)} is a child of Progman` : '24H2 layout: SHELLDLL_DefView under Progman but no WorkerW child');
     if (w) return { ok: true, parent: w, mode: 'progman-child' };
   }
   for (const top of n.topLevel()) {
     if (!n.find(top, 0, 'SHELLDLL_DefView')) continue;
     const w = n.find(0, top, 'WorkerW');
+    trace(w ? `classic layout: WorkerW ${hex(w)} after the window holding SHELLDLL_DefView` : 'classic layout: no WorkerW after SHELLDLL_DefView');
     if (w) return { ok: true, parent: w, mode: 'classic' };
   }
+  trace('WorkerW not found');
   return { ok: false, reason: 'WorkerW not found' };
 }
 
+const hex = (h: number) => `0x${h.toString(16)}`;
+
 /** Attach `hwnd`; `px` is the target rectangle in physical screen pixels. */
-export function attachWindow(n: Native, hwnd: number, px: { x: number; y: number; width: number; height: number }): Attach {
-  const found = findDesktopParent(n);
+export function attachWindow(n: Native, hwnd: number, px: { x: number; y: number; width: number; height: number }, trace: (step: string) => void = () => undefined): Attach {
+  const found = findDesktopParent(n, trace);
   if (!found.ok) return found;
-  if (!n.setParent(hwnd, found.parent)) return { ok: false, reason: 'SetParent failed' };
+  const parented = n.setParent(hwnd, found.parent);
+  trace(`SetParent(${hex(hwnd)}, ${hex(found.parent)}) ${parented ? 'ok' : 'failed'}`);
+  if (!parented) return { ok: false, reason: 'SetParent failed' };
   const origin = n.rect(found.parent);
   n.move(hwnd, px.x - (origin?.left ?? 0), px.y - (origin?.top ?? 0), px.width, px.height);
   return found;
@@ -96,8 +110,10 @@ export class DesktopLayer {
   attached = false;
   /** Last failure, for the log and Diagnostics. */
   error: string | null = null;
+  /** Last attach result for Settings → Experimental: "attached (24H2 layout)" / "fallback, reason …" / null = never tried. */
+  status: string | null = null;
 
-  constructor(private log: (m: string) => void, private load: () => Native = loadWin32, private platform: string = process.platform) {}
+  constructor(private log: (m: string) => void, private load: () => Native = loadWin32, private platform: string = process.platform, private build: string = osBuild()) {}
 
   private get(): Native | null {
     if (this.platform !== 'win32') return this.fail('not Windows');
@@ -110,6 +126,7 @@ export class DesktopLayer {
 
   private fail(reason: string): null {
     this.error = reason;
+    this.status = `fallback, ${reason}`;
     this.log(`desktop layer off: ${reason}`);
     return null;
   }
@@ -121,13 +138,15 @@ export class DesktopLayer {
     if (!n || win.isDestroyed()) return false;
     try {
       this.hwnd = Number(win.getNativeWindowHandle().readBigUInt64LE(0));
-      const r = attachWindow(n, this.hwnd, px);
+      this.log(`desktop layer: attaching on Windows build ${this.build}`);
+      const r = attachWindow(n, this.hwnd, px, (step) => this.log(`desktop layer: ${step}`));
       if (!r.ok) {
         this.fail(r.reason);
         return false;
       }
       this.error = null;
       this.attached = true;
+      this.status = `attached (${r.mode === 'progman-child' ? '24H2 layout' : 'classic layout'}, build ${this.build})`;
       this.log(`desktop layer on (${r.mode})`);
       return true;
     } catch (e) {

@@ -18,6 +18,7 @@ import { todayOf } from '../../core/tasks/tasks';
 import { localParts } from '../../core/time/zone';
 import type { Data } from '../../core/model/types';
 import { Dialog } from '../components/ui';
+import { useOptionalTheme } from '../theme/ThemeProvider';
 import { run, runWithToast, toast, undoFor } from '../store';
 import { planDay } from './actions';
 import { deferReview, markBreak, markMorning, morningDone, reviewDeferred, shownBreaks } from './storage';
@@ -28,6 +29,7 @@ const free = (e: KeyboardEvent) => !(e.target as HTMLElement | null)?.closest('i
 export function MorningStart({ d, now, active, deviceId }: { d: Data; now: number; active: boolean; deviceId: string }) {
   const today = todayOf(d, now);
   const [gone, setGone] = useState(() => morningDone(today));
+  const [details, setDetails] = useState(false);
   const s = settingsOf(d);
   const plan = useMemo(() => (gone || !s.onboarded ? null : autoPlan(d, today, { now, deviceId })), [gone, s.onboarded, d, today, now, deviceId]);
   const show = active && !!plan && plan.placed.length > 0;
@@ -54,24 +56,28 @@ export function MorningStart({ d, now, active, deviceId }: { d: Data; now: numbe
   }, [show, today]);
   if (!show || !plan) return null;
   const shown = plan.placed.slice(0, 4);
+  const first = plan.placed[0]!;
   return (
-    <section className="morning" aria-label="Plan your day">
+    <section className="morning morning-strip" aria-label="Plan your day">
       <div className="morning-head">
         <h2>Plan your day</h2>
         <span className="muted">
-          {plan.placed.length} {plan.placed.length === 1 ? 'block' : 'blocks'} fit
+          {plan.placed.length} {plan.placed.length === 1 ? 'block fits' : 'blocks fit'}, starting with {first.title} at {formatHM(first.startMin)}
         </span>
+        <button className="link" aria-expanded={details} onClick={() => setDetails((v) => !v)}>{details ? 'Hide blocks' : 'Show blocks'}</button>
       </div>
-      <ul className="morning-list">
-        {shown.map((b) => (
-          <li key={b.blockId}>
-            <span className="mono">{formatHM(b.startMin)}</span>
-            <span>{b.title}</span>
-            <span className="muted">{formatHuman((b.endMin - b.startMin) * 60_000)}</span>
-          </li>
-        ))}
-        {plan.placed.length > shown.length && <li className="muted">and {plan.placed.length - shown.length} more</li>}
-      </ul>
+      {details && (
+        <ul className="morning-list">
+          {shown.map((b) => (
+            <li key={b.blockId}>
+              <span className="mono">{formatHM(b.startMin)}</span>
+              <span>{b.title}</span>
+              <span className="muted">{formatHuman((b.endMin - b.startMin) * 60_000)}</span>
+            </li>
+          ))}
+          {plan.placed.length > shown.length && <li className="muted">and {plan.placed.length - shown.length} more</li>}
+        </ul>
+      )}
       <div className="row gap">
         <button
           className="btn"
@@ -159,6 +165,7 @@ function ReviewDialog({ d, now, date, tasks, onLater }: { d: Data; now: number; 
 /** Break prompt: only when `breakDue` says so (a long block just ended; never mid-block). */
 export function BreakCard({ d, now }: { d: Data; now: number }) {
   const [shown, setShown] = useState(shownBreaks);
+  const radio = useOptionalTheme()?.theme.motion.signature.kind === 'lap-timer';
   const due = breakDue(d, now, shown);
   if (!due) return null;
   const dismiss = () => {
@@ -173,9 +180,10 @@ export function BreakCard({ d, now }: { d: Data; now: number }) {
     dismiss();
   };
   return (
-    <aside className="break-card" role="status" aria-label="Break">
-      <p className="w-label strong">{due.focusedMin} min of focus.</p>
-      <p className="w-sub">A 10 minute break now keeps the next block sharp.</p>
+    <aside className="break-card" role="status" aria-label={radio ? 'Radio: break' : 'Break'}>
+      {radio && <p className="eyebrow break-radio">Radio</p>}
+      <p className="w-label strong">{radio ? `${due.focusedMin} min on this stint. Box, box.` : `${due.focusedMin} min of focus.`}</p>
+      <p className="w-sub">{radio ? 'Pit for 10 minutes now and the next stint stays quick.' : 'A 10 minute break now keeps the next block sharp.'}</p>
       <div className="row gap">
         <button className="btn btn-s" onClick={() => void take()}>
           Take 10 minutes
