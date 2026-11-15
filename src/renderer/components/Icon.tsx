@@ -19,6 +19,9 @@ const P: Record<string, ReactElement> = {
   bolt: <path d="M13 2L4 14h7l-1 8 9-12h-7z" />,
   idea: <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5V16h8v-2.5A6 6 0 0 0 12 3z" />,
   restore: <path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5" />,
+  home: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  board: <><rect x="3" y="4" width="5" height="16" rx="1.5" /><rect x="10" y="4" width="5" height="10" rx="1.5" /><rect x="17" y="4" width="4" height="13" rx="1.5" /></>,
+  log: <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />,
   copy: <><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M4 16V4h12" /></>,
 };
 

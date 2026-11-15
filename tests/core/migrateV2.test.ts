@@ -14,7 +14,7 @@ const load = (): Obj => structuredClone(v1);
 const mig = (): Data => migrate(load(), TODAY) as Data;
 const recs = (d: Data, c: Coll) => Object.values(d[c] as Record<string, Obj>);
 
-describe('migrate v1 -> v2 (Josef fixture)', () => {
+describe('migrate v1 -> current (Josef fixture)', () => {
   it('has the shape the fixture promises', () => {
     expect(v1.schema).toBe(1);
     expect(Object.keys(v1.tasks).length).toBeGreaterThanOrEqual(8);
@@ -24,10 +24,10 @@ describe('migrate v1 -> v2 (Josef fixture)', () => {
     expect(v1.tasks['t-calc-hw'].deadline).toBe('2026-10-30');
   });
 
-  it('returns schema 2 with projects and reviews present and empty', () => {
+  it('returns schema 3 with projects and reviews present and empty', () => {
     const d = mig();
     expect(d).not.toBeNull();
-    expect(d.schema).toBe(2);
+    expect(d.schema).toBe(3);
     expect(d.projects).toEqual({});
     expect(d.reviews).toEqual({});
     for (const c of COLLS) expect(d[c]).toBeTypeOf('object');
@@ -123,11 +123,11 @@ describe('migrate v1 -> v2 (Josef fixture)', () => {
     expect(d.closures['hol-2026-12-25']).toMatchObject({ source: 'holiday', confirmed: false, startDate: '2026-12-25' });
   });
 
-  it('every record has v 2, fv {} and fw {}', () => {
+  it('every record has v 3, fv {} and fw {}', () => {
     const d = mig();
     for (const c of COLLS) {
       for (const r of recs(d, c)) {
-        expect(r.v, `${c}/${r.id}`).toBe(2);
+        expect(r.v, `${c}/${r.id}`).toBe(3);
         expect(r.fv).toEqual({});
         expect(r.fw).toEqual({});
       }
@@ -170,7 +170,7 @@ describe('migrate v1 -> v2 (Josef fixture)', () => {
   });
 
   it('returns null for a newer schema and for garbage', () => {
-    expect(migrate({ schema: 3 })).toBeNull();
+    expect(migrate({ schema: 4 })).toBeNull();
     expect(migrate(null)).toBeNull();
     expect(migrate(undefined)).toBeNull();
     expect(migrate('schema')).toBeNull();

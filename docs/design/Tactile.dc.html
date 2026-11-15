@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tactile instrument</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=Martian+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+.tc-btn{transition:transform 90ms cubic-bezier(.2,0,0,1),box-shadow 90ms,background 120ms;box-shadow:0 2px 0 #A9ACB1,0 3px 6px rgba(20,22,26,.12)}
+.tc-btn:hover{background:#FFFFFF}
+.tc-btn:active{transform:translateY(2px);box-shadow:0 0 0 #A9ACB1,0 1px 2px rgba(20,22,26,.12)}
+.tc-dark{box-shadow:0 2px 0 #000,0 3px 6px rgba(20,22,26,.25)}
+.tc-dark:hover{background:#2A2D33}
+.tc-knob{transition:left 140ms cubic-bezier(.3,1.4,.5,1)}
+.tc-digit{display:inline-block;transition:transform 160ms cubic-bezier(.2,0,0,1)}
+.tc-row{transition:background 80ms}
+.tc-row:hover{background:#ECEDEF}
+.tc-check{transition:background 120ms,transform 120ms cubic-bezier(.3,1.6,.5,1)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; background: #DFE1E4; font-family: 'Hanken Grotesk', sans-serif; color: #15171A; display: grid; grid-template-columns: minmax(0,1fr) 400px; gap: 40px; padding: 56px 64px; box-sizing: border-box">
+<main style="background: #F2F3F5; border-radius: 20px; padding: 44px; display: flex; flex-direction: column; gap: 28px; box-shadow: inset 0 1px 0 #FFFFFF, 0 1px 2px rgba(20,22,26,.08)">
+<div style="display: flex; justify-content: space-between; font-size: 15px; color: #5B6068"><span>Wednesday 11 November</span><span style="font-family: 'Martian Mono', monospace">14:22</span></div>
+<h1 style="margin: 0; font-size: 46px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05">Blade pitch model</h1>
+<div style="display: flex; align-items: baseline; gap: 4px; font-family: 'Martian Mono', monospace; font-size: 120px; font-weight: 500; letter-spacing: -0.04em">
+<sc-for list="{{ digits }}" as="d" hint-placeholder-count="5"><span class="tc-digit" style="{{ d.style }}">{{ d.ch }}</span></sc-for></div>
+<div style="display: flex; gap: 14px">
+<button class="tc-btn tc-dark" onClick="{{ tick }}" style="height: 56px; padding: 0 28px; border: none; border-radius: 12px; background: #15171A; color: #FFFFFF; font: 600 17px 'Hanken Grotesk', sans-serif; cursor: pointer">{{ runLabel }}</button>
+<button class="tc-btn" style="height: 56px; padding: 0 24px; border: none; border-radius: 12px; background: #F9FAFB; color: #15171A; font: 600 16px 'Hanken Grotesk', sans-serif; cursor: pointer">Hold Enter to finish</button>
+</div>
+<p style="margin: 0; font-size: 14px; color: #5B6068">Press the buttons: they travel 2 px and settle. The timer digits tick one by one; toggles snap with a tiny overshoot.</p>
+</main>
+<aside style="display: flex; flex-direction: column; gap: 18px">
+<section style="background: #F2F3F5; border-radius: 16px; padding: 20px"><h2 style="margin: 0 0 8px; font-size: 17px; font-weight: 600">Up next</h2>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="3"><button class="tc-row" onClick="{{ r.toggle }}" style="width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 10px; border: none; border-radius: 10px; background: transparent; font: 400 15px 'Hanken Grotesk', sans-serif; color: #15171A; text-align: left; cursor: pointer"><span class="tc-check" style="{{ r.box }}"></span><span style="{{ r.text }}">{{ r.name }}</span></button></sc-for></section>
+<section style="background: #F2F3F5; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 4px">
+<sc-for list="{{ toggles }}" as="t" hint-placeholder-count="3"><div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0"><span style="font-size: 15px">{{ t.label }}</span><button role="switch" aria-checked="{{ t.on }}" aria-label="{{ t.label }}" onClick="{{ t.flip }}" style="{{ t.track }}"><span class="tc-knob" style="{{ t.knob }}"></span></button></div></sc-for></section>
+</aside></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(p){super(p);this.state={sec:2468,run:true,done:{},sw:{Sound:true,Wellness:true,Motion:false}};}
+renderVals(){const s=this.state;const m=Math.floor(s.sec/60),x=s.sec%60;const str=String(m).padStart(2,'0')+':'+String(x).padStart(2,'0');
+const prev=this._prev||str;this._prev=str;
+const digits=str.split('').map((ch,i)=>({ch,style:ch!==prev[i]?'transform: translateY(-4px)':''}));
+const names=['Find NREL 5 MW data','Tip-speed ratio clamp','Reply to coach'];
+const rows=names.map(n=>{const d=!!s.done[n];return{name:n,
+box:'width: 20px; height: 20px; border-radius: 6px; flex: none; border: 2px solid #15171A; background: '+(d?'#15171A':'transparent')+'; transform: scale('+(d?'1':'0.94')+')',
+text:d?'text-decoration: line-through; color: #8A8F97':'',toggle:()=>this.setState({done:Object.assign({},s.done,{[n]:!d})})};});
+const toggles=Object.keys(s.sw).map(k=>{const on=s.sw[k];return{label:k,on:on?'true':'false',
+track:'width: 48px; height: 28px; border-radius: 14px; border: none; position: relative; padding: 0; cursor: pointer; background: '+(on?'#15171A':'#C3C6CB'),
+knob:'position: absolute; top: 3px; left: '+(on?'23px':'3px')+'; width: 22px; height: 22px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,.25)',
+flip:()=>this.setState({sw:Object.assign({},s.sw,{[k]:!on})})};});
+return{digits,rows,toggles,runLabel:'Tick 1 s',tick:()=>this.setState({sec:Math.max(0,s.sec-1)})};}
+}
+</script>
+</body>
+</html>

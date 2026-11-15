@@ -1,13 +1,14 @@
 // Loading untrusted JSON into Data: the schema migration entry point and the
 // one-off import of a Monolith data file. migrate() is pure, lossless and
-// idempotent: a v1 file becomes v2 (fields renamed are moved, never dropped), a
-// v2 file only gets missing defaults filled. Monolith import ids are
+// idempotent: v1 becomes v2 (fields renamed are moved, never dropped), v2 becomes
+// v3 (new fields get defaults), a v3 file only gets missing defaults filled. A file
+// or record from a NEWER schema is refused / read-only (the Phase 1 version gate). Monolith import ids are
 // deterministic ('mono-<id>'), so importing the same file twice changes nothing.
 
 import { defaultActiveTimer, defaultSettings, defaultTimer, emptyData, idleRuntime } from '../model/defaults';
 import { sessionId } from '../model/ids';
 import { keysFor } from '../model/sortKey';
-import { COLLS, SCHEMA_V, type Data, type Priority, type Settings, type TaskStatus } from '../model/types';
+import { COLLS, PARSER_REPORTS_MAX, SCHEMA_V, type Coll, type Data, type Priority, type Settings, type TaskStatus } from '../model/types';
 import { isObj } from '../validation';
 import { maxOrder } from '../tasks/tasks';
 import { create, get, type Ctx } from './repo';
@@ -61,26 +62,47 @@ function upgradeV1(raw: Obj, today: string | null): Obj {
   return out;
 }
 
+const dur = (e: Obj): number => (typeof e.startMin === 'number' && typeof e.endMin === 'number' && e.endMin > e.startMin ? e.endMin - e.startMin : 60);
+
+/**
+ * v2 -> v3 for one record (also used for a record pulled from a v2 device): add the
+ * fields v3 introduced, never touch what is there. Idempotent.
+ */
+export function upgradeRecord(coll: Coll | string, rec: Obj): Obj {
+  switch (coll) {
+    case 'events':
+      return { ...rec, startMin: rec.startMin ?? null, endMin: rec.endMin ?? null, durationMin: rec.durationMin === undefined ? dur(rec) : rec.durationMin };
+    case 'ideas':
+      return { ...rec, projectId: rec.projectId ?? null };
+    case 'blocks':
+      return { ...rec, auto: rec.auto === undefined ? false : rec.auto };
+    default:
+      return rec;
+  }
+}
+
 /** Every record gets the v2 base fields (per-field version maps) and the current schema version. */
 function withBase(rec: Obj): Obj {
   return { ...rec, v: typeof rec.v === 'number' && rec.v > SCHEMA_V ? rec.v : SCHEMA_V, fv: isObj(rec.fv) ? rec.fv : {}, fw: isObj(rec.fw) ? rec.fw : {} };
 }
 
 /**
- * Untrusted file -> Data (v2), or null if it is not a Chronos file. `today` (local
+ * Untrusted file -> Data (v3), or null if it is not a Chronos file. `today` (local
  * date) decides inbox vs planned for v1 tasks; normalize() keeps it right afterwards.
  */
 export function migrate(input: unknown, today: string | null = null): Data | null {
-  if (!isObj(input) || (input.schema !== 1 && input.schema !== 2)) return null;
+  if (!isObj(input) || (input.schema !== 1 && input.schema !== 2 && input.schema !== 3)) return null;
   const raw = input.schema === 1 ? upgradeV1(input, today) : input;
   const d = emptyData();
   for (const c of COLLS) {
     if (!isObj(raw[c])) continue;
     const recs: Obj = {};
-    for (const [id, r] of Object.entries(raw[c] as Obj)) if (isObj(r)) recs[id] = withBase(r);
+    for (const [id, r] of Object.entries(raw[c] as Obj)) if (isObj(r)) recs[id] = upgradeRecord(c, withBase(r));
     (d as Record<string, unknown>)[c] = recs;
   }
   d.settings = { main: withBase(fill<Settings>(defaultSettings(), (raw.settings as Obj | undefined)?.main) as unknown as Obj) as unknown as Settings };
+  const sm = d.settings.main as Settings;
+  if (Array.isArray(sm.parserReports) && sm.parserReports.length > PARSER_REPORTS_MAX) sm.parserReports = sm.parserReports.slice(-PARSER_REPORTS_MAX);
   d.timer = { current: withBase(fill(defaultActiveTimer(), (raw.timer as Obj | undefined)?.current) as unknown as Obj) as unknown as Data['timer'][string] };
   if (isObj(raw.tombs)) d.tombs = raw.tombs as Data['tombs'];
   return d;

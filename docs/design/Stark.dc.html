@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chronos: Stark workshop home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&amp;family=Sora:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#4FD8FF}a:hover{color:#A6ECFF}
+::selection{background:#4FD8FF;color:#03060B}
+.stk-grid{background-color:#03060B;background-image:radial-gradient(circle at 38% 46%,rgba(79,216,255,0.13),rgba(3,6,11,0) 55%)}
+.stk-btn{transition:background 160ms cubic-bezier(.16,1,.3,1),color 160ms,border-color 160ms}
+.stk-btn:hover{background:rgba(79,216,255,0.14);border-color:#4FD8FF}
+.stk-btn:focus-visible,.stk-chip:focus-visible,.stk-rail:focus-visible{outline:2px solid #A6ECFF;outline-offset:2px}
+.stk-primary:hover{background:#A6ECFF}
+.stk-chip{transition:all 160ms cubic-bezier(.16,1,.3,1)}
+.stk-chip:hover{border-color:#4FD8FF;color:#E6F7FF}
+.stk-rail:hover{background:rgba(79,216,255,0.10);color:#E6F7FF}
+.stk-w{transition:opacity 420ms cubic-bezier(.16,1,.3,1),filter 420ms cubic-bezier(.16,1,.3,1)}
+@keyframes stk-spin{to{transform:rotate(360deg)}}
+@keyframes stk-fill{from{stroke-dashoffset:1068}to{stroke-dashoffset:491}}
+.stk-ticks{transform-origin:220px 220px;animation:stk-spin 120s linear infinite}
+.stk-arc{animation:stk-fill 1400ms cubic-bezier(.16,1,.3,1) both}
+@media (prefers-reduced-motion:reduce){.stk-ticks,.stk-arc{animation:none}}
+</style>
+</helmet>
+<div class="stk-grid" style="width: 1440px; height: 900px; display: flex; font-family: Sora, system-ui, sans-serif; color: #CFE9F5; overflow: hidden">
+<nav aria-label="Main" style="width: 76px; flex: none; border-right: 1px solid rgba(79,216,255,0.16); display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 8px; background: rgba(3,6,11,0.85)">
+<div aria-hidden="true" style="width: 36px; height: 36px; margin-bottom: 24px; border: 2px solid #4FD8FF; border-radius: 18px; display: flex; align-items: center; justify-content: center"><div style="width: 12px; height: 12px; border-radius: 6px; background: #4FD8FF"></div></div>
+<a href="#" class="stk-rail" aria-current="page" aria-label="Today" style="width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #4FD8FF; background: rgba(79,216,255,0.12)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></a>
+<a href="#" class="stk-rail" aria-label="Projects" style="width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #6F8C9C"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"></rect><rect x="10" y="4" width="5" height="10" rx="1.5"></rect><rect x="17" y="4" width="4" height="13" rx="1.5"></rect></svg></a>
+<a href="#" class="stk-rail" aria-label="Notes" style="width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #6F8C9C"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></a>
+<div style="flex: 1"></div>
+<a href="#" class="stk-rail" aria-label="Settings" style="width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #6F8C9C"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"></path></svg></a>
+</nav>
+<main style="flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 28px 40px 24px; gap: 24px">
+<header style="display: flex; align-items: center; gap: 24px">
+<div style="display: flex; align-items: baseline; gap: 16px">
+<span style="font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 34px; color: #E6F7FF; font-variant-numeric: tabular-nums">14:22</span>
+<span style="font-size: 15px; color: #7FA3B5">Wednesday 11 November</span>
+</div>
+<div style="flex: 1"></div>
+<div role="group" aria-label="Widgets" style="display: flex; gap: 8px">
+<sc-for list="{{ chips }}" as="c" hint-placeholder-count="4">
+<button class="stk-chip" aria-pressed="{{ c.pressed }}" onClick="{{ c.toggle }}" style="{{ c.style }}">{{ c.label }}</button>
+</sc-for>
+</div>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #7FA3B5"><span style="width: 8px; height: 8px; border-radius: 4px; background: #5BE3A4"></span>Synced</span>
+</header>
+<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px">
+<section aria-label="Current task" style="position: relative; border: 1px solid rgba(79,216,255,0.28); border-radius: 18px; background: linear-gradient(180deg, rgba(79,216,255,0.07), rgba(79,216,255,0.02)); padding: 32px; display: flex; flex-direction: column; overflow: hidden">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 10px; min-width: 0">
+<h1 style="margin: 0; font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 40px; line-height: 1.1; color: #F2FBFF; letter-spacing: -0.01em">Wind sim: blade pitch model</h1>
+<p style="margin: 0; font-size: 16px; line-height: 1.5; color: #9FC3D4; max-width: 46ch">Done when the power curve plateaus at rated speed and matches the reference within 5 %.</p>
+</div>
+<span style="flex: none; font-size: 13px; color: #4FD8FF; border: 1px solid rgba(79,216,255,0.4); border-radius: 999px; padding: 6px 12px">14:00 to 15:30</span>
+</div>
+<div style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 48px">
+<svg width="400" height="400" viewBox="0 0 440 440" role="img" aria-label="41 minutes 8 seconds left of a 90 minute block, 54 percent done">
+<defs><mask id="stkProg"><circle class="stk-arc" cx="220" cy="220" r="170" fill="none" stroke="#fff" stroke-width="30" stroke-dasharray="1068 1068" stroke-dashoffset="491" transform="rotate(-90 220 220)"></circle></mask></defs>
+<g class="stk-ticks"><circle cx="220" cy="220" r="206" fill="none" stroke="#4FD8FF" stroke-opacity="0.35" stroke-width="6" stroke-dasharray="1.5 10.4"></circle></g>
+<circle cx="220" cy="220" r="170" fill="none" stroke="#4FD8FF" stroke-opacity="0.12" stroke-width="22" stroke-dasharray="20 6.7"></circle>
+<circle cx="220" cy="220" r="170" fill="none" stroke="#4FD8FF" stroke-width="22" stroke-dasharray="20 6.7" mask="url(#stkProg)"></circle>
+<circle cx="220" cy="220" r="138" fill="none" stroke="#4FD8FF" stroke-opacity="0.3" stroke-width="1"></circle>
+<circle cx="220" cy="220" r="132" fill="rgba(3,6,11,0.6)"></circle>
+<text x="220" y="228" text-anchor="middle" fill="#F2FBFF" font-family="Chakra Petch" font-weight="600" font-size="76" style="font-variant-numeric: tabular-nums">41:08</text>
+<text x="220" y="268" text-anchor="middle" fill="#7FA3B5" font-family="Sora" font-size="15">left in this block</text>
+</svg>
+<div style="display: flex; flex-direction: column; gap: 12px; width: 220px">
+<button class="stk-btn stk-primary" onClick="{{ toggleFocus }}" style="height: 56px; border-radius: 12px; border: none; background: #4FD8FF; color: #03060B; font: 600 17px 'Chakra Petch', sans-serif; cursor: pointer">{{ focusLabel }}</button>
+<button class="stk-btn" style="height: 48px; border-radius: 12px; border: 1px solid rgba(79,216,255,0.35); background: transparent; color: #CFE9F5; font: 500 15px Sora, sans-serif; cursor: pointer">Hold Enter to finish</button>
+<button class="stk-btn" style="height: 48px; border-radius: 12px; border: 1px solid rgba(79,216,255,0.2); background: transparent; color: #9FC3D4; font: 500 15px Sora, sans-serif; cursor: pointer">Pause</button>
+</div>
+</div>
+<div style="display: flex; gap: 32px; font-size: 14px; color: #9FC3D4; border-top: 1px solid rgba(79,216,255,0.16); padding-top: 18px">
+<span>Next: <span style="color: #E6F7FF">Football training at 16:00</span></span>
+<span>Then: <span style="color: #E6F7FF">Physics corrections at 19:00</span></span>
+</div>
+</section>
+<div class="stk-w" style="{{ widgetsStyle }}">
+<sc-if value="{{ show.day }}" hint-placeholder-val="{{ true }}">
+<section aria-label="Day" style="border: 1px solid rgba(79,216,255,0.2); border-radius: 18px; background: rgba(5,12,20,0.75); padding: 20px; display: flex; gap: 16px; align-items: center">
+<svg width="150" height="150" viewBox="0 0 200 200" role="img" aria-label="Today on a 24 hour dial">
+<circle cx="100" cy="100" r="80" fill="none" stroke="#4FD8FF" stroke-opacity="0.12" stroke-width="12"></circle>
+<circle cx="100" cy="100" r="80" fill="none" stroke="#5F7D8E" stroke-width="12" stroke-dasharray="136.1 502.7" transform="rotate(22.5 100 100)"></circle>
+<circle cx="100" cy="100" r="80" fill="none" stroke="#4FD8FF" stroke-width="12" stroke-dasharray="31.4 502.7" transform="rotate(120 100 100)"></circle>
+<circle cx="100" cy="100" r="80" fill="none" stroke="#5F7D8E" stroke-width="12" stroke-dasharray="41.9 502.7" transform="rotate(150 100 100)"></circle>
+<circle cx="100" cy="100" r="80" fill="none" stroke="#A6ECFF" stroke-width="4" stroke-dasharray="15.7 502.7" transform="rotate(195 100 100)"></circle>
+<line x1="100" y1="100" x2="48.9" y2="171.6" stroke="#FFB547" stroke-width="2"></line>
+<circle cx="100" cy="100" r="4" fill="#FFB547"></circle>
+</svg>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 14px; color: #9FC3D4">Free time left today</span>
+<span style="font-family: 'Chakra Petch', sans-serif; font-size: 36px; font-weight: 600; color: #F2FBFF">3 h 05 m</span>
+<span style="font-size: 13px; color: #7FA3B5">After the 30 min buffer before 23:00</span>
+</div>
+</section>
+</sc-if>
+<sc-if value="{{ show.momentum }}" hint-placeholder-val="{{ true }}">
+<section aria-label="Momentum" style="border: 1px solid rgba(79,216,255,0.2); border-radius: 18px; background: rgba(5,12,20,0.75); padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<h2 style="margin: 0; font-size: 15px; font-weight: 500; color: #CFE9F5">Focus this week</h2>
+<span style="font-family: 'Chakra Petch', sans-serif; font-size: 26px; font-weight: 600; color: #F2FBFF">17.8 h</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; align-items: end; height: 84px">
+<sc-for list="{{ bars }}" as="b" hint-placeholder-count="7">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end">
+<div title="{{ b.title }}" style="{{ b.style }}"></div>
+<span style="font-size: 11px; color: #7FA3B5">{{ b.day }}</span>
+</div>
+</sc-for>
+</div>
+<span style="font-size: 13px; color: #9FC3D4">4-day streak · estimates running 12 % long</span>
+</section>
+</sc-if>
+<sc-if value="{{ show.notes }}" hint-placeholder-val="{{ true }}">
+<section aria-label="Notes" style="border: 1px solid rgba(79,216,255,0.2); border-radius: 18px; background: rgba(5,12,20,0.75); padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 500; color: #CFE9F5">Thinking space</h2>
+<p style="margin: 0; font-size: 14px; line-height: 1.55; color: #E6F7FF">Cp drops hard past 12 m/s. Ramp pitch from 10 m/s and compare.</p>
+<p style="margin: 0; font-size: 14px; line-height: 1.55; color: #9FC3D4">Tip-speed ratio clamp at cut-in?</p>
+</section>
+</sc-if>
+<sc-if value="{{ show.wellness }}" hint-placeholder-val="{{ true }}">
+<section aria-label="Wellness" style="border: 1px solid rgba(255,181,71,0.45); border-radius: 18px; background: rgba(255,181,71,0.07); padding: 20px; display: flex; align-items: center; gap: 16px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M17 8h1a4 4 0 1 1 0 8h-1"></path><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path><path d="M6 2v3M10 2v3M14 2v3"></path></svg>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 15px; color: #FFD9A0">82 min without a break</span>
+<span style="font-size: 13px; color: #C9A878">Take 10 minutes when this block ends at 15:30.</span>
+</div>
+</section>
+</sc-if>
+</div>
+</div>
+<button class="stk-btn" style="height: 52px; border-radius: 14px; border: 1px solid rgba(79,216,255,0.28); background: rgba(5,12,20,0.85); color: #7FA3B5; font: 400 15px Sora, sans-serif; display: flex; align-items: center; gap: 12px; padding: 0 20px; cursor: text; text-align: left">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4FD8FF" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+<span style="flex: 1">Ask JARVIS, add a task or search</span>
+<span style="font-size: 13px; color: #5F7D8E">Ctrl K</span>
+</button>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { focus: false, show: { day: true, momentum: true, notes: true, wellness: true } }; }
+  renderVals() {
+    const s = this.state;
+    const names = [['day', 'Day'], ['momentum', 'Momentum'], ['notes', 'Notes'], ['wellness', 'Wellness']];
+    const chips = names.map(([k, label]) => {
+      const on = s.show[k];
+      return {
+        label, pressed: on ? 'true' : 'false',
+        style: 'height: 34px; padding: 0 14px; border-radius: 999px; cursor: pointer; font: 500 13px Sora, sans-serif; border: 1px solid ' + (on ? '#4FD8FF' : 'rgba(79,216,255,0.22)') + '; background: ' + (on ? 'rgba(79,216,255,0.14)' : 'transparent') + '; color: ' + (on ? '#E6F7FF' : '#6F8C9C'),
+        toggle: () => this.setState({ show: Object.assign({}, s.show, { [k]: !on }) })
+      };
+    });
+    const data = [['Thu', 2.5], ['Fri', 1.0], ['Sat', 4.2], ['Sun', 3.1], ['Mon', 2.0], ['Tue', 3.6], ['Wed', 1.4]];
+    const bars = data.map(([day, h], i) => ({
+      day, title: day + ': ' + h + ' h',
+      style: 'width: 100%; border-radius: 4px; height: ' + Math.round(h / 4.5 * 64) + 'px; background: ' + (i === 6 ? '#4FD8FF' : 'rgba(79,216,255,0.35)')
+    }));
+    return {
+      chips, bars, show: s.show,
+      focusLabel: s.focus ? 'Leave focus' : 'Enter focus',
+      toggleFocus: () => this.setState({ focus: !s.focus }),
+      widgetsStyle: 'display: flex; flex-direction: column; gap: 16px; min-height: 0; ' + (s.focus ? 'opacity: 0.18; filter: blur(1.5px) saturate(0.4);' : 'opacity: 1;')
+    };
+  }
+}
+</script>
+</body>
+</html>

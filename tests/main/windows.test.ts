@@ -1,26 +1,30 @@
-// Widget docking maths and Firebase config discovery (no Electron needed).
+// Window placement maths and Firebase config discovery (no Electron needed).
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { dockBounds, WIDGET_H, WIDGET_W } from '../../src/main/windows/widget';
+import { OPEN, overlayBounds, PILL } from '../../src/main/windows/overlay';
+import { NOTEPAD, notepadBounds, PALETTE, paletteBounds } from '../../src/main/windows/popup';
 import { readFirebaseConfig } from '../../src/main/config';
 
-const bottom = { bounds: { x: 0, y: 0, width: 1920, height: 1080 }, workArea: { x: 0, y: 0, width: 1920, height: 1032 } };
+const wa = { x: 0, y: 0, width: 1920, height: 1032 };
 
-describe('dockBounds', () => {
-  it('docks in the taskbar free left slot, vertically centred', () => {
-    expect(dockBounds(bottom, 'taskbar-left', null)).toEqual({ x: 12, y: 1032 + 2, width: WIDGET_W, height: WIDGET_H });
+describe('window placement', () => {
+  it('overlay sits bottom-left and grows upward, keeping its bottom edge', () => {
+    const c = overlayBounds(wa, false);
+    const o = overlayBounds(wa, true);
+    expect(c).toEqual({ x: 16, y: 1032 - 16 - PILL.height, ...PILL });
+    expect(o.y + o.height).toBe(c.y + c.height);
+    expect(o.height).toBe(OPEN.height);
   });
-  it('docks right of centre, leaving room for the tray', () => {
-    expect(dockBounds(bottom, 'taskbar-right', null).x).toBe(1920 - WIDGET_W - 320);
+  it('overlay follows a work area that does not start at the origin', () => {
+    expect(overlayBounds({ x: 60, y: 40, width: 1000, height: 600 }, false)).toMatchObject({ x: 76, y: 40 + 600 - 16 - PILL.height });
   });
-  it('falls back to free at top-left for an auto-hidden or side taskbar, and clamps saved positions', () => {
-    const autoHide = { bounds: bottom.bounds, workArea: bottom.bounds };
-    expect(dockBounds(autoHide, 'taskbar-left', null)).toMatchObject({ x: 12, y: 12 });
-    const side = { bounds: bottom.bounds, workArea: { x: 60, y: 0, width: 1860, height: 1080 } };
-    expect(dockBounds(side, 'taskbar-left', null)).toMatchObject({ x: 72, y: 12 });
-    expect(dockBounds(bottom, 'free', { x: 5000, y: -50 })).toMatchObject({ x: 1920 - WIDGET_W, y: 0 });
+  it('notepad is top-right and the palette is centred', () => {
+    expect(notepadBounds(wa)).toEqual({ x: 1920 - NOTEPAD.width - 16, y: 16, ...NOTEPAD });
+    const p = paletteBounds(wa);
+    expect(p.x * 2 + PALETTE.width).toBe(1920);
+    expect(p.y).toBe(Math.round(1032 * 0.2));
   });
 });
 

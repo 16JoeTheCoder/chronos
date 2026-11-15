@@ -1,9 +1,11 @@
-// The Chronos data model (schema v2). Pure types shared by core, main, preload and renderer.
+// The Chronos data model (schema v3). Pure types shared by core, main, preload and renderer.
 // Every synced entity extends Base and is written only through core/repo, which
 // stamps updatedAt/deviceId/v. DeviceSettings is local to one machine and never synced.
 
+import type { ParserRule } from '../parser/types';
+
 /** The schema this build reads and writes. A pulled record with a higher `v` puts sync in read-only mode (D-104). */
-export const SCHEMA_V = 2;
+export const SCHEMA_V = 3;
 
 export interface Base {
   id: string;
@@ -171,9 +173,11 @@ export interface CalEvent extends Base {
   tagId: string | null;
   scope: Scope;
   tz: string;
-  /** Minutes from local midnight in tz. */
-  startMin: number;
-  endMin: number;
+  /** Minutes from local midnight in tz. Both null = unplaced ("to place"): a one-off event that has a date and a length but no time yet. */
+  startMin: number | null;
+  endMin: number | null;
+  /** Length in minutes (default 60). A placed event keeps it equal to endMin - startMin; placing an unplaced one uses it. */
+  durationMin: number;
   /** One-off date, or null for a recurring event. */
   date: string | null;
   recur: Recurrence | null;
@@ -229,6 +233,8 @@ export interface Idea extends Base {
   text: string;
   body: string;
   taskId: string | null;
+  /** The project this note belongs to (v3), or null. */
+  projectId: string | null;
   reviewed: boolean;
   /** Tasks the Phase 2 parser made from this note. */
   parsedTaskIds: string[];
@@ -276,6 +282,45 @@ export interface TimeLeftVariants {
   mealReserveMin: number;
 }
 
+export interface ThemeScheduleEntry {
+  from: string;
+  themeId: string;
+}
+export interface SoundSettings {
+  enabled: boolean;
+  /** 0-1 */
+  volume: number;
+  muteInFocus: boolean;
+}
+/** `motion` false forces every effect off. */
+export interface EnergySettings {
+  livingReactor: boolean;
+  holographicDepth: boolean;
+  reactiveData: boolean;
+  motion: boolean;
+}
+export interface WidgetSettings {
+  day: boolean;
+  momentum: boolean;
+  notes: boolean;
+  wellness: boolean;
+}
+export interface ParserReport {
+  at: number;
+  input: string;
+  expected: string;
+  actual: string;
+}
+export const PARSER_REPORTS_MAX = 200;
+export interface PlanningSettings {
+  /** Block length for a task with no estimate. */
+  defaultBlockMin: number;
+  /** Use the median of recent finished same-project/tag tasks as the estimate. */
+  learnEstimates: boolean;
+  /** Offer a break when a block ends after this many minutes of continuous focus. */
+  breakAfterMin: number;
+}
+
 export interface Settings extends Base {
   displayName: string;
   timezone: string;
@@ -291,13 +336,22 @@ export interface Settings extends Base {
   checkpointEveryMin: number;
   holidaysEnabled: boolean;
   theme: 'dark' | 'light' | 'system';
-  /** Phase 3 themes; unused by the UI yet. */
   themeId: string;
+  /** Switch themes by time of day: at `from` (HH:MM, local) the theme becomes `themeId`. Empty = manual. */
+  themeSchedule: ThemeScheduleEntry[];
+  /** Weekly focus goal in hours. */
+  weeklyFocusTargetH: number;
+  sound: SoundSettings;
+  energy: EnergySettings;
+  widgets: WidgetSettings;
+  /** The misparse loop (docs/parser): newest last, capped at PARSER_REPORTS_MAX, oldest dropped. */
+  parserReports: ParserReport[];
+  planning: PlanningSettings;
   customTheme: Record<string, string> | null;
   /** Drag snap in minutes (5/10/15/30); unused by the UI yet. */
   snapMin: number;
   /** Phase 2 parser keywords; empty now. */
-  parserRules: { keyword: string; kind: 'fixed' | 'task' }[];
+  parserRules: ParserRule[];
   accent: string | null;
   runwayPosition: 'top' | 'bottom';
   reduceMotion: boolean | null;
@@ -310,12 +364,20 @@ export interface DeviceSettings {
   launchAtLogin: boolean;
   skipLaunchScreen: boolean;
   widgetDock: 'taskbar-left' | 'taskbar-right' | 'free';
+  /** "Live on the desktop": Home sits behind the desktop icons (Windows only; falls back to a normal window). */
+  liveOnDesktop: boolean;
+  /** The overlay hides while another app is full-screen. */
+  overlayHideInFullscreen: boolean;
   widgetPos: { x: number; y: number } | null;
   shortcuts: { toggle: string; startPause: string; capture: string };
   displayId: number | null;
   stackFolder: string | null;
   sound: boolean;
   notifications: boolean;
+  /** The project the quick-add composer files into by default (v3), or null. */
+  composerProjectId: string | null;
+  /** This device has been through onboarding (v3). */
+  onboarded: boolean;
   /** Show the Diagnostics section (per device). */
   experimental: boolean;
   /** Local MCP endpoint for Claude Desktop (127.0.0.1 only). */
@@ -346,7 +408,7 @@ export const COLLS: Coll[] = ['tasks', 'events', 'eventExceptions', 'closures', 
 export type Rec<C extends Coll = Coll> = Collections[C];
 
 /** All synced state. timer and settings each hold exactly one doc ('current', 'main'). */
-export type Data = { schema: 2 } & { [C in Coll]: Record<string, Collections[C]> } & {
+export type Data = { schema: 3 } & { [C in Coll]: Record<string, Collections[C]> } & {
   /** Purge stubs, kept so an offline device cannot resurrect deleted records. */
   tombs: Partial<Record<Coll, Record<string, Stub>>>;
 };

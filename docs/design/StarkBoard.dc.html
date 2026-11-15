@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Project board</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&amp;family=Sora:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#4FD8FF}
+.kb-ghost:hover{border-style:solid}
+.kb-btn:focus-visible,.kb-ghost:focus-visible,a:focus-visible{outline:2px solid #4FD8FF;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; background: #03060B radial-gradient(circle at 60% 30%, rgba(79,216,255,0.10), rgba(3,6,11,0) 55%); font-family: Sora, system-ui, sans-serif; color: #CFE9F5; display: flex; overflow: hidden">
+<nav aria-label="Projects" style="width: 280px; background: rgba(3,6,11,0.9); border-right: 1px solid rgba(79,216,255,0.18); padding: 36px 18px; display: flex; flex-direction: column; gap: 4px">
+<h1 style="margin: 0 0 20px 14px; font-family: 'Chakra Petch', sans-serif; font-size: 32px; font-weight: 600; color: #F2FBFF">Projects</h1>
+<a href="#" aria-current="page" style="padding: 12px 14px; border-radius: 10px; text-decoration: none; display: flex; justify-content: space-between; font-size: 15px; background: rgba(79,216,255,0.12); color: #F2FBFF; font-weight: 600"><span>Wind farm simulator</span><span style="font-size: 13px">7 tasks</span></a><a href="#"  style="padding: 12px 14px; border-radius: 10px; text-decoration: none; display: flex; justify-content: space-between; font-size: 15px; color: #9FC3D4"><span>Coding club</span><span style="font-size: 13px">5 tasks</span></a><a href="#"  style="padding: 12px 14px; border-radius: 10px; text-decoration: none; display: flex; justify-content: space-between; font-size: 15px; color: #9FC3D4"><span>Greenmech</span><span style="font-size: 13px">9 tasks</span></a><a href="#"  style="padding: 12px 14px; border-radius: 10px; text-decoration: none; display: flex; justify-content: space-between; font-size: 15px; color: #9FC3D4"><span>Chronos</span><span style="font-size: 13px">12 tasks</span></a>
+<button class="kb-ghost" style="margin-top: 12px; height: 44px; border-radius: 10px; border: 1px dashed rgba(79,216,255,0.22); background: transparent; color: #9FC3D4; font: 500 14px Sora, sans-serif">New project</button>
+</nav>
+<main style="flex: 1; min-width: 0; padding: 36px 40px; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; align-items: flex-end; gap: 24px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 6px">
+<h2 style="margin: 0; font-family: 'Chakra Petch', sans-serif; font-size: 44px; font-weight: 600; line-height: 1; color: #F2FBFF">Wind farm simulator</h2>
+<span style="font-size: 15px; color: #9FC3D4">2 of 6 done · 3 h 45 m estimated left · 1 h 30 m planned today</span>
+</div>
+<div role="tablist" aria-label="View" style="display: flex; border: 1px solid rgba(79,216,255,0.22); border-radius: 10px; overflow: hidden">
+<button role="tab" aria-selected="true" style="height: 40px; padding: 0 18px; border: none; background: #4FD8FF; color: #03060B; font: 600 14px Sora, sans-serif">Board</button>
+<button role="tab" aria-selected="false" style="height: 40px; padding: 0 18px; border: none; background: transparent; color: #9FC3D4; font: 500 14px Sora, sans-serif">List</button>
+</div>
+</div>
+<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start"><section aria-label="To do" style="border-radius: 16px; background: rgba(5,12,20,0.75); padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0"><div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-family: 'Chakra Petch', sans-serif; font-size: 22px; font-weight: 600; color: #F2FBFF">To do</h2><span style="font-size: 13px; color: #9FC3D4">3</span></div><article style="border-radius: 14px; border: 1px solid rgba(79,216,255,0.22); background: rgba(79,216,255,0.05); padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 16px; font-weight: 500; color: #F2FBFF; line-height: 1.35">Find NREL 5 MW power curve data</span><div style="display: flex; gap: 14px; font-family: Sora; font-size: 13px; color: #9FC3D4"><span>45 m</span><span>Tomorrow</span></div></article><article style="border-radius: 14px; border: 1px solid rgba(79,216,255,0.22); background: rgba(79,216,255,0.05); padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 16px; font-weight: 500; color: #F2FBFF; line-height: 1.35">Tip-speed ratio clamp at cut-in</span><div style="display: flex; gap: 14px; font-family: Sora; font-size: 13px; color: #9FC3D4"><span>30 m</span></div></article><article style="border-radius: 14px; border: 1px solid rgba(79,216,255,0.22); background: rgba(79,216,255,0.05); padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 16px; font-weight: 500; color: #F2FBFF; line-height: 1.35">Write validation section</span><div style="display: flex; gap: 14px; font-family: Sora; font-size: 13px; color: #9FC3D4"><span>1 h 30 m</span><span>Fri 14 Nov</span></div></article><button class="kb-ghost" style="height: 44px; border-radius: 10px; border: 1px dashed rgba(79,216,255,0.22); background: transparent; color: #9FC3D4; font: 500 14px Sora, sans-serif; text-align: left; padding: 0 14px">Add a task to this project</button></section><section aria-label="Doing" style="border-radius: 16px; background: rgba(5,12,20,0.75); padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0"><div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-family: 'Chakra Petch', sans-serif; font-size: 22px; font-weight: 600; color: #F2FBFF">Doing</h2><span style="font-size: 13px; color: #9FC3D4">1 of 1, the focus slot</span></div><article style="border-radius: 14px; border: 2px solid #4FD8FF; background: rgba(79,216,255,0.12); padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 16px; font-weight: 500; color: #F2FBFF; line-height: 1.35">Blade pitch model</span><div style="display: flex; gap: 14px; font-family: Sora; font-size: 13px; color: #9FC3D4"><span>1 h 30 m</span><span>Today</span></div><button class="kb-btn" style="height: 40px; border-radius: 10px; border: none; background: #4FD8FF; color: #03060B; font: 600 15px 'Chakra Petch', sans-serif">Enter focus</button></article><p style="margin: 0; font-size: 13px; line-height: 1.5; color: #9FC3D4">Dropping another card here swaps it with this one. One task at a time.</p></section><section aria-label="Done" style="border-radius: 16px; background: rgba(5,12,20,0.75); padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0"><div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-family: 'Chakra Petch', sans-serif; font-size: 22px; font-weight: 600; color: #F2FBFF">Done</h2><span style="font-size: 13px; color: #9FC3D4">2</span></div><article style="border-radius: 14px; border: 1px solid rgba(79,216,255,0.22); background: rgba(79,216,255,0.05); padding: 16px; display: flex; flex-direction: column; gap: 10px; opacity: 0.7"><span style="font-size: 16px; font-weight: 500; color: #F2FBFF; line-height: 1.35">Rotor geometry import</span><div style="display: flex; gap: 14px; font-family: Sora; font-size: 13px; color: #9FC3D4"><span>1 h</span><span>Mon</span></div></article><article style="border-radius: 14px; border: 1px solid rgba(79,216,255,0.22); background: rgba(79,216,255,0.05); padding: 16px; display: flex; flex-direction: column; gap: 10px; opacity: 0.7"><span style="font-size: 16px; font-weight: 500; color: #F2FBFF; line-height: 1.35">Wind speed distribution (Weibull)</span><div style="display: flex; gap: 14px; font-family: Sora; font-size: 13px; color: #9FC3D4"><span>2 h</span><span>Tue</span></div></article></section></div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

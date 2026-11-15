@@ -432,7 +432,7 @@ export class Controller {
     this.notifyTimer(res.events);
     // Timer and session changes persist immediately; planning edits are debounced.
     this.changed(cmd.type === 'timer' || cmd.type.startsWith('task.') || cmd.type === 'sprint.checkpoint');
-    return { ok: true, id: res.id };
+    return { ok: true, id: res.id, undo: res.undo };
   }
 
   /** Recent JSON of everything synced, for Settings → Data → Export. */

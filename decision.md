@@ -192,3 +192,151 @@ If `settings/main` or `timer/current` fails validation at load, it is quarantine
 
 ### D-126 Fixes from the Phase 1 test pass
 The test suite found four bugs, all fixed with regression tests: (1) appended sortKeys grew a character every ~6 appends and failed validation after ~385 tasks: appending now bumps the first bumpable digit (one character per ~61 appends), migration/import keys are balanced and equal-length, and the length limit is 512; (2) `SyncEngine.start()` did not reset seeding, so switching account in one run never uploaded existing data; (3) restoring a snapshot dropped records made after it without syncing that: they are now recycled, so the restore reaches every device; (4) the MCP bridge said "not running" instead of "the integration is off" on a fresh install.
+
+
+## Phase 2+3, checkpoint A (schema v3 and planning)
+
+### D-127 Schema v3 reuses the Phase 1 version gate
+`SCHEMA_V` is 3 and `Data.schema` is 3. `migrate()` accepts schema 1, 2 and 3 and runs v1 -> v2 -> v3 per record (`upgradeRecord`): it only adds missing v3 fields (event `durationMin`, note `projectId`, block `auto`, the new settings, filled deep from defaults) and never rewrites a value that is there, so it is lossless and idempotent (tests/core/migrateV3.test.ts on `tests/fixtures/v2-josef.json`). Every record is stamped `v: 3`, so a Phase 1 client (accepts `v <= 2`) sees a newer record and goes read-only (D-104) instead of writing v2 shapes over v3 data. A record pulled from a v2 device (a new event without `durationMin`) is upgraded in `mergeRemote` before validation rather than quarantined. A newer file (schema 4) is refused (`migrate` returns null). There is no cross-midnight flag in the model, so `endMin > startMin` still always holds for placed events; the PHASE23 wording "unless the cross-midnight flag is set" is not implemented (nothing can create such an event).
+
+### D-128 Unplaced events ("to place")
+`CalEvent.startMin` and `endMin` are both null or both set (validators and `recordProblem`); only a one-off event (`date` not null) may be unplaced. `durationMin` (default 60) is the length: a placed event keeps it equal to `endMin - startMin` (event.create/update set it), an unplaced one uses it. `expandEvents` skips events without times, so gaps, time left, prep nudges and `upcoming` ignore them; `unplacedOn(d, date)` is the tray. Command `event.place {id, startMin}` sets `startMin` and `endMin = startMin + durationMin` (refuses past midnight and an event that already has a time). An edit exception cannot make a recurring event unplaced.
+
+### D-129 New settings and device fields
+Synced settings: `themeSchedule`, `weeklyFocusTargetH`, `sound`, `energy`, `widgets`, `parserReports`, `planning` (defaults as in the prompt), all validated in `validateSettings`. `parserReports` is newest-last, capped at 200 by the `parser.report` command and by `migrate`; each string is cut to 300/500/500 characters (input/expected/actual) so 200 reports stay far below Firestore's 1 MiB document limit. Device settings gain `composerProjectId` and `onboarded`. The synced `Settings.onboarded` from v2 is kept as is (the schedule setup guide still uses it); the device flag is the per-machine onboarding.
+
+### D-130 MCP: Log tools, and the parser hook for add_task is left open
+Added `post_log {body, projectId?}` (a note via `idea.add`, now with `projectId`), `search_log {query}` (notes only), `list_unplaced {date?}` (omitted date = every unplaced event from today on) and `place_event {eventId, startMin}` (refused with the reason on overlap, like `place_block`). `get_day` also returns `unplaced`. Safety rules unchanged: no hard deletes, 30 writes a minute, undo tokens. The parser-backed `text` argument of `add_task` is not wired yet: there is a TODO(D-130) at the top of the `add_task` handler. The hub adds the argument to the tool schema, calls `parse` with `source: 'claude'` and, if confidence is not high, returns the parse for Claude to confirm.
+
+### D-131 Estimates
+`estimateFor(d, task)`: the task's own estimate; else, with `planning.learnEstimates`, the median actual focus time (the larger of `workMs` and its work sessions) of the last 5 finished tasks (not killed, with a measured time above 0) that share the project or the tag, when there are at least 3, rounded to 5 minutes and kept within 5-480; else `planning.defaultBlockMin`. Tasks without a project and tag never learn.
+
+### D-132 Auto-plan
+Free time comes from `timeLeft` (fixed events padded by the transition variant, the meal reserve, the gap filter, the end-of-day buffer, every existing block), starting at `now` snapped up to `snapMin` for today and at the day start for later days. "Prep" in the prompt is read as that padding, not as prep nudges. Candidates: open tasks that were not started and have no block on that date or later, ordered by priority, due date (none last), `sortKey`, id. First fit, no splitting: a task longer than every remaining gap is reported as unplaced and a shorter one behind it may still fit. Blocks are `auto: true` with the deterministic id `ab-<taskId>-<date>`, so two devices planning the same morning write one block and running it twice adds nothing. It never reads or touches a manual block.
+
+### D-133 Re-plan
+Movable = auto blocks of today that have already ended, whose task is open and was never started. They are lifted out, then placed again in their original order into the gaps from now on; a block that finds no room stays where it is (the end-of-day review still sees its task). In-progress, started, finished and future auto blocks and every manual block are untouched.
+
+### D-134 End-of-day review
+Asked: open tasks with a block on the day, or due on or before it, except the task being timed right now and overdue tasks already answered "unscheduled" in an earlier review. Due at `dayEndMin - bufferMin`, or on demand. `review.submit {date, outcomes}` applies the answers (done = finish, dropped = close with a fixed reason, unscheduled = remove the day's blocks, tomorrow = remove them and place the task as an auto block next day if it fits, else it stays unscheduled), then writes `reviews/review-<date>`; its existence on any device means reviewed, so nobody is asked twice and a second submit is refused. Answering a subset is allowed; the rest are not asked again. A finished task keeps its block as history.
+
+### D-135 Wellness
+`breakDue(d, now, shown)`: continuous focus = work sessions plus the slice running now, merged across gaps shorter than 5 minutes (a 5-minute gap counts as a break taken). The prompt is for a block that ended at most 10 minutes ago, whose chain was at least `breakAfterMin` long at the block's end, only while no block is in progress (back-to-back blocks suppress it) and not after 5 quiet minutes. Which prompts were shown is device-local, passed in by the caller.
+
+### D-136 Planning commands are one commit and one undo
+`plan.auto`, `plan.replan`, `review.submit` return `undo: RevertOp[]` (the previous values of exactly the fields they changed, from `core/undo.revertOpsBetween`, the same function the MCP undo tokens use). Passing it to `records.revert` undoes the whole command as one action. `records.revert` is internal and is not parsed from IPC (it would let a renderer write arbitrary fields), so the UI must keep the ops in main behind a token like the MCP does, or main exposes a `plan.undo`. `Result.id` carries the count placed/moved (`plan.*`) or the review id.
+
+### D-137 Audit changes
+New rule: no Electron or Node imports or APIs in `src/core/parser`. `chrono-node` is allowed as an import inside `src/core/parser` only and in the dependency allowlist (pinned, D13 of the parser notes), and `@fontsource/*` packages are allowed (fonts are never loaded from a CDN). The "typed finish phrase is gone" check is unchanged; `docs/PHASE23_PROMPT.md` was reworded so it no longer quotes the old sentence.
+
+### D-138 Firestore rules for v3
+Rules stay generic per collection, plus a `shape()` check for the v3 fields: event `durationMin` an int 1-1440 and times both null or both set, note `projectId` a string or null, block `auto` a bool, settings lists/maps for `themeSchedule` (<= 24), `parserReports` (<= 200), `sound`, `energy`, `widgets`, `planning`, and `weeklyFocusTargetH` a number 0-168. Absent fields pass, so documents from v2 devices are still writable. Not run against the emulator (D-124); the manual rule checks in docs/SYNC.md still apply.
+
+# Parser
+
+# decision.md (parser)
+
+What was decided mid-design. Each item overrides the matching line in CHRONOS_PARSER_REQUIREMENTS.md. Josef confirmed D1-D12 in chat on 2026-11-14; D13-D15 are proposals that need his OK.
+
+## Confirmed by Josef
+
+**D1. No default length for fixed events.** A fixed event with a start and no end is saved start-only; the UI asks for the end. Exceptions live in the pack as `defaultDurationMin`: `call` = 30, `class` = 60 (fallback only). Josef can add more per word.
+
+**D2. Class length comes from the schedule.** Order: (1) an entry in `ctx.timetable` for that weekday starting at that time, so double periods fall out for free (Mon P1-2 Math = 07:45-09:05); (2) a bell start in `ctx.bells` = one period (40 min); (3) the pack default (60). Typing "double" extends to two periods. Two new ParseContext fields: `bells`, `timetable`. The one-day edit or skip of a timetable entry is a Chronos feature; the parser just receives that day's version.
+
+**D3. "by" and "due" beat fixed keywords.** `Call mom by 8pm` is a task due 20:00. `by <name>` is not a deadline (`finish design request by ko dieky`).
+
+**D4. Start + length = fixed**, with or without "for": `Gym workout 90 mins 4pm`, `call oma 4pm for 1h`, `2hrs sleep nap 2pm`. A range also makes it fixed and beats a task keyword (`Study with Mr. Tjong at 10to1pm`).
+
+**D5. Passed times.** Tasks keep their date (today); the end-of-day review asks "done?". Fixed events are kept and get a warning. Replaces "move to tomorrow".
+
+**D6. A bare number is never a time.** It is a time only with am/pm or a colon (`4pm`, `4:30`, `16:00`), after `at`, `@`, `by`, `due`, `from`, `till`, `until`, or as a valid clock range next to a time word or fixed keyword (`10-1`, `4-6`). `math hw 5` keeps the 5 in the title. `pages 10-20` is not a range of times. Removes spec rule 6(d).
+
+**D7. "tonight" = today, no time.** It queues the item for today. Replaces "start 18:00". So `dinner tonight` is a task today (a fixed word with a date only is a task).
+
+**D8. Event words.** Added to the pack: workout, gym, meet, padel, birthday, restaurant. `test` and `exam` are date-only event words: `Math test tomorrow!` is a fixed all-day reminder, not a task. A task keyword wins over them: `Study for magnets test on this fri` stays a task. ASSUMPTION TO CHECK: the v2 data model must allow a fixed event with no time. Read `types.ts` first; if it does not, ask Josef.
+
+**D9. Fixed word + date only = task** (`go to church tmr`, `gym next mon`).
+
+**D10. Notes vs tasks.** Prefix `note ` or `//` always wins. In quick-add, bias to task. A line is a task if it starts with a verb from the lexicon, has a task keyword, or carries a time, duration, priority or project. A line is a note when it has none of those and starts with a hedge, first-person or function word, or is sentence-like (>= 6 words with >= 2 function words). Notes keep the raw text: nothing is consumed (`tdy` stays). Uncertain cases get `confidence: low` and the other kind as `alternatives[0]`. Replaces ">12 words". Thresholds live in `lexicon.en.json` and are tuned on the corpus.
+
+**D11. Fuzzy matching is conservative.** Only inside a number+unit or a date/time slot. Collapse repeated letters first, same first letter, max edit distance 1 (targets up to 5 letters) or 2 (6+), keyboard-neighbour or one stray punctuation character counts as 1. Never correct a real word: generate `neverCorrect` at build time by checking every target against a common-word list. The chip shows the corrected meaning; the user's typed text is never rewritten.
+
+**D12. Cleanup of the title.** Consumed spans also remove adjacent `at/on/by/due/for`, the day parts `morning/afternoon/evening`, and `in the morning of`. A leading `in` is dropped after a removed duration (`2hrzz in mechanical engineering prep`). Only `for <duration>` is consumed (`for shorts` stays). `in Kopi Kenangan` is never `in N days`. Letter/digit glue is split (`10to1pm`, `mom4pm`, `3pages`); letters-only glue is not (`keyboardthis`).
+
+## Proposed, needs Josef's OK
+
+**D13. Project words.** Consume a project word only at the start of the line, or right before a priority marker at the end, or with a `#` prefix. Mid-line it stays plain text and sets no project. This is the rule that makes all confirmed corpus lines consistent (`Finish Chronos Build`, `Meeting with SC`, `work on sc draft proposal` keep the word; `sc budget draft !2 tmr`, `greenmech build robot arm`, `fix parser bug chronos !1` consume it). If consuming would leave the title empty, keep the word (`greenmech 3pm to 4:30pm friday`).
+
+**D14. Corpus size.** Josef cannot hand-write 150 lines. Shipped 117: crucial categories are his own words, the grammar categories (4-6 each) are Claude drafts he confirmed. This is below the spec's 10 per category. Make up the difference through the misparse loop (D15).
+
+**D15. Misparse loop.** The quick-add has a "Report misparse" action: it stores the input, what Josef expected, and what the parser produced in synced settings. Claude reads these, adds the line to `corpus.txt`, and ships a pack or lexicon update. Most fixes are data, not code. A fix may not break any older corpus line.
+
+## Decided 2026-11-14 (Phase 2+3 planning chat)
+
+**D13 revised (replaces the proposal).** Any project word anywhere in the line sets the project; the word stays in the title. Only `#name` is removed from the title.
+
+**D16. Tests and exams use the timetable.** `<subject> test|exam <date>`: if that day's timetable has a period whose title matches the subject (case-insensitive, prefix/alias match, e.g. "math" = "Math"), the event takes that period's start and end (first match). If not, it is a fixed event on that date with no time yet and a 60 min duration ("to place"), which the user drags onto the timeline. Replaces "all day" in D8. Needs the CalEvent schema change in the build prompt.
+
+**D17. 1 h default for every fixed event typed with a start and no end** (replaces D1). Exceptions: `call` = 30 min (pack), classes and timetable matches take the period length. The user adjusts by dragging.
+
+## Not decided / out of scope here
+- The schedule importer (PDF or image to LLM to JSON). Separate feature, built after the parser. The AI runs once at import time; the parser only reads the resulting JSON, so "no AI in the parse path" still holds.
+- "yesterday" handling, bare-hour rules (1-6 = pm, 7-11 next occurrence, 12 = noon), `half 5`, `quarter past 4`, `noon/midnight`, `1700`, `5.30`: no corpus lines yet. See `tests/parser/corpus.known-gaps.txt`.
+
+### D-139 Log: which lines become tasks
+Clear task lines are queued automatically on posting, with one Undo toast: an explicit prefix (`- `, `* `, `[] `, `[ ] `, `- [ ] `, `task `), or a high-confidence parse that has a task/fixed keyword and a date or time. Task/fixed parses that are less clear (no date/time, or medium confidence) get a faint "Add as task?" chip; note-kind and low-confidence lines stay text. At most 20 lines are auto-added per post (`core/log/lines.ts`). Fixed-event lines become tasks with due date/time, not events. Edits never auto-add (a half-typed `- c` must not become a task); unlinked task lines in an edited post show the chip.
+
+### D-140 Log: how a line links to its task (no schema change)
+`Idea.parsedTaskIds` (existing, validated by `isId`) holds `L<lineIndex>:<taskId>` per linked line; plain ids stay as unlinked tasks. Ticking never writes the note: a line is ticked exactly when its task is `done`, so card, Focus and Board cannot disagree. A checkbox click sends `task.finish` / `task.reopen`. When a post is edited, links are re-aligned by line text (`relink`); a link whose line stopped being a task line is dropped (the task stays). A recycled or dropped task shows the line without a checkbox and offers the chip again.
+
+### D-141 New command `idea.edit`
+`{ type: 'idea.edit', id, body?, projectId?, parsedTaskIds? }` in `core/commands.ts` (body trimmed, 1..20000 chars, `text` follows; unknown project and bad ids rejected). `src/main/ipc.ts` must parse it (not done by the Log owner): `case 'idea.edit'`: rid, optional `str(raw.body, 20_000)`, `nullableId(raw.projectId)`, `parsedTaskIds` as an array of up to 500 `isId` strings.
+
+### D-142 Log: search, edited flag, windowing
+`core/log/search.ts` runs MiniSearch on the words, then applies "phrases" (substring), `project:` (name prefix or id), `before:`/`after:` (exclusive, YYYY-MM-DD, `today`, `yesterday`, user zone) and `is:task`. The MCP `search_log` tool now calls the same function. "edited" shows when `updatedAt - createdAt > 60 s`; edits save 700 ms after typing stops (one `idea.edit`), and on blur, Done or Esc. The feed renders a window of rows from measured heights (no dependency). The composer project is the device's `composerProjectId`, set by the picker (`/p`, `/project`, Ctrl+Shift+P) and by the focused task's project; a project view fixes it.
+
+### D-143 Undo tokens held in main
+`records.revert` is not accepted over IPC (D-136). Results that carry `undo` ops (plan.auto, plan.replan, review.submit) are sealed in `src/main/undoTokens.ts`: the renderer gets `undoToken` (24 hex, one use, 60 s, newest 20 kept) and never the ops. `window.chronos.undo(token)` redeems it; the redeem result is sealed again, so Redo is possible. Notepad results reuse the same store and reach the toast as a `mcp.undo` token (main tries its own store first, then Claude's), so Home's existing toast code needs no change.
+
+### D-144 Desktop layer (Live on the desktop), SHIPPED OFF
+`src/main/desktopLayer.ts`, koffi lazy-loaded on win32 only and an esbuild external (the only new dependency, `koffi@3.3.8` pinned, plus `asarUnpack` for its native binary). Sends Progman 0x052C, finds the WorkerW (pre-24H2: the sibling after the one holding SHELLDLL_DefView; 24H2: WorkerW as a child of Progman), SetParent + MoveWindow, and forwards left-button/move/wheel from a WH_MOUSE_LL hook while the pointer is over the bare desktop. Esc on Home goes onto the layer; any show() detaches it into the normal window. Every failure logs and leaves a normal window. It cannot be tested here, so `liveOnDesktop` defaults to **false** (the spec said on by default); flip the default in `core/model/defaults.ts` after `docs/WINDOWS_CHECKLIST.md` "Desktop layer" passes. Mouse forwarding also forwards clicks on desktop icons to Chronos (no icon hit test). If Explorer restarts the WorkerW is destroyed with the window attached; restart Chronos.
+
+### D-145 Overlay, notepad, palette replace the widget and quick capture
+The taskbar widget window and quick capture are gone; `widgetDock`/`widgetPos` stay in the device schema, unused. One renderer page, `windows.html`, routed by hash (`#overlay`, `#notepad`, `#palette`). Overlay: `focusable:false` + `showInactive`, bottom-left, shown only while a task is in focus or a notice (with Undo) is up, hidden under a full-screen app (SHQueryUserNotificationState, device `overlayHideInFullscreen`, default on). Notepad: the old "capture" shortcut (default Ctrl+Alt+N) opens it; task notes autosave (600 ms), the general note is a per-device draft; on Esc lines starting with `- `, `task `, `@ ` go through `parseNotepad` and become records, the line is marked `[x] ` so it is not re-processed, one Undo toast. Palette: in-app `<Palette open onClose />` (Ctrl+K is wired by Home), global fixed `Ctrl+Alt+K`. Timetable and bells reach the parser from the renderer (`schedule/timetable`); MCP `add_task text` has no timetable, so a test/exam typed by Claude may come back unplaced.
+
+### D-146 Ask Claude
+Claude Desktop has no documented way to receive text from another app. The palette copies the text to the clipboard and opens `claude://`; if that fails it opens https://claude.ai/new. No MCP route: MCP is Claude calling Chronos, not the reverse.
+
+### D-147 Parser as a lazy chunk, `add_task text`, main budget 180 KB
+`dist/parser.js` (parser + chrono-node, 80 KB) is built like `dist/sync.js` and required on first use by MCP `add_task text`; core takes it as the injected `StorePort.parse`. `text` is parsed with source `claude`; only a high-confidence task is written, otherwise the parse is returned for Claude to confirm (`add_task` now requires `title` or `text`). The main bundle was already over 150 KB from checkpoint A/D code (planning, Log search pulls `core/parser` through `core/log/lines`); it is now ~172 KB, so the audit limit moves to 180 KB. chrono-node is not in it.
+
+### D-148 Settings: six sections plus Experimental, own controls
+`src/renderer/settings/*` replaces the twelve Phase 1 sections: Look and widgets, Day and planning (with Tags), Focus (timer defaults, overlay, shortcuts), Parser rules, School timetable, Account and sync (sign-in, this PC, Claude MCP, data, About), and Experimental (diagnostics, time-left maths). Rows use their own `st-*` controls styled only from theme tokens, so they follow the theme engine, not the legacy app.css. The legacy dark/light/system `theme` and `accent` fields are no longer editable (themeId replaces them). Exported: `Settings({ snap, onSchedule?, onClose?, section? })`.
+
+### D-149 Custom themes and the bell grid are device-local
+No synced field can hold a theme (`settings.customTheme` is a 64x64-character string map) or a bell grid. Imported themes (validated with `importTheme`, contrast shown, warnings need "Keep theme") are stored in this PC's localStorage (`chronos.customThemes.v1`) behind `useCustomThemes()`/`loadCustomThemes()` in `settings/customThemes.ts`; the hub passes them to `ThemeProvider`. The bell grid is `chronos.bells.v1`, read with `loadBells()`/`useBells()` in `schedule/timetable.ts`; `timetableFor(data, date)` gives the parser's per-day timetable (exceptions applied). Import/export use a file input and Blob download (api.ts has no dialog). Timetable seed data is copied into `schedule/timetableSeed.ts`; seeding is offered once on an empty timetable and only on a click.
+
+### D-150 Board: the focus slot is the column "doing"; a swap is two task.moveCard calls
+`src/core/board` is pure: `planMove` returns the moves and the reverse moves. The slot is the column with id (else name) "doing". Dropping on an occupied slot moves the holder to the dragged card's old place first, then the card in; Undo (toast) replays the reverse list. There is no batch command, so this is two commits, not one; a command `task.swapCard` would make it one. Moving a card does not change the task's status. Extra cards in the slot (after a sync or MCP edit) are flagged, not moved. Drag and drop is native HTML5; keyboard: Space picks up, arrows choose, Space drops, Escape cancels; the List view has a column select. `Board({ projectId?, onOpenLog?, onEnterFocus?, onOpenTask? })`.
+
+### D-151 Main-side gaps found by Settings
+`pickSettings` in main/ipc.ts does not pass `snapMin`, `parserRules` or `parserReports`, and `validateSettings` still checks `parserRules` as the Phase 1 `{keyword, kind}`. Until main accepts the parser's `ParserRule` shape and these three fields, the snap control, rule delete/import and "Clear reports" are wired (settings.update) but refused or ignored.
+
+### D-152 UI shell: rail, Home = Now, Plan and Focus one key away
+The renderer is a rail (Home, Board, Log, Settings) plus screens; Home shows one task (title, signature timer, Start/Pause, Hold Enter), Next and time left, with the widgets beside it. P opens the runway/plan view, F Focus, N new task, Ctrl+K palette, Ctrl+L Log, Ctrl+Z the latest undo. Board, Log and Palette are mounted by `import.meta.glob` from `../board/Board`, `../log/Log`, `../palette/Palette` so a missing file is a placeholder, not a build break. The old tokens.css palette is gone: only theme tokens (--c-*, --r-*, --font-*, --ease, --dur-*, --depth-*) style components; tokens.css keeps the tag palette (data colours) and derived aliases, and `public/boot.js` re-applies the last theme's variables before first paint (cached in localStorage; system colours on the very first launch). `npm run audit` now rejects hard-coded colours outside theme files.
+
+### D-153 Drag and drop model, undo and the three interruptions
+`runway/dnd.ts` is the pure model (snap to settings.snapMin, Alt = whole minutes, preview, intent per lane x item); `dropActions.ts` runs the commands with an explicit inverse for each, so a compound move (event to block, block to event, task to event) undoes as one toast. A moved recurring event asks "Just today" (event.editOn exception, default on Enter) or "Every week" (event.update). Unplaced events live in a "To place" tray; Enter places one in the first free gap (event.place). Only three things interrupt: an upcoming fixed event (heads-up strips), the end-of-day review (a dialog; Esc = later, once per session), and the break prompt (only when `breakDue` says so). The morning plan is a quiet card on Home, not an interruption; Enter accepts (plan.auto, undoable as one action).
+
+### D-154 Focus keys and the buffer cushion
+Space and hold-Enter are a window-level listener on Focus (`focus/keys.ts`), ignoring text fields, open dialogs and other focused controls, so they work with no click first. Space only toggles; Enter feeds the existing 2 s hold (early release drains). The cushion is the day-end buffer: full on time, shrinking with the larger of timer overtime and time past the block end, then "Buffer used up, N over".
+
+### D-155 Energy layers and moments
+Energy layers (living reactor, holographic depth, reactive data) apply to the reactor-ring (Stark) only, each behind its settings.energy switch and `data-motion="off"`. Tilt follows pointermove (no rAF), assembly is a CSS scan-line clip. Block start/finish moments are CSS/SVG overlays that never take input: Tactile has none (micro-interactions only), Stark follows StarkMoments, TARS the Flight bar and stamp, Gargantua the ring draw and flare. Sound cues fire on start/finish honouring settings.sound and muteInFocus, with or without motion. SignatureTimer's requestAnimationFrame was replaced by a timeout so the audit rule holds.
+
+### D-156 Audit: a folder import covers its index and re-exports
+`every core module has a test` now counts a test that imports a folder (`src/core/theme`) as importing `src/core/theme/index` and every module the index re-exports (`export ... from './x'`). A module the index does not re-export (parser `calendar` and `lexicon`) still needs its own import: `tests/parser/calendarLexicon.test.ts`. No rule was loosened for other modules. The Log screen's `requestAnimationFrame` calls became 16 ms timeouts (the "no rAF" rule stands) and the one computed colour string in `LookSection.tsx` carries `audit-allow`.
+
+### D-157 One Focus layout, container-sized timers
+Focus is a grid with areas top / stage / side / more / foot; no absolute positioning, so nothing can sit under anything. Stage is a flex column (meta, title, criterion, timer, cushion, hint) whose timer area takes the height left; the signature timer sits in a `.sig-slot` (`container-type: size`) and sizes itself from the slot (`cqw`/`cqh`), never overflowing. Home's hero uses the same slot. Single column for Gargantua and at 1000 px or narrower; the dimmed widgets are left out there. Tactile's hero sizes to its content. A smoke-only hook (`CHRONOS_SMOKE=1` exposes `openNotepad`/`openPalette` on `globalThis`) lets `scripts/smoke.mjs` open the popups, since global shortcuts cannot be pressed under Xvfb. Note: numbers D-312 to D-315 never existed in this file (the "main-side gaps" decision is D-151); numbering is unique and ascending as of D-157.

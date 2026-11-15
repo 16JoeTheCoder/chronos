@@ -10,18 +10,21 @@
 import type { Command, Result, RevertOp } from '../commands';
 import { blockFits } from '../commands';
 import { clockOf, formatHM, parseHM } from '../format';
+import { searchLog } from '../log/search';
 import { newId, reviewId } from '../model/ids';
-import type { Block, Coll, Data, Rec, Task } from '../model/types';
+import type { Block, Data, Task } from '../model/types';
 import { get, live, settingsOf } from '../repo/repo';
 import { SearchIndex, type SearchType } from '../search/index';
-import { diffData } from '../sync/outbox';
+import { revertOpsBetween } from '../undo';
 import { PRIORITY_RANK, activeTask, blockSpan, blocksOn, isOpen, todayOf } from '../tasks/tasks';
 import { overlaps, total } from '../time/intervals';
 import { prepNudges } from '../time/prep';
-import { expandEvents } from '../time/schedule';
+import { expandEvents, unplacedOn } from '../time/schedule';
 import { timeLeft } from '../time/timeLeft';
 import { addDays, daysBetween, mondayOf, weekdayOf, zonedToUtc } from '../time/zone';
 import { WEEKDAYS } from '../format';
+import { buildParseContext } from '../parseContext';
+import type { ParseContext, ParseResult } from '../parser/types';
 import { TOOLS, checkArgs, toolByName } from './tools';
 
 export interface StorePort {
@@ -31,6 +34,8 @@ export interface StorePort {
   run(cmd: Command): Result;
   /** A change Claude made, for the app's Undo toast. */
   notify?(n: { text: string; undoToken: string }): void;
+  /** The quick-add parser, injected so core never bundles it (main loads it lazily, D-147). Missing = `text` is refused. */
+  parse?(text: string, ctx: ParseContext): ParseResult;
 }
 
 export type ToolResult = { ok: true; result: unknown } | { ok: false; error: string };
@@ -39,6 +44,13 @@ export const WRITES_PER_MINUTE = 30;
 const UNDO_KEEP = 100;
 
 type Args = Record<string, unknown>;
+const PRIORITY_OF = { 1: 'must', 2: 'should', 3: 'nice' } as const;
+
+/** The parse as Claude should see it: what was understood, nothing internal. */
+function summarizeParse(p: ParseResult) {
+  const { title, kind, date, startMin, endMin, estimateMin, priority, recurrence, confidence, warnings } = p;
+  return { kind, title, date, start: startMin === undefined ? undefined : formatHM(startMin), end: endMin === undefined ? undefined : formatHM(endMin), estimateMin, priority: priority ? PRIORITY_OF[priority] : undefined, recurrence, confidence, warnings };
+}
 const str = (v: unknown) => (typeof v === 'string' ? v : undefined);
 const int = (v: unknown) => (typeof v === 'number' ? v : undefined);
 
@@ -143,13 +155,7 @@ export class Mcp {
     const r = this.store.run(cmd);
     if (!r.ok) return { ok: false, error: r.fields && Object.keys(r.fields).length ? `${r.error} ${Object.values(r.fields).join(' ')}` : r.error };
     const after = this.d;
-    const ops: RevertOp[] = diffData(before, after, this.store.now()).map((e) => {
-      const prev = (before[e.coll] as Record<string, Rec>)[e.id];
-      if (!prev) return { coll: e.coll as Coll, id: e.id, prev: null };
-      const fields: Record<string, unknown> = {};
-      for (const k of Object.keys(e.fields)) fields[k] = (prev as unknown as Record<string, unknown>)[k] ?? null;
-      return { coll: e.coll as Coll, id: e.id, prev: fields };
-    });
+    const ops: RevertOp[] = revertOpsBetween(before, after, this.store.now());
     const token = newId();
     this.undo.set(token, { ops, label, taskId });
     for (const k of [...this.undo.keys()].slice(0, Math.max(0, this.undo.size - UNDO_KEEP))) this.undo.delete(k);
@@ -185,6 +191,7 @@ export class Mcp {
           now: date === this.today ? this.clock(now) : null,
           day: { start: formatHM(s.dayStartMin), end: formatHM(s.dayEndMin) },
           events: instances.map((i) => ({ id: i.event.id, title: i.event.title, start: formatHM(i.startMin), end: formatHM(i.endMin), recurring: i.event.recur !== null, ...(i.exceptionId ? { editedToday: true } : {}) })),
+          unplaced: unplacedOn(d, date).map((e) => ({ id: e.id, title: e.title, durationMin: e.durationMin })),
           blocks: blocks.map((b) => this.block(b)),
           free: tl.free.map(([x, y]) => ({ start: this.clock(x), end: this.clock(y), minutes: m(y - x) })),
           buffer: { start: formatHM(s.dayEndMin - s.bufferMin), end: formatHM(s.dayEndMin), minutes: s.bufferMin },
@@ -331,31 +338,59 @@ export class Mcp {
         return ok({ notes });
       }
 
+      case 'search_log': {
+        // Same engine as the Log screen: words, "phrases", project:, before:, after:, is:task.
+        const { hits } = searchLog(d, this.index, a.query as string, { tz: s.timezone, today: this.today, limit: 20 });
+        const notes = hits.flatMap((h) => {
+          const n = d.ideas[h.id];
+          return n && n.deletedAt === null ? [{ id: n.id, body: n.body.length > 1000 ? `${n.body.slice(0, 1000)}…` : n.body, project: n.projectId ? (d.projects[n.projectId]?.name ?? null) : null, posted: `${todayOf(d, n.createdAt)} ${this.clock(n.createdAt)}` }] : [];
+        });
+        return ok({ results: notes });
+      }
+      case 'list_unplaced': {
+        const from = str(a.date) ?? this.today;
+        const dates = new Set(a.date !== undefined ? [from] : live(d, 'events').filter((e) => e.date !== null && e.date >= from).map((e) => e.date as string));
+        const events = [...dates].sort().flatMap((date) => unplacedOn(d, date).map((e) => ({ id: e.id, title: e.title, date, durationMin: e.durationMin })));
+        return ok({ timezone: s.timezone, events });
+      }
+
       // ---- writes ----
       case 'add_task': {
-        const tag = this.tagId(str(a.tag));
+        // `text`: parsed like the quick-add box (source 'claude', D-147). Anything but a confident task is returned, not written.
+        let parsed: ParseResult | null = null;
+        if (str(a.text) !== undefined) {
+          if (!this.store.parse) return fail('Natural-language text is not available here. Send title and the other fields.');
+          parsed = this.store.parse(str(a.text) as string, buildParseContext(d, now, 'claude'));
+          if (parsed.kind !== 'task' || parsed.confidence !== 'high') {
+            return ok({ added: false, needsConfirmation: true, reason: parsed.kind !== 'task' ? `Chronos reads this as a ${parsed.kind === 'fixed' ? 'fixed event' : 'note'}, not a task.` : `Chronos is only ${parsed.confidence} sure about this parse.`, parse: summarizeParse(parsed), next: 'Show Josef this parse. Then call add_task again with explicit title, dueDate, dueTime, estimateMin, priority fields (or tell him to type it in the Chronos quick-add box).' });
+          }
+        }
+        if (!parsed && str(a.title) === undefined) return fail('Give title or text.');
+        const title = str(a.title) ?? (parsed as ParseResult).title;
+        if (!title.trim() || title.length > 120) return fail('The title must be 1-120 characters.');
+        const tag = str(a.tag) === undefined && parsed?.tagId ? { id: parsed.tagId } : this.tagId(str(a.tag));
         if ('error' in tag) return fail(tag.error);
-        const dueTime = str(a.dueTime) !== undefined ? parseHM(a.dueTime as string) : null;
+        const dueTime = str(a.dueTime) !== undefined ? parseHM(a.dueTime as string) : (parsed?.dueTime ?? null);
         if (a.dueTime !== undefined && dueTime === null) return fail('dueTime must be HH:MM.');
         const cmd: Command = {
           type: 'task.create',
           input: {
-            title: a.title as string,
+            title,
             kind: a.kind as 'task' | undefined,
             finishCondition: str(a.finishCondition),
             notes: str(a.notes),
             tagId: tag.id,
-            projectId: str(a.projectId) ?? null,
-            priority: a.priority as Task['priority'] | undefined,
-            estimateMin: int(a.estimateMin) ?? null,
-            dueDate: str(a.dueDate) ?? null,
+            projectId: str(a.projectId) ?? parsed?.projectId ?? null,
+            priority: (a.priority as Task['priority'] | undefined) ?? (parsed?.priority ? PRIORITY_OF[parsed.priority] : undefined),
+            estimateMin: int(a.estimateMin) ?? parsed?.estimateMin ?? null,
+            dueDate: str(a.dueDate) ?? parsed?.date ?? null,
             dueTime,
-            recurrence: (a.recurrence as Task['recurrence']) ?? null,
+            recurrence: (a.recurrence as Task['recurrence']) ?? (parsed?.recurrence ? { freq: parsed.recurrence.freq, interval: parsed.recurrence.interval, ...(parsed.recurrence.weekdays ? { weekdays: parsed.recurrence.weekdays } : {}) } : null),
             source: 'claude',
           },
         };
         if (a.projectId !== undefined && !get(d, 'projects', a.projectId as string)) return fail('No project with that id.');
-        return this.write('add_task', cmd, `added "${a.title as string}"`, (x, id) => (id && x.tasks[id] ? this.task(x.tasks[id] as Task) : null), '');
+        return this.write('add_task', cmd, `added "${title}"`, (x, id) => (id && x.tasks[id] ? this.task(x.tasks[id] as Task) : null), '');
       }
       case 'update_task': {
         const t = taskOf(a.id);
@@ -439,6 +474,19 @@ export class Mcp {
       }
       case 'add_note':
         return this.write('add_note', { type: 'idea.add', text: a.body as string, taskId: null }, `saved a note`, (x, id) => (id ? { id, body: x.ideas[id]?.body } : null));
+      case 'post_log': {
+        if (a.projectId !== undefined && !get(d, 'projects', a.projectId as string)) return fail('No project with that id.');
+        return this.write('post_log', { type: 'idea.add', text: a.body as string, taskId: null, projectId: str(a.projectId) ?? null }, 'posted', (x, id) => (id ? { id, body: x.ideas[id]?.body, projectId: x.ideas[id]?.projectId ?? null } : null));
+      }
+      case 'place_event': {
+        const ev = get(d, 'events', str(a.eventId));
+        if (!ev || ev.deletedAt !== null || ev.date === null) return fail('No such one-off event.');
+        if (ev.startMin !== null || ev.endMin !== null) return fail(`"${ev.title}" already has a time.`);
+        const sm = a.startMin as number;
+        const em = sm + ev.durationMin;
+        if (!blockFits(d, ev.date, sm, em)) return fail(this.overlapReason(ev.date, sm, em));
+        return this.write('place_event', { type: 'event.place', id: ev.id, startMin: sm }, `placed "${ev.title}" ${ev.date} ${formatHM(sm)}-${formatHM(em)}`, (x) => ({ eventId: ev.id, date: ev.date, start: formatHM(sm), end: formatHM(em), title: x.events[ev.id]?.title }));
+      }
       case 'add_project':
         return this.write('add_project', { type: 'project.create', name: a.name as string, color: a.color as never, columns: a.columns as string[] | undefined }, `created project "${a.name as string}"`, (x, id) => (id ? { id, name: x.projects[id]?.name, columns: x.projects[id]?.columns } : null));
       case 'move_card': {

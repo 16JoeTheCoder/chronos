@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Project board</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&amp;family=Barlow:wght@400;500;600&amp;family=Courier+Prime:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#B84508}
+.kb-ghost:hover{border-style:solid}
+.kb-btn:focus-visible,.kb-ghost:focus-visible,a:focus-visible{outline:2px solid #FF6A13;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; background: #F2F2EE; font-family: Barlow, system-ui, sans-serif; color: #111418; display: flex; overflow: hidden">
+<nav aria-label="Projects" style="width: 280px; background: #FFFFFF; border-right: 1px solid #D5D6D2; padding: 36px 18px; display: flex; flex-direction: column; gap: 4px">
+<h1 style="margin: 0 0 20px 14px; font-family: 'Barlow Condensed', sans-serif; font-size: 32px; font-weight: 600; color: #111418">Projects</h1>
+<a href="#" aria-current="page" style="padding: 12px 14px; border-radius: 10px; text-decoration: none; display: flex; justify-content: space-between; font-size: 15px; background: #FFF4EC; color: #111418; font-weight: 600"><span>Wind farm simulator</span><span style="font-size: 13px">7 tasks</span></a><a href="#"  style="padding: 12px 14px; border-radius: 10px; text-decoration: none; display: flex; justify-content: space-between; font-size: 15px; color: #5A6068"><span>Coding club</span><span style="font-size: 13px">5 tasks</span></a><a href="#"  style="padding: 12px 14px; border-radius: 10px; text-decoration: none; display: flex; justify-content: space-between; font-size: 15px; color: #5A6068"><span>Greenmech</span><span style="font-size: 13px">9 tasks</span></a><a href="#"  style="padding: 12px 14px; border-radius: 10px; text-decoration: none; display: flex; justify-content: space-between; font-size: 15px; color: #5A6068"><span>Chronos</span><span style="font-size: 13px">12 tasks</span></a>
+<button class="kb-ghost" style="margin-top: 12px; height: 44px; border-radius: 10px; border: 1px dashed #D5D6D2; background: transparent; color: #5A6068; font: 500 14px Barlow, sans-serif">New project</button>
+</nav>
+<main style="flex: 1; min-width: 0; padding: 36px 40px; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; align-items: flex-end; gap: 24px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 6px">
+<h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 44px; font-weight: 600; line-height: 1; color: #111418">Wind farm simulator</h2>
+<span style="font-size: 15px; color: #5A6068">2 of 6 done · 3 h 45 m estimated left · 1 h 30 m planned today</span>
+</div>
+<div role="tablist" aria-label="View" style="display: flex; border: 1px solid #D5D6D2; border-radius: 10px; overflow: hidden">
+<button role="tab" aria-selected="true" style="height: 40px; padding: 0 18px; border: none; background: #FF6A13; color: #111418; font: 600 14px Barlow, sans-serif">Board</button>
+<button role="tab" aria-selected="false" style="height: 40px; padding: 0 18px; border: none; background: transparent; color: #5A6068; font: 500 14px Barlow, sans-serif">List</button>
+</div>
+</div>
+<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start"><section aria-label="To do" style="border-radius: 16px; background: #E9E9E4; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0"><div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 600; color: #111418">To do</h2><span style="font-size: 13px; color: #5A6068">3</span></div><article style="border-radius: 8px; border: 1px solid #D5D6D2; background: #FFFFFF; padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 16px; font-weight: 500; color: #111418; line-height: 1.35">Find NREL 5 MW power curve data</span><div style="display: flex; gap: 14px; font-family: 'Courier Prime', monospace; font-size: 13px; color: #5A6068"><span>45 m</span><span>Tomorrow</span></div></article><article style="border-radius: 8px; border: 1px solid #D5D6D2; background: #FFFFFF; padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 16px; font-weight: 500; color: #111418; line-height: 1.35">Tip-speed ratio clamp at cut-in</span><div style="display: flex; gap: 14px; font-family: 'Courier Prime', monospace; font-size: 13px; color: #5A6068"><span>30 m</span></div></article><article style="border-radius: 8px; border: 1px solid #D5D6D2; background: #FFFFFF; padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 16px; font-weight: 500; color: #111418; line-height: 1.35">Write validation section</span><div style="display: flex; gap: 14px; font-family: 'Courier Prime', monospace; font-size: 13px; color: #5A6068"><span>1 h 30 m</span><span>Fri 14 Nov</span></div></article><button class="kb-ghost" style="height: 44px; border-radius: 10px; border: 1px dashed #D5D6D2; background: transparent; color: #5A6068; font: 500 14px Barlow, sans-serif; text-align: left; padding: 0 14px">Add a task to this project</button></section><section aria-label="Doing" style="border-radius: 16px; background: #E9E9E4; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0"><div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 600; color: #111418">Doing</h2><span style="font-size: 13px; color: #5A6068">1 of 1, the focus slot</span></div><article style="border-radius: 8px; border: 2px solid #FF6A13; background: #FFF4EC; padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 16px; font-weight: 500; color: #111418; line-height: 1.35">Blade pitch model</span><div style="display: flex; gap: 14px; font-family: 'Courier Prime', monospace; font-size: 13px; color: #5A6068"><span>1 h 30 m</span><span>Today</span></div><button class="kb-btn" style="height: 40px; border-radius: 10px; border: none; background: #FF6A13; color: #111418; font: 600 15px 'Barlow Condensed', sans-serif">Enter focus</button></article><p style="margin: 0; font-size: 13px; line-height: 1.5; color: #5A6068">Dropping another card here swaps it with this one. One task at a time.</p></section><section aria-label="Done" style="border-radius: 16px; background: #E9E9E4; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0"><div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 600; color: #111418">Done</h2><span style="font-size: 13px; color: #5A6068">2</span></div><article style="border-radius: 8px; border: 1px solid #D5D6D2; background: #FFFFFF; padding: 16px; display: flex; flex-direction: column; gap: 10px; opacity: 0.7"><span style="font-size: 16px; font-weight: 500; color: #111418; line-height: 1.35">Rotor geometry import</span><div style="display: flex; gap: 14px; font-family: 'Courier Prime', monospace; font-size: 13px; color: #5A6068"><span>1 h</span><span>Mon</span></div></article><article style="border-radius: 8px; border: 1px solid #D5D6D2; background: #FFFFFF; padding: 16px; display: flex; flex-direction: column; gap: 10px; opacity: 0.7"><span style="font-size: 16px; font-weight: 500; color: #111418; line-height: 1.35">Wind speed distribution (Weibull)</span><div style="display: flex; gap: 14px; font-family: 'Courier Prime', monospace; font-size: 13px; color: #5A6068"><span>2 h</span><span>Tue</span></div></article></section></div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -57,11 +57,20 @@ export function expandEvents(d: Data, date: string): Instance[] {
     const edit = ex?.kind === 'edit' ? ex : null;
     const startMin = edit?.startMin ?? ev.startMin;
     const endMin = edit?.endMin ?? ev.endMin;
-    if (endMin <= startMin) continue;
+    // An unplaced event ("to place") has no time on the runway yet.
+    if (startMin === null || endMin === null || endMin <= startMin) continue;
     const event = edit && (edit.title !== null || edit.tagId !== null) ? { ...ev, title: edit.title ?? ev.title, tagId: edit.tagId ?? ev.tagId } : ev;
     out.push({ event, exceptionId: ex?.id ?? null, date, startMin, endMin, start: zonedToUtc(date, startMin, ev.tz), end: zonedToUtc(date, endMin, ev.tz) });
   }
   return out.sort((a, b) => a.start - b.start);
+}
+
+/** One-off events on this date that have no time yet (the runway's "to place" tray). */
+export function unplacedOn(d: Data, date: string): CalEvent[] {
+  const closed = closedScopes(d, date);
+  return live(d, 'events')
+    .filter((ev) => ev.date === date && (ev.startMin === null || ev.endMin === null) && !closed.has(ev.scope))
+    .sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : 1));
 }
 
 /** Instances in the next `hours` from now, scanning the local dates that window touches. */

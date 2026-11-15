@@ -1,17 +1,19 @@
 // Electron entry point: wires the controller (state + persistence) to Home, the
-// taskbar widget, quick capture, tray, global shortcuts, the shelf, power events
+// overlay, notepad, palette, tray, global shortcuts, the shelf, power events
 // and notifications. One instance only; a second launch shows Home.
 
 import os from 'node:os';
 import path from 'node:path';
-import { Menu, app, clipboard, dialog, net, powerMonitor, safeStorage, session, shell, type WebContents } from 'electron';
+import { app, clipboard, dialog, net, powerMonitor, safeStorage, session, shell, type WebContents } from 'electron';
 import fs from 'node:fs';
 import { Mcp } from '../core/mcp/handlers';
 import type { Diagnostics, Snapshot, SyncView } from '../core/model/types';
 import { activeTask } from '../core/tasks/tasks';
-import { CHANNELS } from '../preload/api';
+import { CHANNELS, type Notice } from '../preload/api';
 import { readFirebaseConfig } from './config';
+import { askClaude } from './askClaude';
 import { Controller } from './controller';
+import { DesktopLayer, fullscreenAppActive } from './desktopLayer';
 import { registerIpc } from './ipc';
 import { describeError, initLog, log, readLog } from './log';
 import { McpServer, newToken } from './mcp/server';
@@ -20,14 +22,16 @@ import { notify } from './notify';
 import { mark, perfMarks } from './perf';
 import { Shelf } from './shelf';
 import { registerShortcuts, unregisterShortcuts } from './shortcuts';
+import { UndoTokens } from './undoTokens';
 import { applyLoginItem } from './startup';
 import { Store } from './store';
 import { AppTray } from './tray';
-import { CaptureWindow } from './windows/capture';
 import { HomeWindow } from './windows/home';
-import { WidgetWindow } from './windows/widget';
+import { OverlayWindow } from './windows/overlay';
+import { NOTEPAD, PALETTE, notepadBounds, paletteBounds, PopupWindow } from './windows/popup';
 
 const FAST_TICK_MS = 250;
+const NOTICE_MS = 9000;
 const SLOW_TICK_MS = 30_000;
 // 32 px PNG produced by `node scripts/make-icon.mjs --tray` (same artwork as build/icon.png).
 const TRAY_ICON =
@@ -72,7 +76,7 @@ function boot(): void {
     new Store(dataDir),
     {
       onChange: () => broadcast(),
-      onNotify: (n) => notify(n, controller.device, () => widget.win.webContents.send(CHANNELS.beep)),
+      onNotify: (n) => notify(n, controller.device, () => overlay.webContents?.send(CHANNELS.beep)),
       onGap: () => home.show(activeTask(controller.data) ? 'focus' : null),
       onDeviceChanged: (prev, next) => applyDevice(next, prev),
       log: (m) => log(m),
@@ -101,7 +105,10 @@ function boot(): void {
     now: () => Date.now(),
     run: (cmd) => controller.command(cmd, Date.now()),
     notify: (n) => notice({ text: n.text, undoToken: n.undoToken }),
+    // The parser (and chrono-node) is a lazy chunk, like sync.js, to keep it out of the main bundle (D-147).
+    parse: (text, ctx) => (require(path.join(__dirname, 'parser.js')) as typeof import('../core/parser')).parse(text, ctx),
   });
+  const undoTokens = new UndoTokens();
   const mcpServer = new McpServer(() => mcp, log);
   const bridgePath = app.isPackaged ? path.join(process.resourcesPath, 'chronos-mcp.js') : path.join(app.getAppPath(), 'dist', 'chronos-mcp.js');
   async function applyMcp(): Promise<void> {
@@ -125,10 +132,24 @@ function boot(): void {
     if (process.env.CHRONOS_USER_DATA) env.CHRONOS_USER_DATA = dataDir;
     return JSON.stringify({ mcpServers: { chronos: { command: process.execPath, args: [bridgePath], env } } }, null, 2);
   }
-  function notice(n: { text: string; undoToken?: string; error?: boolean }): void {
-    for (const wc of [home.win.webContents]) if (!wc.isDestroyed()) wc.send(CHANNELS.notice, n);
+  // Notices (Claude's changes, notepad results) carry an Undo. Home shows them when you are in it; otherwise
+  // the overlay does, and stays up long enough to read and click.
+  let noticeUntil = 0;
+  function notice(n: Notice): void {
+    const homeActive = home.visible && !layer.attached;
+    const target = homeActive ? home.win.webContents : overlay.webContents;
+    if (!homeActive) {
+      noticeUntil = Date.now() + NOTICE_MS;
+      setTimeout(syncOverlay, NOTICE_MS + 500);
+    }
+    if (target && !target.isDestroyed()) target.send(CHANNELS.notice, n);
+    syncOverlay();
+  }
+  function syncOverlay(): void {
+    overlay.want(!!activeTask(controller.data) || Date.now() < noticeUntil);
   }
 
+  const layer = new DesktopLayer(log);
   const home = new HomeWindow(
     () => controller.device.displayId,
     () => {
@@ -138,17 +159,21 @@ function boot(): void {
         mark('home.shown');
       }
     },
+    layer,
+    () => controller.device.liveOnDesktop,
+    log,
   );
-  const widget = new WidgetWindow(
-    () => controller.device,
-    (pos) => controller.command({ type: 'device.update', patch: { widgetPos: pos } }, Date.now()),
-  );
-  const capture = new CaptureWindow();
+  const overlay = new OverlayWindow(fullscreenAppActive, () => controller.device.overlayHideInFullscreen);
+  const popupOpts = { backgroundColor: '#00000000', transparent: true, hasShadow: false } as const;
+  const notepad = new PopupWindow('#notepad', notepadBounds, { ...popupOpts, ...NOTEPAD, title: 'Chronos notepad' }, false);
+  const palette = new PopupWindow('#palette', paletteBounds, { ...popupOpts, ...PALETTE, title: 'Chronos palette' }, true);
+  // Smoke test only (scripts/smoke.mjs): global shortcuts cannot be pressed under Xvfb, so the script opens the popups here.
+  if (process.env.CHRONOS_SMOKE) (globalThis as Record<string, unknown>).__chronosSmoke = { openNotepad: () => notepad.open(), openPalette: () => palette.open() };
   const shelf = new Shelf(
     () => Shelf.defaultFolder(controller.device.stackFolder),
     () => home.win.webContents.send(CHANNELS.stackChanged),
   );
-  for (const w of [home.win, widget.win]) {
+  for (const w of [home.win, overlay.win]) {
     w.on('close', (e) => {
       if (!quitting) e.preventDefault();
     });
@@ -226,8 +251,9 @@ function boot(): void {
   let fastTick: ReturnType<typeof setInterval> | null = null;
   function broadcast(): void {
     const snap = snapshot();
-    const targets: (WebContents | null)[] = [home.win.webContents, widget.win.webContents, capture.webContents];
+    const targets: (WebContents | null)[] = [home.win.webContents, overlay.webContents, notepad.webContents, palette.webContents];
     for (const wc of targets) if (wc && !wc.isDestroyed()) wc.send(CHANNELS.snapshot, snap);
+    syncOverlay();
     tray.update(controller.device.launchAtLogin, controller.running);
     // The 250 ms tick runs only while a timer runs; otherwise only the 30 s tick does.
     if (controller.running && !fastTick) fastTick = setInterval(() => controller.tick(Date.now()), FAST_TICK_MS);
@@ -239,25 +265,16 @@ function boot(): void {
 
   function applyDevice(next: typeof controller.device, prev?: typeof controller.device): void {
     if (!prev || JSON.stringify(prev.shortcuts) !== JSON.stringify(next.shortcuts)) {
-      shortcutError = registerShortcuts(next.shortcuts, { toggle: toggleHome, startPause, capture: () => capture.open() });
+      shortcutError = registerShortcuts(next.shortcuts, { toggle: toggleHome, startPause, capture: () => notepad.open(), palette: () => palette.open() });
     }
     if (!prev || prev.launchAtLogin !== next.launchAtLogin) applyLoginItem(next.launchAtLogin);
-    if (prev && (prev.widgetDock !== next.widgetDock || (next.widgetDock !== 'free' && prev.widgetPos !== next.widgetPos))) widget.dock();
+    if (prev && prev.liveOnDesktop && !next.liveOnDesktop) home.layerOff();
     if (prev && prev.displayId !== next.displayId) home.fit();
     if (prev && prev.mcp.enabled !== next.mcp.enabled) void applyMcp();
   }
 
-  function widgetMenu(): void {
-    Menu.buildFromTemplate([
-      { label: controller.running ? 'Pause' : 'Start', enabled: !!activeTask(controller.data), click: startPause },
-      { label: 'Show Chronos', click: () => home.show(null) },
-      { type: 'separator' },
-      { label: 'Quit Chronos', click: quit },
-    ]).popup({ window: widget.win });
-  }
-
   registerIpc({
-    isOurSender: (e) => [home.win.webContents, widget.win.webContents, capture.webContents].includes(e.sender),
+    isOurSender: (e) => [home.win.webContents, overlay.webContents, notepad.webContents, palette.webContents].includes(e.sender),
     snapshot,
     command: async (cmd) => {
       if (cmd.type === 'data.openFolder') {
@@ -293,6 +310,9 @@ function boot(): void {
           clipboard.writeText(claudeConfig());
           return { ok: true };
         case 'mcp.undo': {
+          // Notepad undo tokens (D-143) share this command so Home's existing toast code works for both.
+          const revert = undoTokens.redeem(cmd.token);
+          if (revert) return controller.command(revert, Date.now());
           const r = mcp.undoToken(cmd.token);
           return r.ok ? { ok: true } : { ok: false, error: r.error };
         }
@@ -307,12 +327,25 @@ function boot(): void {
       }
       return controller.command(cmd, Date.now());
     },
+    seal: (r) => undoTokens.seal(r),
+    redeemUndo: (t) => undoTokens.redeem(t),
     hide: () => home.hide(),
-    widgetClick: toggleHome,
-    widgetMenu,
-    dragStart: () => widget.dragStart(),
-    dragEnd: () => widget.dragEnd(),
-    closeCapture: () => capture.close(),
+    showHome: (view) => {
+      palette.close();
+      home.show(view);
+    },
+    overlayClick: toggleHome,
+    overlayExpand: (on) => overlay.expand(on),
+    closeNotepad: (created) => {
+      notepad.close();
+      if (created) {
+        const token = undoTokens.hold(created.records.map((r) => ({ coll: r.coll, id: r.id, prev: null })));
+        notice({ text: created.text || 'Added from your notes', undoToken: token });
+      }
+    },
+    closePalette: () => palette.close(),
+    notify: (text, undoToken) => notice({ text, undoToken }),
+    askClaude,
     quit,
     restart: (reason) => {
       log(`renderer error, restarting: ${reason}`);
@@ -361,7 +394,10 @@ function boot(): void {
     void mcpServer.stop();
     unregisterShortcuts();
     shelf.stop();
-    widget.destroy();
+    overlay.destroy();
+    notepad.destroy();
+    palette.destroy();
+    layer.detach();
     tray.destroy();
   });
   app.on('window-all-closed', () => app.quit());

@@ -1,0 +1,49 @@
+{
+  "$schema": "chronos-lexicon/1",
+  "language": "en",
+  "version": 1,
+  "_comment": "All English words the parser needs, as data, so a second language is a second file. Edit here, never in code.",
+  "shorthand": {
+    "today": ["today", "tdy", "tday", "2day"],
+    "tomorrow": ["tomorrow", "tmr", "tmrw", "2moro", "2morow", "tmrrw"],
+    "tonight": ["tonight", "tonite"],
+    "weekend": ["weekend"],
+    "endOfWeek": ["end of week", "eow"],
+    "yesterday": ["yesterday", "yday"]
+  },
+  "weekdays": {
+    "1": ["mon", "monday"], "2": ["tue", "tues", "tuesday"], "3": ["wed", "weds", "wednesday"],
+    "4": ["thu", "thur", "thurs", "thursday"], "5": ["fri", "friday"], "6": ["sat", "saturday"], "7": ["sun", "sunday"]
+  },
+  "units": {
+    "minute": ["m", "min", "mins", "minute", "minutes"],
+    "hour": ["h", "hr", "hrs", "hour", "hours"]
+  },
+  "months": {
+    "1": ["jan", "january"], "2": ["feb", "february"], "3": ["mar", "march"], "4": ["apr", "april"], "5": ["may"], "6": ["jun", "june"],
+    "7": ["jul", "july"], "8": ["aug", "august"], "9": ["sep", "sept", "september"], "10": ["oct", "october"], "11": ["nov", "november"], "12": ["dec", "december"]
+  },
+  "quantityNouns": ["page", "pages", "pg", "pp", "ch", "chapter", "chapters", "q", "qs", "question", "questions", "ex", "exercise", "exercises", "no", "number", "numbers", "problem", "problems", "slide", "slides", "line", "lines", "room", "lesson", "unit", "part", "level", "grade", "score", "beat"],
+  "timeContextWords": ["next", "this", "every", "daily", "weekly", "weekdays", "weekend"],
+  "deadlineWords": ["by", "due"],
+  "startWords": ["at", "@", "from", "till", "until", "to"],
+  "connectorsStrippedNextToConsumed": ["at", "on", "by", "due", "for"],
+  "leadingConnectorsStrippedAfterDuration": ["in"],
+  "dayPartsConsumedWithTime": ["morning", "afternoon", "evening", "in the morning of", "in the afternoon of", "in the evening of"],
+  "timeWords": { "noon": 720, "midday": 720, "midnight": 1440 },
+  "noteSignals": {
+    "_comment": "A line is a note when it has no task keyword and no verb start AND starts with a hedge/first-person/function word, or is sentence-like (>= 6 words with >= 2 function words). Tune on the corpus.",
+    "hedgeStarters": ["maybe", "perhaps", "i", "i'm", "im", "my", "we", "he", "she", "they", "it", "when", "so", "why", "how", "what", "if", "need", "should", "could", "would", "because", "but", "also"],
+    "functionWords": ["a", "an", "the", "is", "are", "was", "be", "to", "of", "in", "on", "that", "this", "it", "my", "i", "you", "so", "and", "but", "with", "for", "as", "just", "not", "all", "have", "has"],
+    "sentenceMinWords": 6,
+    "sentenceMinFunctionWords": 2
+  },
+  "verbStarters": ["buy", "call", "make", "learn", "finish", "read", "go", "meet", "send", "sell", "study", "fix", "build", "write", "email", "reply", "contact", "clean", "organize", "setup", "set", "submit", "pay", "cook", "shower", "meditate", "simulate", "monitor", "start", "work", "wrap", "revise", "plan", "check", "update", "review", "book", "pick", "prepare", "practice", "join", "ask", "order", "return", "bring", "take", "get", "do", "upload", "download", "install", "watch", "listen", "walk", "run", "sleep", "wash", "water", "journal"],
+  "fuzzy": {
+    "_comment": "Conservative autocorrect. Only inside a number+unit or in a date/time slot. Collapse repeated letters first. Same first letter. Max edit distance 1 for targets up to 5 letters, 2 for 6+. Keyboard-neighbour substitution or one stray punctuation char counts as 1. Never correct a token that is a real word: neverCorrect is generated at build time by checking every target against a common-word list.",
+    "targets": ["minutes", "minute", "mins", "hours", "hour", "hrs", "tomorrow", "tonight", "today", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "noon", "midnight"],
+    "maxDistanceShort": 1,
+    "maxDistanceLong": 2,
+    "neverCorrect": ["mind", "mine", "mile", "miles", "hot", "hurt", "hose", "house", "month", "months", "moon", "soon", "sundae", "toady", "friend"]
+  }
+}

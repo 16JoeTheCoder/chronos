@@ -216,10 +216,10 @@ function EventPanel({ d, draft, today, onDone }: { d: Data; draft: Draft; today:
           )}
           <div className="grid2">
             <Field label="Start" error={errors.time}>
-              <TimeInput value={f.startMin} onChange={(startMin) => set({ startMin })} />
+              <TimeInput value={f.startMin ?? 0} onChange={(startMin) => set({ startMin })} />
             </Field>
             <Field label="End">
-              <TimeInput value={f.endMin} onChange={(endMin) => set({ endMin })} />
+              <TimeInput value={f.endMin ?? 0} onChange={(endMin) => set({ endMin })} />
             </Field>
           </div>
         </>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flight plan moments</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&amp;family=Barlow:wght@400;500&amp;family=Courier+Prime:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+
+@keyframes fp-bar{0%,8%{width:0}55%,100%{width:100%}}
+@keyframes fp-in{0%,10%{opacity:0;transform:translateY(10px)}35%,100%{opacity:1;transform:none}}
+@keyframes fp-fill{0%,5%{width:0}55%,100%{width:100%}}
+@keyframes fp-stamp{0%,56%{opacity:0;transform:rotate(-8deg) scale(1.25)}64%,100%{opacity:1;transform:rotate(-8deg) scale(1)}}
+@keyframes fp-tick{0%,58%{stroke-dashoffset:60}70%,100%{stroke-dashoffset:0}}
+.b1{animation:fp-bar 5s cubic-bezier(.16,1,.3,1) infinite}
+.b2{animation:fp-in 5s cubic-bezier(.16,1,.3,1) infinite}
+.b3{animation:fp-fill 4s linear infinite}
+.b4{animation:fp-stamp 4s cubic-bezier(.16,1,.3,1) infinite}
+.b5{animation:fp-tick 4s cubic-bezier(.16,1,.3,1) infinite}
+
+@media (prefers-reduced-motion:reduce){*{animation:none !important}}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; background: #F2F2EE; font-family: Barlow, system-ui, sans-serif; color: #111418; display: flex; gap: 24px; padding: 40px; box-sizing: border-box">
+<section style="flex: 1; background: #FFFFFF; border: 1px solid #D5D6D2; border-radius: 8px; padding: 28px; display: flex; flex-direction: column; gap: 18px; min-width: 0"><h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 30px; font-weight: 600; color: #111418">Step start</h2><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #3A3F46">The mission clock zeroes, the step bar runs out to its length, and the step title types in. Once.</p>
+<div style="flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 22px">
+<span class="b2" style="font-family: 'Barlow Condensed', sans-serif; font-size: 36px; font-weight: 600; line-height: 1.05">Wind sim: blade pitch model</span>
+<span style="font-family: 'Courier Prime', monospace; font-weight: 700; font-size: 64px; color: #B84508">T– 90:00</span>
+<div style="height: 10px; background: #E6E6E1"><div class="b1" style="height: 10px; background: #111418"></div></div>
+<span style="font-family: 'Courier Prime', monospace; font-size: 14px; color: #5A6068">14:00 start · 15:30 end</span></div></section>
+<section style="flex: 1; background: #FFFFFF; border: 1px solid #D5D6D2; border-radius: 8px; padding: 28px; display: flex; flex-direction: column; gap: 18px; min-width: 0"><h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 30px; font-weight: 600; color: #111418">Complete step</h2><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #3A3F46">Holding Enter fills the step bar in orange over 2 s. At full, the step is stamped complete and ticked off the plan.</p>
+<div style="flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 24px; position: relative">
+<div style="height: 56px; border: 1.5px solid #111418; border-radius: 6px; position: relative; overflow: hidden"><div class="b3" style="position: absolute; inset: 0 auto 0 0; background: #FF6A13"></div><span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 700 18px 'Barlow Condensed', sans-serif">Hold to complete step</span></div>
+<div class="b4" style="align-self: center; border: 3px solid #B84508; border-radius: 6px; padding: 10px 22px; font-family: 'Courier Prime', monospace; font-weight: 700; font-size: 26px; color: #B84508">STEP COMPLETE</div>
+<div style="display: flex; align-items: center; gap: 12px"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="20" height="20" rx="2" fill="none" stroke="#111418" stroke-width="1.5"></rect><path class="b5" d="M5 11 l4 4 l8 -9" fill="none" stroke="#B84508" stroke-width="2.5" stroke-dasharray="60" stroke-dashoffset="60"></path></svg><span style="font-size: 16px">Blade pitch model</span></div></div></section>
+<section style="flex: 1; background: #FFFFFF; border: 1px solid #D5D6D2; border-radius: 8px; padding: 28px; display: flex; flex-direction: column; gap: 18px; min-width: 0"><h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 30px; font-weight: 600; color: #111418">Debrief</h2><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #3A3F46">End of day: the log first, then every open step gets one disposition. Nothing carries over silently.</p>
+<table style="border-collapse: collapse; font-family: 'Courier Prime', monospace; font-size: 15px"><tr><td style="padding: 4px 0; color: #5A6068">Focused</td><td style="text-align: right; font-weight: 700">4 h 10 m</td></tr><tr><td style="padding: 4px 0; color: #5A6068">Steps complete</td><td style="text-align: right; font-weight: 700">3</td></tr></table>
+<div><div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #E2E3DF"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="16" height="16" rx="2" fill="none" stroke="#111418" stroke-width="1.5"></rect><path d="M4 9 l3 3 l7 -7" fill="none" stroke="#B84508" stroke-width="2"></path></svg><span style="flex: 1; font-size: 15px">Rotor geometry import</span><span style="font-family: 'Courier Prime', monospace; font-size: 13px; padding: 3px 10px; border: 1px solid #111418; border-radius: 4px">Done</span></div><div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #E2E3DF"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="16" height="16" rx="2" fill="none" stroke="#111418" stroke-width="1.5"></rect></svg><span style="flex: 1; font-size: 15px">Find NREL 5 MW power curve data</span><span style="font-family: 'Courier Prime', monospace; font-size: 13px; padding: 3px 10px; border: 1px solid #111418; border-radius: 4px">Tomorrow</span></div><div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #E2E3DF"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="16" height="16" rx="2" fill="none" stroke="#111418" stroke-width="1.5"></rect></svg><span style="flex: 1; font-size: 15px">Tip-speed ratio clamp</span><span style="font-family: 'Courier Prime', monospace; font-size: 13px; padding: 3px 10px; border: 1px solid #111418; border-radius: 4px">Unscheduled</span></div><div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #E2E3DF"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="16" height="16" rx="2" fill="none" stroke="#111418" stroke-width="1.5"></rect></svg><span style="flex: 1; font-size: 15px">Reply to coach about Saturday</span><span style="font-family: 'Courier Prime', monospace; font-size: 13px; padding: 3px 10px; border: 1px solid #111418; border-radius: 4px">Tomorrow</span></div></div>
+<button style="margin-top: auto; height: 52px; border-radius: 6px; border: none; background: #FF6A13; color: #111418; font: 700 18px 'Barlow Condensed', sans-serif">Close the day</button></section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

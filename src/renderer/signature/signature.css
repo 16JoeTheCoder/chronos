@@ -1,0 +1,84 @@
+/* Signature timers. Colours come only from theme CSS variables; motion is transform/opacity. */
+.sig { --sig-a: var(--c-accent); --sig-b: var(--c-accent-hover); display: inline-block; position: relative; flex: none; color: var(--c-text); }
+.sig[data-overrun="true"] { --sig-a: var(--c-warn); --sig-b: var(--c-warn); }
+.sig svg { display: block; overflow: visible; }
+.sig-time { fill: var(--c-text); font-family: var(--font-display); font-weight: 600; font-variant-numeric: var(--num-variant, tabular-nums); }
+.sig[data-overrun="true"] .sig-time { fill: var(--c-warn); color: var(--c-warn); }
+
+@keyframes sig-spin { to { transform: rotate(360deg); } }
+@keyframes sig-breathe { 0%, 100% { transform: scale(.94); opacity: .78; } 50% { transform: scale(1.04); opacity: 1; } }
+@keyframes sig-flare { 0% { transform: scale(1); opacity: .95; } 100% { transform: scale(2.4); opacity: 0; } }
+@keyframes sig-pulse { 0%, 100% { opacity: 1; } 30% { opacity: .25; } }
+@keyframes sig-lift { from { transform: translateY(calc(-1 * var(--sig-lift, 4px))); } to { transform: none; } }
+
+.sig[data-running="false"], .sig[data-running="false"] * { animation-play-state: paused; }
+
+/* reactor-ring */
+.sig-reactor-ring svg { position: absolute; inset: 0; }
+.sig-reactor-ring circle { fill: none; }
+.sig-reactor-ring .sig-ticks { transform-box: view-box; transform-origin: 50% 50%; animation: sig-spin var(--sig-tick-sec) linear infinite; }
+.sig-reactor-ring .sig-ticks circle { stroke: var(--sig-a); stroke-opacity: .35; stroke-width: 6; }
+.sig-reactor-ring .sig-seg-track, .sig-reactor-ring .sig-seg-on { stroke: var(--sig-a); stroke-width: 22; }
+.sig-reactor-ring .sig-seg-track { stroke-opacity: .12; }
+.sig-reactor-ring .sig-mask { stroke: #fff; stroke-width: 30; transition: stroke-dashoffset var(--sig-charge-ms) var(--ease); }
+.sig-reactor-ring .sig-inner-ring { stroke: var(--sig-a); stroke-opacity: .3; stroke-width: 1; }
+.sig-reactor-ring .sig-disc { fill: var(--c-ground); fill-opacity: .25; }
+.sig-plasma, .sig-core, .sig-flare { position: absolute; border-radius: 50%; pointer-events: none; }
+.sig-plasma {
+  left: 20.45%; top: 20.45%; width: 59.1%; height: 59.1%;
+  background: conic-gradient(transparent, color-mix(in srgb, var(--sig-a) 55%, transparent), var(--sig-b), color-mix(in srgb, var(--sig-a) 55%, transparent), transparent);
+  -webkit-mask: radial-gradient(circle closest-side, transparent 78%, #000 80%, #000 96%, transparent 98%);
+  mask: radial-gradient(circle closest-side, transparent 78%, #000 80%, #000 96%, transparent 98%);
+  opacity: calc(.45 + var(--k, 1) * .55);
+  animation: sig-spin var(--sig-band-sec) linear infinite;
+}
+.sig-core {
+  left: 27.3%; top: 27.3%; width: 45.4%; height: 45.4%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--sig-b) calc(var(--k, 1) * 100%), transparent) 0%, color-mix(in srgb, var(--sig-a) calc(var(--k, 1) * 50%), transparent) 45%, transparent 72%);
+  animation: sig-breathe var(--sig-breath-sec) ease-in-out infinite;
+}
+.sig-flare { left: 27.3%; top: 27.3%; width: 45.4%; height: 45.4%; border: 3px solid var(--sig-b); animation: sig-flare var(--sig-flare-ms) var(--ease) forwards; }
+.sig-reactor-ring .sig-core-m { fill: var(--sig-b); transform-box: view-box; transform-origin: 50% 50%; animation: sig-breathe var(--sig-breath-sec) ease-in-out infinite; }
+.sig-flare-svg { fill: none; stroke: var(--sig-b); stroke-width: 20; transform-box: view-box; transform-origin: 50% 50%; animation: sig-flare var(--sig-flare-ms) var(--ease) forwards; }
+.sig-mini.sig-reactor-ring .sig-seg-track, .sig-mini.sig-reactor-ring .sig-seg-on { stroke-width: 44; }
+.sig-mini.sig-reactor-ring .sig-mask { stroke-width: 60; }
+
+/* slab-monolith */
+.sig-slab-monolith { display: flex; align-items: flex-end; gap: calc(var(--s) * .105); }
+.sig-slabs { display: flex; gap: calc(var(--s) * .021); }
+.sig-slab { position: relative; overflow: hidden; display: block; width: calc(var(--s) * .226); height: var(--s); border-radius: var(--r-sm); background: var(--c-ink, var(--c-text)); }
+.sig-slab-fill { position: absolute; inset: 0; background: var(--c-on-ink, var(--c-ground)); opacity: .18; transform-origin: bottom; transition: transform var(--dur-base) var(--ease); }
+.sig-rule { position: absolute; left: 6.5%; right: 6.5%; height: 2px; background: color-mix(in srgb, var(--c-on-ink, var(--c-ground)) 14%, var(--c-ink, var(--c-text))); }
+.sig-rule-t { top: calc(var(--s) * .042); }
+.sig-rule-b { bottom: calc(var(--s) * .042); }
+.sig-slab-monolith .sig-time { font-family: var(--font-num); font-weight: 600; font-size: calc(var(--s) * .232); line-height: .9; color: var(--c-text); }
+.sig-slab-monolith.sig-mini { display: inline-flex; align-items: flex-end; gap: 2px; }
+.sig-slab-monolith.sig-mini .sig-slab { width: calc(var(--s) * .2); border-radius: 2px; }
+.sig-slab-monolith[data-complete="true"] .sig-slab { animation: sig-pulse var(--sig-flare-ms, 900ms) var(--ease); }
+
+/* accretion-ring */
+.sig-accretion-ring .sig-time { font-family: var(--font-num); font-weight: 400; }
+.sig-accretion-ring .sig-halo { fill: none; stroke: var(--c-ring, var(--c-text-2)); stroke-opacity: .18; stroke-width: 18; }
+.sig-accretion-ring .sig-hole { fill: var(--c-ground); }
+.sig-accretion-ring .sig-rim { fill: none; stroke: var(--c-ring, var(--c-text-2)); stroke-opacity: .25; stroke-width: 2; }
+.sig-accretion-ring .sig-prog { fill: none; stroke: var(--c-ring-bright, var(--sig-b)); stroke-width: 4; transition: stroke-dashoffset var(--sig-charge-ms, 1400ms) var(--ease); }
+.sig-accretion-ring[data-overrun="true"] .sig-prog { stroke: var(--c-warn); }
+.sig-accretion-ring .sig-disk { transform-box: view-box; transform-origin: 50% 50%; animation: sig-spin var(--sig-disk-sec) linear infinite; }
+.sig-accretion-ring .sig-disk path { fill: none; stroke: var(--c-disk, var(--sig-b)); stroke-width: 3; stroke-opacity: .7; }
+.sig-accretion-ring .sig-flare-svg { stroke: var(--c-ring-bright, var(--sig-b)); stroke-width: 6; }
+.sig-mini.sig-accretion-ring .sig-halo { stroke-width: 36; }
+.sig-mini.sig-accretion-ring .sig-rim { stroke-width: 6; }
+.sig-mini.sig-accretion-ring .sig-prog { stroke-width: 44; }
+.sig-mini.sig-accretion-ring .sig-disk path { stroke-width: 36; }
+.sig-mini.sig-accretion-ring .sig-flare-svg { stroke-width: 30; }
+
+/* ticking-digits: the digit lift is the only motion */
+.sig-ticking-digits { display: inline-flex; align-items: baseline; gap: .033em; font-family: var(--font-num); font-weight: 500; letter-spacing: -.04em; line-height: 1; font-variant-numeric: var(--num-variant, tabular-nums); }
+.sig-ticking-digits[data-overrun="true"] { color: var(--c-warn); }
+.sig-mini.sig-ticking-digits { align-items: center; letter-spacing: -.02em; }
+.sig-digit { display: inline-block; }
+.sig-tick { animation: sig-lift var(--sig-tick-ms) var(--ease) both; }
+
+/* motion switch / reduced motion (ThemeProvider sets data-motion="off") */
+[data-motion="off"] .sig, [data-motion="off"] .sig * { animation: none !important; transition: none !important; }
+[data-motion="off"] .sig-flare, [data-motion="off"] .sig-flare-svg { display: none; }

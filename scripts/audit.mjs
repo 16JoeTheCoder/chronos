@@ -1,5 +1,5 @@
 // npm run audit (§11.2): the mechanical backstop. Typecheck, tests, build, then
-// the standing rules: core purity (and core/mcp free of Node/Electron), dependency
+// the standing rules: core purity (and core/mcp and core/parser free of Node/Electron), dependency
 // allowlist, network code only where it belongs (Firebase only in src/main/sync),
 // the typed finish phrase gone, bundle budgets, no fast intervals in main, no
 // unexplained TODOs, every core module covered by a test. Prints one line per check and exits non-zero on any failure.
@@ -33,11 +33,11 @@ check('tests', () => {
 });
 check('build', () => void sh('node scripts/build.mjs'));
 
-check('core imports only core (minisearch in core/search only)', () => {
+check('core imports only core (minisearch in core/search, chrono-node in core/parser only)', () => {
   const bad = [];
   for (const f of files('src/core')) {
     const src = readFileSync(f, 'utf8');
-    for (const i of imports(src)) if (!i.startsWith('.') && !(i === 'minisearch' && f === 'src/core/search/index.ts')) bad.push(`${f}: imports ${i}`);
+    for (const i of imports(src)) if (!i.startsWith('.') && !(i === 'minisearch' && f === 'src/core/search/index.ts') && !(i === 'chrono-node' && f.startsWith('src/core/parser/'))) bad.push(`${f}: imports ${i}`);
     if (/\b(document|window|localStorage|navigator)\./.test(src)) bad.push(`${f}: touches the DOM`);
   }
   return bad;
@@ -57,19 +57,28 @@ check('the typed finish phrase is gone', () => {
   return all.filter((f) => readFileSync(f, 'utf8').toLowerCase().includes(phrase)).map((f) => `${f}: still mentions the typed phrase`);
 });
 
+check('core/parser is free of Electron and Node imports', () =>
+  files('src/core/parser', /\.(ts|tsx)$/).flatMap((f) => {
+    const src = readFileSync(f, 'utf8');
+    const bad = imports(src).filter((i) => i === 'electron' || i === 'fs' || i === 'path' || i === 'os' || i === 'crypto' || i.startsWith('node:') || i.startsWith('electron/'));
+    const api = /\b(process\.|Buffer\b|require\(|__dirname|__filename)/.test(src) ? [`${f}: uses a Node API`] : [];
+    return [...bad.map((i) => `${f}: imports ${i}`), ...api];
+  }),
+);
+
 check('renderer never imports main', () =>
   files('src/renderer').flatMap((f) => imports(readFileSync(f, 'utf8')).filter((i) => i.includes('/main/')).map((i) => `${f}: imports ${i}`)),
 );
 
 check('dependency allowlist', () => {
-  const allow = new Set(['electron', 'react', 'react-dom', 'typescript', 'vite', '@vitejs/plugin-react', 'esbuild', 'electron-builder', 'vitest', 'playwright-core', '@types/node', '@types/react', '@types/react-dom', 'firebase', 'minisearch', '@modelcontextprotocol/sdk']);
+  const allow = new Set(['electron', 'react', 'react-dom', 'typescript', 'vite', '@vitejs/plugin-react', 'esbuild', 'electron-builder', 'vitest', 'playwright-core', '@types/node', '@types/react', '@types/react-dom', 'firebase', 'minisearch', '@modelcontextprotocol/sdk', 'chrono-node', 'koffi']);
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-  return Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter((d) => !allow.has(d)).map((d) => `not allowed: ${d}`);
+  return Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter((d) => !allow.has(d) && !d.startsWith('@fontsource/')).map((d) => `not allowed: ${d}`);
 });
 
 // Network code lives in exactly these files: sync (Firestore, Google sign-in), the
 // loopback MCP endpoint and the stdio bridge. Firebase only in src/main/sync.
-const NETWORK_FILES = new Set(['src/main/sync/firestore.ts', 'src/main/sync/auth.ts', 'src/main/sync/remote.ts', 'src/main/mcp/server.ts', 'src/bridge/client.ts', 'src/bridge/chronos-mcp.ts']);
+const NETWORK_FILES = new Set(['src/main/sync/firestore.ts', 'src/main/sync/auth.ts', 'src/main/sync/remote.ts', 'src/main/mcp/server.ts', 'src/bridge/client.ts', 'src/bridge/chronos-mcp.ts', 'src/main/askClaude.ts']);
 const FIREBASE_FILES = new Set(['src/main/sync/firestore.ts', 'src/main/sync/auth.ts', 'src/main/sync/remote.ts']);
 check('network code only in the sync, MCP endpoint and bridge modules', () => {
   const bad = [];
@@ -99,6 +108,23 @@ check('no rAF loops, no sub-250 ms intervals in main', () => {
   return bad;
 });
 
+// No hard-coded colours outside theme files: every colour comes from a theme token (--c-*). Allowed:
+// the theme JSON files, the tag palette in tokens.css (data colours), lines that only define a mask.
+const COLOUR_ALLOW = new Set(['src/renderer/public/tokens.css']);
+check('no hard-coded colours outside theme files', () => {
+  const bad = [];
+  const re = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/;
+  for (const f of files('src/renderer', /\.(tsx?|css|html)$/)) {
+    if (COLOUR_ALLOW.has(f) || f.includes('/themes/')) continue;
+    readFileSync(f, 'utf8').split('\n').forEach((line, n) => {
+      if (/mask|audit-allow|&#\d+;/.test(line)) return;
+      const code = line.replace(/\/\*.*?\*\/|\/\/.*$/g, '');
+      if (re.test(code)) bad.push(`${f}:${n + 1}: ${line.trim().slice(0, 100)}`);
+    });
+  }
+  return bad;
+});
+
 check('bundle budgets', () => {
   const bad = [];
   const gz = (p) => gzipSync(readFileSync(p)).length;
@@ -115,7 +141,7 @@ check('bundle budgets', () => {
   if (bridge > 700 * 1024) bad.push('MCP bridge over 700 KB');
   if (js > 220 * 1024) bad.push('renderer JS over 220 KB gzipped');
   if (css > 30 * 1024) bad.push('CSS over 30 KB gzipped');
-  if (main > 150 * 1024) bad.push('main bundle over 150 KB');
+  if (main > 180 * 1024) bad.push("main bundle over 180 KB");
   if (launch > 8 * 1024) bad.push('launch.css over 8 KB');
   return bad;
 });
@@ -135,11 +161,22 @@ check('TODO/FIXME have a decision', () => {
 
 check('every core module has a test', () => {
   const tests = files('tests').map((f) => readFileSync(f, 'utf8')).join('\n');
-  return files('src/core')
+  const mods = files('src/core')
     .filter((f) => !f.endsWith('model/types.ts'))
-    .map((f) => relative('src', f).replace(/\\/g, '/').replace(/\.tsx?$/, ''))
-    .filter((m) => !tests.includes(`src/${m}'`))
-    .map((m) => `no test imports src/${m}`);
+    .map((f) => relative('src', f).replace(/\\/g, '/').replace(/\.tsx?$/, ''));
+  // A test that imports a folder (src/core/theme) imports its index, and so every module the index re-exports.
+  const covered = new Set();
+  const reexports = (m) => {
+    const src = readFileSync(`src/${m}.ts`, 'utf8');
+    const dir = m.replace(/\/[^/]+$/, '');
+    return [...src.matchAll(/export[^'"]*?from\s+['"]\.\/([^'"]+)['"]/g)].map((x) => `${dir}/${x[1]}`.replace(/\.\w+$/, ''));
+  };
+  for (const m of mods) {
+    if (tests.includes(`src/${m}'`)) covered.add(m);
+    if (m.endsWith('/index') && tests.includes(`src/${m.slice(0, -6)}'`)) covered.add(m);
+  }
+  for (const m of [...covered]) if (m.endsWith('/index')) for (const r of reexports(m)) covered.add(r);
+  return mods.filter((m) => !covered.has(m)).map((m) => `no test imports src/${m}`);
 });
 
 check('docs present', () =>

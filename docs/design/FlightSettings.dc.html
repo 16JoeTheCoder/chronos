@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flight plan settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&amp;family=Barlow:wght@400;500;600&amp;family=Courier+Prime:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F5DA8}a:hover{color:#1F3F75}
+::selection{background:#FF6A13;color:#111418}
+.fp-ghost:hover{background:rgba(17,20,24,0.06)}
+.fp-btn:hover{background:#E85A08}
+.fp-btn:focus-visible,.fp-ghost:focus-visible{outline:2px solid #2F5DA8;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; background: #F2F2EE; font-family: Barlow, system-ui, sans-serif; color: #111418; display: flex">
+<nav aria-label="Settings sections" style="width: 260px; background: #FFFFFF; border-right: 1px solid #D5D6D2; padding: 40px 20px; display: flex; flex-direction: column; gap: 4px">
+<h1 style="margin: 0 0 24px 12px; font-family: 'Barlow Condensed', sans-serif; font-size: 34px; font-weight: 700">Settings</h1>
+<a href="#" aria-current="page" style="padding: 12px; border-radius: 6px; background: #FFE3D2; color: #111418; text-decoration: none; font-size: 16px; font-weight: 600">Look and widgets</a>
+<a href="#" style="padding: 12px; color: #3A3F46; text-decoration: none; font-size: 16px">Day and planning</a>
+<a href="#" style="padding: 12px; color: #3A3F46; text-decoration: none; font-size: 16px">Focus</a>
+<a href="#" style="padding: 12px; color: #3A3F46; text-decoration: none; font-size: 16px">Parser rules</a>
+<a href="#" style="padding: 12px; color: #3A3F46; text-decoration: none; font-size: 16px">Account and sync</a>
+<div style="flex: 1"></div>
+<a href="#" style="padding: 12px; color: #5A6068; text-decoration: none; font-size: 15px">Experimental</a>
+</nav>
+<main style="flex: 1; padding: 44px 64px; max-width: 840px; display: flex; flex-direction: column; gap: 32px; overflow: hidden">
+<section style="display: flex; flex-direction: column; gap: 14px">
+<h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 600">Theme</h2>
+<div style="display: flex; gap: 16px"><button class="fp-ghost" aria-pressed="true" style="flex: 1; border-radius: 8px; border: 2px solid #111418; background: #FFFFFF; padding: 18px; display: flex; flex-direction: column; gap: 12px; text-align: left; font: 600 17px Barlow, sans-serif; color: #111418"><span style="display: flex; gap: 6px"><span style="width: 18px; height: 18px; border-radius: 9px; background: #F2F2EE; border: 1px solid #D5D6D2"></span><span style="width: 18px; height: 18px; border-radius: 9px; background: #111418; border: 1px solid #D5D6D2"></span><span style="width: 18px; height: 18px; border-radius: 9px; background: #FF6A13; border: 1px solid #D5D6D2"></span></span>Flight plan</button><button class="fp-ghost" aria-pressed="false" style="flex: 1; border-radius: 8px; border: 1px solid #D5D6D2; background: #FFFFFF; padding: 18px; display: flex; flex-direction: column; gap: 12px; text-align: left; font: 600 17px Barlow, sans-serif; color: #111418"><span style="display: flex; gap: 6px"><span style="width: 18px; height: 18px; border-radius: 9px; background: #03060B; border: 1px solid #D5D6D2"></span><span style="width: 18px; height: 18px; border-radius: 9px; background: #4FD8FF; border: 1px solid #D5D6D2"></span><span style="width: 18px; height: 18px; border-radius: 9px; background: #FFB547; border: 1px solid #D5D6D2"></span></span>Stark workshop</button></div>
+</section>
+<section style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 600">Switch themes on a schedule</h2><div style="display: flex; align-items: center; gap: 16px; padding: 0"><div style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 16px; font-weight: 500"></span><span style="font-size: 14px; color: #5A6068"></span></div><button class="fp-ghost" role="switch" aria-checked="true" aria-label="Switch themes on a schedule" style="width: 44px; height: 24px; border-radius: 12px; border: none; background: #FF6A13; position: relative; padding: 0"><span style="position: absolute; top: 3px; left: 22px; width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF"></span></button></div></div>
+<div style="display: grid; grid-template-columns: 120px minmax(0,1fr) 40px; gap: 12px; align-items: center"><label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #5A6068">From<input value="07:00" aria-label="Switch time" style="height: 40px; border-radius: 6px; border: 1px solid #A9ADB3; padding: 0 10px; font: 700 15px 'Courier Prime', monospace; color: #111418"></label><label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #5A6068">Theme<select aria-label="Theme" style="height: 40px; border-radius: 6px; border: 1px solid #A9ADB3; padding: 0 10px; font: 500 15px Barlow, sans-serif; color: #111418; background: #FFFFFF"><option>Flight plan</option></select></label><button class="fp-ghost" aria-label="Remove switch" style="margin-top: 18px; height: 40px; border-radius: 6px; border: 1px solid #D5D6D2; background: transparent; font: 600 18px Barlow">×</button></div><div style="display: grid; grid-template-columns: 120px minmax(0,1fr) 40px; gap: 12px; align-items: center"><label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #5A6068">From<input value="18:30" aria-label="Switch time" style="height: 40px; border-radius: 6px; border: 1px solid #A9ADB3; padding: 0 10px; font: 700 15px 'Courier Prime', monospace; color: #111418"></label><label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #5A6068">Theme<select aria-label="Theme" style="height: 40px; border-radius: 6px; border: 1px solid #A9ADB3; padding: 0 10px; font: 500 15px Barlow, sans-serif; color: #111418; background: #FFFFFF"><option>Stark workshop</option></select></label><button class="fp-ghost" aria-label="Remove switch" style="margin-top: 18px; height: 40px; border-radius: 6px; border: 1px solid #D5D6D2; background: transparent; font: 600 18px Barlow">×</button></div>
+<button class="fp-ghost" style="align-self: flex-start; height: 40px; padding: 0 16px; border-radius: 6px; border: 1px dashed #A9ADB3; background: transparent; font: 600 15px Barlow, sans-serif; color: #111418">Add a switch time</button>
+</section>
+<section style="display: flex; flex-direction: column">
+<h2 style="margin: 0 0 4px; font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 600">Widgets</h2>
+<div style="display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid #E2E3DF"><div style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 16px; font-weight: 500">Day</span><span style="font-size: 14px; color: #5A6068">Flight plan list or dial, and free time left</span></div><button class="fp-ghost" role="switch" aria-checked="true" aria-label="Day" style="width: 44px; height: 24px; border-radius: 12px; border: none; background: #FF6A13; position: relative; padding: 0"><span style="position: absolute; top: 3px; left: 22px; width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF"></span></button></div><div style="display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid #E2E3DF"><div style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 16px; font-weight: 500">Momentum</span><span style="font-size: 14px; color: #5A6068">Focus hours, steps done, streak, estimate drift</span></div><button class="fp-ghost" role="switch" aria-checked="true" aria-label="Momentum" style="width: 44px; height: 24px; border-radius: 12px; border: none; background: #FF6A13; position: relative; padding: 0"><span style="position: absolute; top: 3px; left: 22px; width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF"></span></button></div><div style="display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid #E2E3DF"><div style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 16px; font-weight: 500">Notes</span><span style="font-size: 14px; color: #5A6068">The current step's crew notes</span></div><button class="fp-ghost" role="switch" aria-checked="true" aria-label="Notes" style="width: 44px; height: 24px; border-radius: 12px; border: none; background: #FF6A13; position: relative; padding: 0"><span style="position: absolute; top: 3px; left: 22px; width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF"></span></button></div><div style="display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid #E2E3DF"><div style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 16px; font-weight: 500">Wellness</span><span style="font-size: 14px; color: #5A6068">Break reminder at the end of long blocks</span></div><button class="fp-ghost" role="switch" aria-checked="true" aria-label="Wellness" style="width: 44px; height: 24px; border-radius: 12px; border: none; background: #FF6A13; position: relative; padding: 0"><span style="position: absolute; top: 3px; left: 22px; width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF"></span></button></div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

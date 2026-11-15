@@ -7,13 +7,14 @@ import { useSyncExternalStore, type PointerEvent as RPointerEvent } from 'react'
 export type DragItem =
   | { kind: 'task'; taskId: string; title: string; dur: number }
   | { kind: 'block'; blockId: string; title: string; mode: 'move' | 'start' | 'end'; offsetMin: number }
-  | { kind: 'event'; eventId: string; title: string; date: string; recurring: boolean }
+  | { kind: 'event'; eventId: string; title: string; date: string; recurring: boolean; /** Placed events: where it sits now. Unplaced: both null. */ startMin?: number | null; endMin?: number | null; durMin?: number; offsetMin?: number; unplaced?: boolean }
   | { kind: 'file'; path: string; title: string };
 
 export interface Target {
   el(): HTMLElement | null;
   accepts(item: DragItem): boolean;
-  over?(item: DragItem, x: number, y: number): unknown;
+  /** `free` = Alt held: snapping off. */
+  over?(item: DragItem, x: number, y: number, free: boolean): unknown;
   drop(item: DragItem, preview: unknown): void;
 }
 
@@ -23,6 +24,8 @@ export interface DragState {
   y: number;
   target: string | null;
   preview: unknown;
+  /** Alt held: free drag, no snapping. */
+  free?: boolean;
 }
 
 const targets = new Map<string, Target>();
@@ -45,10 +48,10 @@ export function useDrag(): DragState | null {
   );
 }
 
-function hit(item: DragItem, x: number, y: number): [string | null, unknown] {
+function hit(item: DragItem, x: number, y: number, free: boolean): [string | null, unknown] {
   for (const [id, t] of targets) {
     const r = t.el()?.getBoundingClientRect();
-    if (r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom && t.accepts(item)) return [id, t.over?.(item, x, y)];
+    if (r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom && t.accepts(item)) return [id, t.over?.(item, x, y, free)];
   }
   return [null, null];
 }
@@ -67,8 +70,8 @@ export function beginDrag(e: RPointerEvent, item: DragItem | (() => DragItem), o
       document.documentElement.classList.add('dragging');
     }
     const it = state?.item ?? (typeof item === 'function' ? item() : item);
-    const [target, preview] = hit(it, ev.clientX, ev.clientY);
-    state = { item: it, x: ev.clientX, y: ev.clientY, target, preview };
+    const [target, preview] = hit(it, ev.clientX, ev.clientY, ev.altKey);
+    state = { item: it, x: ev.clientX, y: ev.clientY, target, preview, free: ev.altKey };
     emit();
   };
   const up = () => {

@@ -1,0 +1,189 @@
+{
+  "$schema": "chronos-theme/1",
+  "id": "tars-gargantua",
+  "name": "TARS / Gargantua",
+  "mode": "light",
+  "defaultVariant": "day",
+  "fonts": {
+    "display": {
+      "family": "Red Hat Display",
+      "weights": [
+        500,
+        700,
+        900
+      ],
+      "source": "fontsource"
+    },
+    "text": {
+      "family": "Red Hat Display",
+      "weights": [
+        400,
+        500,
+        700
+      ],
+      "source": "fontsource"
+    },
+    "numerals": {
+      "family": "Red Hat Mono",
+      "weights": [
+        400,
+        600
+      ],
+      "source": "fontsource",
+      "generic": "monospace"
+    },
+    "tabularNumbers": true
+  },
+  "color": {
+    "ground": "#E9E7E1",
+    "panel": "#E9E7E1",
+    "panelHero": "#1A1C1F",
+    "line": "rgba(26,28,31,0.35)",
+    "lineStrong": "#1A1C1F",
+    "text": "#1A1C1F",
+    "text2": "#4A4D52",
+    "text3": "#4A4D52",
+    "muted": "#5A5D62",
+    "accent": "#1A1C1F",
+    "accentHover": "#3A3D42",
+    "onAccent": "#E9E7E1",
+    "now": "#1A1C1F",
+    "wellness": "#8A5A00",
+    "ok": "#2F6B3F",
+    "warn": "#8A5A00",
+    "danger": "#A8322D",
+    "fixedBlock": "#7A776F",
+    "selection": "#1A1C1F",
+    "ink": "#1A1C1F",
+    "onInk": "#E9E7E1"
+  },
+  "shape": {
+    "radiusSm": 4,
+    "radiusMd": 4,
+    "radiusLg": 4,
+    "pill": 999
+  },
+  "depth": {
+    "float": "0 12px 32px rgba(26,28,31,0.16)"
+  },
+  "motion": {
+    "ease": "cubic-bezier(.2,0,0,1)",
+    "fast": 120,
+    "base": 240,
+    "signature": {
+      "kind": "slab-monolith",
+      "respectReducedMotion": true
+    }
+  },
+  "focus": {
+    "widgetOpacity": 0.3,
+    "widgetBlurPx": 0
+  },
+  "widgets": {
+    "day": {
+      "style": "dial"
+    },
+    "momentum": {
+      "style": "week-bars"
+    },
+    "notes": {
+      "style": "latest-two"
+    },
+    "wellness": {
+      "style": "card",
+      "breakAfterMin": 75
+    }
+  },
+  "sound": {
+    "enabled": true,
+    "volume": 0.3,
+    "muteInFocus": false,
+    "cues": {
+      "blockStart": "soft-rise",
+      "blockFinish": "chord"
+    }
+  },
+  "variants": {
+    "day": {
+      "name": "TARS",
+      "mode": "light",
+      "motion": {
+        "signature": {
+          "kind": "slab-monolith"
+        }
+      }
+    },
+    "night": {
+      "name": "Gargantua",
+      "mode": "dark",
+      "fonts": {
+        "display": {
+          "family": "Michroma",
+          "weights": [
+            400
+          ],
+          "source": "fontsource"
+        },
+        "text": {
+          "family": "Red Hat Text",
+          "weights": [
+            300,
+            400,
+            500
+          ],
+          "source": "fontsource"
+        },
+        "numerals": "display"
+      },
+      "color": {
+        "ground": "#000000",
+        "panel": "rgba(244,231,208,0.04)",
+        "panelHero": "rgba(244,231,208,0.07)",
+        "line": "#3A3F47",
+        "lineStrong": "#FFF4E2",
+        "text": "#F5F7FA",
+        "text2": "#D9DEE6",
+        "text3": "#A9B0BA",
+        "muted": "#7A818C",
+        "accent": "#FFF4E2",
+        "accentHover": "#FFFFFF",
+        "onAccent": "#000000",
+        "now": "#FFE9C4",
+        "wellness": "#E8B25A",
+        "ok": "#7FD6A4",
+        "warn": "#E8B25A",
+        "danger": "#FF7A7A",
+        "fixedBlock": "#5A616B",
+        "selection": "#FFF4E2",
+        "ink": "#000000",
+        "onInk": "#F5F7FA",
+        "ring": "#F4E7D0",
+        "ringBright": "#FFF4E2",
+        "disk": "#FFE9C4"
+      },
+      "shape": {
+        "radiusSm": 12,
+        "radiusMd": 24,
+        "radiusLg": 24,
+        "pill": 999
+      },
+      "depth": {
+        "float": "0 18px 40px rgba(0,0,0,0.6)"
+      },
+      "motion": {
+        "ease": "cubic-bezier(.16,1,.3,1)",
+        "fast": 160,
+        "base": 420,
+        "signature": {
+          "kind": "accretion-ring",
+          "diskTurnSec": 90,
+          "completionFlareMs": 900
+        }
+      },
+      "focus": {
+        "widgetOpacity": 0.2,
+        "widgetBlurPx": 1.5
+      }
+    }
+  }
+}

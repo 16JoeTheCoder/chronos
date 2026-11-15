@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Visor: JARVIS heads-up display</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@400;900&amp;family=Geist:wght@300;400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9FB4E6}a:hover{color:#C4D2F2}
+.field{background-color:#090B10;background-image:radial-gradient(rgba(159,180,230,0.13) 1.1px,transparent 1.4px);background-size:14px 14px}
+.vignette{background:radial-gradient(ellipse at center,rgba(9,11,16,0) 30%,rgba(9,11,16,0.92) 78%)}
+</style>
+</helmet>
+<div class="field" style="width: 1440px; height: 900px; position: relative; overflow: hidden; font-family: Geist, system-ui, sans-serif; color: #D7DEEA">
+<div class="vignette" style="position: absolute; inset: 0"></div>
+<div style="position: absolute; left: 48px; top: 48px; width: 28px; height: 28px; border-left: 1px solid #9FB4E6; border-top: 1px solid #9FB4E6"></div>
+<div style="position: absolute; right: 48px; top: 48px; width: 28px; height: 28px; border-right: 1px solid #9FB4E6; border-top: 1px solid #9FB4E6"></div>
+<div style="position: absolute; left: 48px; bottom: 48px; width: 28px; height: 28px; border-left: 1px solid #9FB4E6; border-bottom: 1px solid #9FB4E6"></div>
+<div style="position: absolute; right: 48px; bottom: 48px; width: 28px; height: 28px; border-right: 1px solid #9FB4E6; border-bottom: 1px solid #9FB4E6"></div>
+<div style="position: absolute; left: 96px; top: 72px; font-size: 13px; color: #6E7A90">14:22 · Wed 11 Nov</div>
+<div style="position: absolute; right: 96px; top: 72px; font-size: 13px; color: #6E7A90; display: flex; align-items: center; gap: 8px"><span style="width: 6px; height: 6px; border-radius: 3px; background: #7FD1AE"></span>Synced</div>
+<div style="position: absolute; left: 0; right: 0; top: 230px; display: flex; flex-direction: column; align-items: center; gap: 20px">
+<span style="font-size: 18px; font-weight: 300; color: #9FB4E6">Wind sim: blade pitch model</span>
+<span style="font-family: Doto, monospace; font-weight: 900; font-size: 240px; line-height: 0.9; color: #EEF2F8; letter-spacing: 0.02em">41:08</span>
+<span style="font-size: 15px; color: #8C97AA">Done when the power curve plateaus at rated speed.</span>
+</div>
+<div style="position: absolute; left: 50%; top: 640px; transform: translateX(-50%); width: 560px; display: flex; flex-direction: column; gap: 10px">
+<div style="position: relative; height: 2px; background: #1F2533">
+<div style="position: absolute; left: 0; top: 0; height: 2px; width: 54%; background: #9FB4E6"></div>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 12px; color: #6E7A90"><span>14:00</span><span>Hold Enter to finish · Space to pause</span><span>15:30</span></div>
+</div>
+<div style="position: absolute; left: 96px; top: 300px; display: flex; flex-direction: column; gap: 18px; font-size: 13px; color: #4F5A6E">
+<span>07:30 School</span>
+<span style="color: #D7DEEA">14:00 Blade pitch</span>
+<span>16:00 Football</span>
+<span>19:00 Physics</span>
+</div>
+<div style="position: absolute; right: 96px; top: 300px; width: 220px; display: flex; flex-direction: column; gap: 6px; text-align: right">
+<span style="font-size: 12px; color: #6E7A90">Free today</span>
+<span style="font-size: 28px; font-weight: 300">3 h 05 m</span>
+</div>
+<div style="position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); width: 520px; height: 48px; border: 1px solid #2A3244; border-radius: 24px; display: flex; align-items: center; padding: 0 20px; gap: 12px; color: #6E7A90; font-size: 14px; background: rgba(9,11,16,0.7)">
+<span style="width: 8px; height: 8px; border-radius: 4px; border: 1px solid #9FB4E6"></span>
+<span>Ask JARVIS, add a task, or search</span>
+<span style="margin-left: auto; font-size: 12px">Ctrl K</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

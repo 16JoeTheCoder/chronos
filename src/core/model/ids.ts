@@ -16,3 +16,6 @@ export const recurrenceId = (parentId: string, date: string): string => `${paren
 
 /** Ids accepted from outside (IPC, MCP, sync): uuid, deterministic ids, imports. */
 export const isId = (v: unknown): v is string => typeof v === 'string' && /^[\w:.-]{1,160}$/.test(v);
+
+/** The block auto-plan makes for a task on a date: deterministic, so two devices planning the same morning write one block. */
+export const autoBlockId = (taskId: string, date: string): string => `ab-${taskId}-${date}`;

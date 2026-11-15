@@ -1,26 +1,42 @@
 # Chronos
 
-**Own your time.** A Windows 11 desktop layer for Josef Yang: a day runway (schedule plus time-left maths), a task queue, and a single-focus timer, with a taskbar widget, a Desktop shelf and a Trash. It replaces [Monolith](https://github.com/16JoeTheCoder/monolith).
+**Own your time.** A Windows 11 app for Josef Yang: a day runway (schedule plus time-left maths), a task queue, a single-focus timer, a Log of notes, a project board, a quick-add palette, and four themes (Tactile instrument, Stark workshop, TARS day, Gargantua night). It replaces [Monolith](https://github.com/16JoeTheCoder/monolith).
 
-Planning is free; execution is strict. One task is in focus at a time, it needs a finish condition, and it ends only by holding **Enter** (or the Finish button) for 2 seconds, or with a typed reason to drop it. Everything is local-first; optional live sync between your PCs runs through Firebase (`docs/SETUP_FIREBASE.md`), and Claude Desktop can read and change your data through a local MCP server (`docs/MCP.md`).
+Planning is free; execution is strict. One task is in focus at a time, it needs a finish condition, and it ends only by **holding Enter for 2 seconds** (Space starts and pauses and never finishes). Everything is local-first; optional live sync between your PCs runs through Firebase, and Claude Desktop can read and change your data through a local MCP server.
 
-## Run, test, build
+**Status, plainly:** built and tested on Linux. The "Live on the desktop" layer (Home behind your desktop icons) ships **OFF** with the normal window as the fallback, and is unverified on Windows, as are the overlay, notepad and palette windows. Do the Windows checklist before trusting them.
 
-In the VS Code terminal or an Ubuntu/WSL terminal, from the repo root:
+## Install
+
+On Windows, in a browser: GitHub, 16JoeTheCoder/chronos, **Actions**, the latest **Build Windows** run, download the `Chronos-windows` artifact and run `Chronos-Setup-<version>.exe`. The build is **unsigned**: SmartScreen warns on first run, choose **More info, Run anyway**. (Portable: `Chronos-Portable-<version>.exe`.) To package locally, in Windows PowerShell at the repo root: `npm run package:win`.
+
+## Run, test, build (developers)
+
+In the VS Code terminal at the repo root (Windows PowerShell or Ubuntu/WSL):
 
 ```bash
-npm ci              # install
-npm run dev         # Vite + Electron with hot reload (restart for main-process changes)
-npm test            # unit tests (vitest)
+npm ci                       # install
+npm run dev                  # Vite + Electron with hot reload (restart for main-process changes)
+npm test                     # unit tests (vitest)
 npm run typecheck
-npm run audit       # typecheck, tests, build, budgets and the standing rules
-npm run build       # dist/
-xvfb-run -a npm run smoke   # Linux only: drives the built app, writes docs/screens/
+npm run audit                # typecheck, tests, build, budgets and the standing rules
+npm run build                # dist/
+xvfb-run -a node scripts/smoke.mjs   # Linux only, after npm run build: drives the built app, writes docs/screens/
 ```
 
-Windows installers are built by GitHub Actions (`.github/workflows/build-windows.yml`) on every push: `Chronos-Setup-<version>.exe` (choose a folder) and `Chronos-Portable-<version>.exe`. Tags `v*` attach both to a Release. To package locally on Windows, in PowerShell: `npm run package:win`.
+## Sign in (sync between your PCs)
 
-**The build is unsigned.** Windows SmartScreen warns on first run: choose **More info → Run anyway**.
+One-time setup first: **browser**, Firebase and Google Cloud consoles, following `docs/SETUP_FIREBASE.md` (it says which console each step is in). Then **in Chronos**: Settings, Account and sync, **Sign in with Google**; your browser opens, choose the account, return to Chronos. Signed out or unconfigured, Chronos simply stays local.
+
+## Connect Claude (MCP)
+
+1. **In Chronos:** Settings, Account and sync, Claude MCP: turn **Claude (MCP)** on and click **Copy Claude Desktop config**.
+2. **In VS Code** (or Notepad): open `%APPDATA%\Claude\claude_desktop_config.json`, paste the snippet into `mcpServers`, save.
+3. **Restart Claude Desktop**, then ask it about your day. Details and the tool list: `docs/MCP.md`.
+
+## Keys
+
+`F` Focus, `P` plan, `N` new task, `Ctrl+K` palette (add, search, `>` commands), `Ctrl+L` Log, `Ctrl+Z` undo the last toast action, `Esc` back. Global: `Ctrl+Alt+K` palette, `Ctrl+Alt+N` notepad, `Ctrl+Alt+Space` show or hide Chronos (all editable in Settings, Focus).
 
 ## Where your data lives
 
@@ -28,7 +44,9 @@ Windows installers are built by GitHub Actions (`.github/workflows/build-windows
 
 ## Docs
 
-- `docs/ARCHITECTURE.md`: layers, data flow, windows, sync
+- `docs/ARCHITECTURE.md`: layers, data flow, windows, sync, parser, themes
+- `docs/THEMES.md`: the theme schema and how to write a theme with an AI
+- `docs/parser/`: the parser spec and how to fix a misparse (add the corpus line first)
 - `decision.md`: every decision and why; `log.md`: build log (status, next steps)
 - `docs/SPEC_MATRIX.md`: each spec requirement and its evidence
 - `docs/WINDOWS_CHECKLIST.md`: what to test on Windows, and where

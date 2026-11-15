@@ -51,19 +51,24 @@ Times are local wall time; every read states the time zone. Writes return the ch
 | `list_events({from?, to?})` | the schedule (max 31 days) |
 | `get_stats({from, to})` | focus hours per tag/project, estimate vs actual, finished/dropped counts |
 | `get_review(date)`, `list_notes({limit?})` | the day's review; notes |
+| `search_log({query})` | fuzzy/prefix search over Log posts (notes) only, with their project |
+| `list_unplaced({date?})` | fixed events that have a date and a length but no time yet ("to place"). With `date`: that day; without: every unplaced event from today on. `get_day` also lists the day's under `unplaced` |
 
 | Write | What it does |
 | --- | --- |
-| `add_task({title, kind?, projectId?, tag?, estimateMin?, dueDate?, dueTime?, priority?, recurrence?, finishCondition?})` | a new inbox task, `source: 'claude'` (structured only; free-text parsing is Phase 2) |
+| `add_task({title, kind?, projectId?, tag?, estimateMin?, dueDate?, dueTime?, priority?, recurrence?, finishCondition?})` | a new inbox task, `source: 'claude'` (structured fields only for now; a parser-backed `text` argument is planned, D-130) |
 | `update_task(id, patch)`, `complete_task(id)`, `drop_task(id, reason)` | edit; complete (a recurring task spawns its next instance); close as dropped |
 | `place_block({taskId, date, startMin, endMin})`, `move_block(id, {…})`, `remove_block(id)` | plan time; refused with the reason ("overlaps the fixed event Physics 13:00-14:30") on overlap |
 | `skip_event_on(eventId, date)`, `edit_event_on(eventId, date, patch)` | change one date of a repeating event |
+| `post_log({body, projectId?})` | post to the Log feed (a note), optionally under a project |
+| `place_event({eventId, startMin})` | give an unplaced event its time; it keeps its length. Refused, with the reason, if it overlaps a fixed event or a planned block, runs past midnight, or the event already has a time |
 | `add_note(body)`, `add_project({name, color?, columns?})`, `move_card(taskId, columnId, beforeTaskId?)` | notes, projects, board order |
 | `undo(undoToken)` | reverts exactly the fields that write changed (a created record is recycled) |
 
 ## Safety
 
 - Every write goes through the same core commands as the UI: validation, the outbox, sync. Each one is logged in activity as `claude`, and Chronos shows a toast with **Undo**.
+- Planning (auto-plan, re-plan, review) is not exposed to Claude: it changes many records at once and is the user's call.
 - No hard deletes (removals are recycles, restorable from Recently deleted), no settings changes, no file access outside Chronos data.
 - At most 30 writes per minute (a runaway loop is refused with a clear message).
 - Inputs are checked strictly against each tool's schema (unknown fields, wrong types and missing fields are refused).
