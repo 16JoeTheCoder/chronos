@@ -47,7 +47,8 @@ export function Moments({ snap, inFocus }: { snap: Snapshot; inFocus: boolean })
       if (first) {
         const snd = sound.current;
         if (snd.enabled && !(inFocus && snd.muteInFocus)) playCue(first.kind === 'start' ? 'blockStart' : 'blockFinish', { volume: snd.volume });
-        if (!theme?.motionOff && theme?.theme.motion.signature.kind !== 'ticking-digits') {
+        const k = theme?.theme.motion.signature.kind;
+        if (!theme?.motionOff && k !== 'ticking-digits' && k !== 'lap-timer') {
           setM({ ...first, key: ++seq.current });
         }
       }
@@ -69,6 +70,7 @@ export function Moments({ snap, inFocus }: { snap: Snapshot; inFocus: boolean })
     <div className={`moment moment-${kind} moment-${m.kind}`} key={m.key} aria-hidden="true" data-label={label}>
       {kind === 'reactor-ring' && <StarkMoment m={m} />}
       {kind === 'slab-monolith' && <TarsMoment m={m} />}
+      {kind === 'mission-clock' && <TarsMoment m={m} stamp="STEP COMPLETE" />}
       {kind === 'accretion-ring' && <GargantuaMoment m={m} />}
     </div>
   );
@@ -91,7 +93,7 @@ function StarkMoment({ m }: { m: Moment }) {
   );
 }
 
-function TarsMoment({ m }: { m: Moment }) {
+function TarsMoment({ m, stamp = 'BLOCK COMPLETE' }: { m: Moment; stamp?: string }) {
   return (
     <div className="moment-card">
       <span className="mo-title">{m.title}</span>
@@ -101,7 +103,7 @@ function TarsMoment({ m }: { m: Moment }) {
           <span className="mo-bar"><i /></span>
         </>
       ) : (
-        <span className="mo-stamp">BLOCK COMPLETE</span>
+        <span className="mo-stamp">{stamp}</span>
       )}
     </div>
   );

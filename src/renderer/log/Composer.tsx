@@ -1,7 +1,7 @@
 // The post box. Enter posts (one write, nothing is written while typing); Shift+Enter is a newline.
 // `/p` or `/project` (or Ctrl+Shift+P) opens the project list: arrows, Enter.
 import { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { analyzeBody, autoLines } from '../../core/log';
+import { analyzeBody, autoLines, wordCount } from '../../core/log';
 import type { Data } from '../../core/model/types';
 import { run } from '../store';
 import { queueLines } from './actions';
@@ -43,8 +43,9 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer({ da
   useEffect(() => {
     const el = area.current;
     if (!el) return;
+    // Grows with the text from 180 px up to half the window, then scrolls (CSS sets the bounds).
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
+    el.style.height = `${el.scrollHeight + 2}px`;
   }, [text]);
 
   const close = () => setPick(false);
@@ -75,9 +76,9 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer({ da
         <textarea
           ref={area}
           className="composer-input"
-          rows={2}
+          rows={5}
           value={text}
-          placeholder="What is on your mind? Start a line with - to queue a task."
+          placeholder="What are you working on? Start a line with - to queue a task."
           aria-label="Write a post"
           role="combobox"
           aria-haspopup="listbox"
@@ -132,11 +133,12 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer({ da
           <span className="composer-proj">{current?.name ?? 'Project'}</span>
         ) : (
           <button type="button" className="log-btn log-btn-quiet" onClick={() => setPick((v) => !v)} aria-haspopup="listbox" aria-expanded={open} title="Choose project (Ctrl+Shift+P, or type /p)">
-            {current ? current.name : 'No project'}
+            <span className="composer-proj-label">Project</span> {current ? current.name : 'None'} <kbd>/p</kbd>
           </button>
         )}
+        <span className="composer-count" aria-live="off">{wordCount(text)} {wordCount(text) === 1 ? 'word' : 'words'}</span>
         <span className="composer-hint">Enter to post · Shift+Enter for a new line</span>
-        <button type="button" className="log-btn log-btn-primary" onClick={() => void post()} disabled={!text.trim() || busy}>
+        <button type="button" className="log-btn log-btn-primary" onClick={() => void post()} disabled={!text.trim() || busy} title={!text.trim() ? 'Write something first' : undefined}>
           Post
         </button>
       </div>

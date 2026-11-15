@@ -281,3 +281,30 @@ html[data-reactive-data="on"]:not([data-motion="off"]) .w-momentum.ignited .w-su
 
 .btn kbd { color: inherit; border-color: currentColor; opacity: .7; }
 .focus-more .mode { flex-wrap: wrap; }
+
+/* ---- Flight plan (mission-clock) and Pit wall (lap-timer): text-based timers, laid out like Tactile ---- */
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) .nowscreen { grid-template-columns: minmax(0, 1fr) 400px; }
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) .now-hero { align-self: start; gap: 24px; padding: 36px 40px; }
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) .now-timer { flex: none; min-height: 0; align-items: flex-start; gap: 28px; }
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) .sig-slot { flex: none; container-type: normal; place-items: center start; }
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) :is(.now-actions, .controls) { justify-content: flex-start; }
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) .timer-row { flex: none; min-height: 0; }
+:is([data-signature="mission-clock"], [data-signature="lap-timer"]) .focus { grid-template-rows: auto auto minmax(0, 1fr) auto; }
+[data-signature="mission-clock"] .now-hero { border: 1px solid var(--c-line); border-left: 4px solid var(--c-now); border-radius: var(--r-md); background: var(--c-panel); }
+[data-signature="mission-clock"] .now-title, [data-signature="mission-clock"] .focus-title { font-family: var(--font-display); font-weight: 700; letter-spacing: .01em; }
+[data-signature="mission-clock"] .eyebrow, [data-signature="mission-clock"] .widget h2 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .08em; }
+[data-signature="lap-timer"] .now-hero { border: 0; background: transparent; padding-left: 0; padding-right: 0; }
+[data-signature="lap-timer"] .now-title, [data-signature="lap-timer"] .focus-title { font-weight: 700; }
+[data-signature="lap-timer"] .widget { border: 0; background: var(--c-panel); border-radius: var(--r-lg); }
+[data-signature="lap-timer"] .btn-accent { border-radius: var(--r-md); }
+@media (max-width: 1000px) { :is([data-signature="mission-clock"], [data-signature="lap-timer"]) .nowscreen { grid-template-columns: minmax(0, 1fr); } }
+
+/* Recent laps (Pit wall): purple = personal best for the project or tag, green = under estimate, yellow = over. */
+.laps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.laps li { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.lap-flag { width: 10px; height: 24px; border-radius: 2px; background: var(--lap); flex: none; }
+.lap-name { flex: 1; min-width: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lap-gap { font-weight: 700; font-size: 16px; color: var(--lap); font-variant-numeric: var(--num-variant, tabular-nums); }
+.laps [data-lap="best"] { --lap: var(--c-best, var(--c-accent)); }
+.laps [data-lap="under"] { --lap: var(--c-ok); }
+.laps [data-lap="over"] { --lap: var(--c-warn); }

@@ -1,6 +1,6 @@
 // The Log: a chronological feed of notes (newest first), one stream for check-ins and task notes.
 import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState } from 'react';
-import { feedOf, indexForDay, isEmptyQuery, offsetOf, parseQuery, searchLog, visibleRange, highlight } from '../../core/log';
+import { feedOf, indexForDay, projectsWithPosts, isEmptyQuery, offsetOf, parseQuery, searchLog, visibleRange, highlight } from '../../core/log';
 import { SearchIndex } from '../../core/search';
 import { activeTask, todayOf } from '../../core/tasks/tasks';
 import { addDays, dateOf } from '../../core/time/zone';
@@ -10,6 +10,8 @@ import { Calendar } from './Calendar';
 import { Composer, type ComposerHandle } from './Composer';
 import { whenLabel } from './ctx';
 import { Note } from './Note';
+import { Stats } from './Stats';
+import { Boundary } from '../components/Boundary';
 import './log.css';
 
 export interface LogProps {
@@ -23,7 +25,13 @@ const EST_HEIGHT = 150;
 
 export function Log({ projectId = null, focusPostId }: LogProps) {
   const snap = useSnap();
-  if (!snap) return null;
+  if (!snap) {
+    return (
+      <section className="log" aria-label="Log" aria-busy="true">
+        <p className="feed-empty">Loading the Log…</p>
+      </section>
+    );
+  }
   return <LogView snap={snap} projectId={projectId} focusPostId={focusPostId} />;
 }
 
@@ -48,8 +56,16 @@ function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnTyp
     if (focusedProject !== snap.device.composerProjectId) setComposerProject(focusedProject);
   }, [focusedProject, projectId, snap.device.composerProjectId, setComposerProject]);
 
+  // ---- filter chips: All + each project with posts (a project view starts on its project) ----
+  const [chip, setChip] = useState<string | null>(projectId);
+  useEffect(() => setChip(projectId), [projectId]);
+  const chipProjects = useMemo(() => {
+    const ids = projectsWithPosts(Object.values(d.ideas));
+    return Object.values(d.projects).filter((p) => p.deletedAt === null && ids.has(p.id)).sort((a, b) => (a.sortKey < b.sortKey ? -1 : 1));
+  }, [d.ideas, d.projects]);
+
   // ---- feed ----
-  const feed = useMemo(() => feedOf(d.ideas, projectId), [d.ideas, projectId]);
+  const feed = useMemo(() => feedOf(d.ideas, chip), [d.ideas, chip]);
   const allNotes = useMemo(() => Object.values(d.ideas), [d.ideas]);
   const heights = useRef(new Map<string, number>());
   const [, bump] = useReducer((x: number) => x + 1, 0);
@@ -132,15 +148,15 @@ function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnTyp
   useEffect(() => setResActive(0), [query]);
   const composer = useRef<ComposerHandle>(null);
 
-  const projectName = projectId ? (d.projects[projectId]?.name ?? null) : null;
-  const marksProject = projectId ?? composerProject;
+  const projectName = chip ? (d.projects[chip]?.name ?? null) : null;
+  const marksProject = chip ?? composerProject;
   const markName = marksProject ? (d.projects[marksProject]?.name ?? null) : null;
   const q = found ? found.q : null;
 
   return (
     <section className="log" aria-label="Log">
       <header className="log-head">
-        <h1>{projectName ? `Log · ${projectName}` : 'Log'}</h1>
+        <h1>{projectName ? <>Log <span className="log-h-proj">· {projectName}</span></> : 'Log'}</h1>
         <div className="search">
           <input
             type="search"
@@ -203,6 +219,17 @@ function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnTyp
               if (scroller.current) scroller.current.scrollTop = 0;
             }}
           />
+          {chipProjects.length > 0 && (
+            <div className="log-chips" role="group" aria-label="Show posts from">
+              <button type="button" className="log-chip" aria-pressed={chip === null} onClick={() => setChip(null)}>All</button>
+              {chipProjects.map((p) => (
+                <button key={p.id} type="button" className="log-chip" aria-pressed={chip === p.id} onClick={() => setChip(p.id)}>
+                  <i className="log-chip-dot" style={{ background: `var(--${p.color})` }} aria-hidden="true" />{p.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <Boundary what="the posts">
           <div
             className="feed"
             ref={scroller}
@@ -223,7 +250,7 @@ function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnTyp
                       note={n}
                       data={d}
                       label={whenLabel(n.createdAt, tz, today, yesterday)}
-                      projectName={!projectId && n.projectId ? (d.projects[n.projectId]?.name ?? null) : null}
+                      projectName={!chip && n.projectId ? (d.projects[n.projectId]?.name ?? null) : null}
                       q={q}
                       flash={flash === n.id}
                       onHeight={onHeight}
@@ -233,9 +260,15 @@ function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnTyp
               </div>
             )}
           </div>
+          </Boundary>
         </div>
         <aside className={`log-side${calOpen ? ' open' : ''}`} id="log-cal" aria-label="Calendar">
-          <Calendar notes={allNotes} tz={tz} today={today} projectId={marksProject} projectName={markName} selected={selectedDay} onSelect={pickDay} />
+          <Boundary what="the calendar">
+            <Calendar notes={allNotes} tz={tz} today={today} projectId={marksProject} projectName={markName} selected={selectedDay} onSelect={pickDay} />
+          </Boundary>
+          <Boundary what="this month's numbers">
+            <Stats notes={allNotes} tz={tz} today={today} />
+          </Boundary>
         </aside>
       </div>
     </section>

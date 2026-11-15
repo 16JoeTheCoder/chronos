@@ -2,13 +2,16 @@ import { parseThemeId, resolveVariant, variantNames, type ChronosTheme, type Res
 import tactile from './tactile-instrument.chronos-theme.json';
 import stark from './stark-workshop.chronos-theme.json';
 import tarsGargantua from './tars-gargantua.chronos-theme.json';
+import flightPlan from './flight-plan.chronos-theme.json';
+import pitWall from './pit-wall.chronos-theme.json';
 
-export const builtInThemes = [tactile, stark, tarsGargantua] as unknown as ChronosTheme[];
+export const builtInThemes = [tactile, stark, tarsGargantua, flightPlan, pitWall] as unknown as ChronosTheme[];
 export const DEFAULT_THEME_ID = 'tactile-instrument';
 
 /** Font families bundled via ./fonts.ts, for validateTheme's `bundledFamilies` option. */
 export const BUNDLED_FONT_FAMILIES = [
   'Hanken Grotesk', 'Martian Mono', 'Chakra Petch', 'Sora', 'Red Hat Display', 'Red Hat Mono', 'Michroma', 'Red Hat Text',
+  'Barlow Condensed', 'Barlow', 'Courier Prime', 'Titillium Web',
 ];
 
 /** Selectable ids: one per theme, or one per variant ("tars-gargantua/night"). */

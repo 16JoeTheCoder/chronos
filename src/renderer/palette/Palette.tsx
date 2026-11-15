@@ -11,6 +11,7 @@ import { api } from '../api';
 import type { Screen } from '../components/Rail';
 import { listThemeChoices } from '../themes';
 import { describeError, toast, useSnap } from '../store';
+import { useOptionalTheme } from '../theme/ThemeProvider';
 import { paletteCommands, type PalAction } from './commands';
 import { chipsOf, commandFromParse, describeParse, parseLine } from './fromParse';
 
@@ -36,6 +37,7 @@ export function Palette({ open, onClose, standalone, onNavigate }: PaletteProps)
   const input = useRef<HTMLInputElement>(null);
   const index = useRef(new SearchIndex());
   const returnTo = useRef<HTMLElement | null>(null);
+  const mission = useOptionalTheme()?.theme.motion.signature.kind === 'mission-clock';
 
   const reset = () => { setQ(''); setSel(0); setReport(null); setTimeout(() => input.current?.focus(), 0); };
   useEffect(() => {
@@ -143,7 +145,7 @@ export function Palette({ open, onClose, standalone, onNavigate }: PaletteProps)
     <div className={`pal-scrim${standalone ? '' : ' in-app'}`} onMouseDown={(e) => e.target === e.currentTarget && finish()}>
       <div className="pal" role="dialog" aria-modal="true" aria-labelledby="pal-label">
         <div className="pal-head">
-          <label id="pal-label" htmlFor="pal-input" className="pal-eyebrow">{report !== null ? 'Report misparse' : cmdMode ? 'Command' : 'Add or search'}</label>
+          <label id="pal-label" htmlFor="pal-input" className="pal-eyebrow">{report !== null ? 'Report misparse' : cmdMode ? 'Command' : mission ? 'Call Mission Control' : 'Add or search'}</label>
           <input
             id="pal-input"
             ref={input}

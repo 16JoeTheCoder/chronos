@@ -70,7 +70,7 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSche
             {task.finishCondition && <p className="now-fc">{task.finishCondition}</p>}
             <div className="now-timer">
               <div className="sig-slot">
-                <SignatureTimer progress={t?.progress ?? 0} remainingSec={main / 1000} running={running} overrun={over > 0} size={size} onComplete={hold.pulse} />
+                <SignatureTimer progress={t?.progress ?? 0} remainingSec={main / 1000} elapsedSec={(t?.elapsed ?? 0) / 1000} estimateSec={task.estimateMin ? task.estimateMin * 60 : undefined} running={running} overrun={over > 0} size={size} onComplete={hold.pulse} />
               </div>
               <div className="now-actions">
                 {owner ? (

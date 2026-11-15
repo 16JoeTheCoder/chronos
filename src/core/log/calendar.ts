@@ -97,3 +97,52 @@ export const offsetOf = (heights: readonly number[], i: number): number => {
   for (let k = 0; k < i && k < heights.length; k++) y += heights[k]!;
   return y;
 };
+
+export interface MonthStats {
+  posts: number;
+  words: number;
+  /** Days in the month with at least one post. */
+  activeDays: number;
+  /** Consecutive days with a post, ending today (or yesterday when today has none yet). */
+  streak: number;
+  /** Task lines turned into tasks by posts this month (linked lines, see core/log/links). */
+  tasks: number;
+}
+
+const wordCount = (s: string): number => (s.trim() ? s.trim().split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length : 0);
+
+/** "This month" in the Log's side column. Computed from notes only (no new fields). month is 1..12. */
+export function monthStats(notes: readonly Idea[], tz: string, year: number, month: number, today: string): MonthStats {
+  const prefix = `${year}-${String(month).padStart(2, '0')}-`;
+  const days = new Set<string>();
+  const all = new Set<string>();
+  let posts = 0;
+  let words = 0;
+  let tasks = 0;
+  for (const n of notes) {
+    if (n.deletedAt !== null) continue;
+    const date = dateOf(n.createdAt, tz);
+    all.add(date);
+    if (!date.startsWith(prefix)) continue;
+    posts++;
+    days.add(date);
+    words += wordCount(n.body);
+    tasks += n.parsedTaskIds.length;
+  }
+  let streak = 0;
+  let day = all.has(today) ? today : addDays(today, -1);
+  while (all.has(day)) {
+    streak++;
+    day = addDays(day, -1);
+  }
+  return { posts, words, activeDays: days.size, streak, tasks };
+}
+
+/** Projects that have at least one live post, for the Log's filter chips. */
+export function projectsWithPosts(notes: readonly Idea[]): Set<string> {
+  const s = new Set<string>();
+  for (const n of notes) if (n.deletedAt === null && n.projectId) s.add(n.projectId);
+  return s;
+}
+
+export { wordCount };
