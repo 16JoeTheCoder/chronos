@@ -16,7 +16,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .dragging, .dragging * { cursor: grabbing !important; user-select: none; }
 
 /* ---- Type helpers ---- */
-.eyebrow { font: 500 12px/16px var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); }
+.eyebrow { font: 600 15px/20px var(--font-sans); letter-spacing: 0; text-transform: none; color: var(--text); } /* Phase 3.7: section headings in sentence case (Flight plan keeps its capitals). */
 .muted { color: var(--text-2); }
 .warn { color: var(--warn); }
 .mono { font-family: var(--font-mono); font-size: 13px; }
@@ -96,7 +96,7 @@ input[type="number"] { font-family: var(--font-mono); font-variant-numeric: tabu
 .wordmark { color: var(--text); font-weight: 500; letter-spacing: .4em; }
 .top-nav { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
 .top > .seg { justify-self: center; }
-.plan { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 32px; overflow: hidden auto; padding: 4px 4px 8px; }
+.plan { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 32px; padding: 4px 4px 48px; }
 .foot { display: flex; gap: 12px; align-items: center; }
 .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
 .empty { padding: 12px 0; }
@@ -109,13 +109,21 @@ input[type="number"] { font-family: var(--font-mono); font-variant-numeric: tabu
 
 /* ---- Runway ---- */
 .holiday { margin-bottom: 12px; color: var(--text-2); }
-.rw { position: relative; margin-right: 24px; padding-left: 64px; }
-.rw-axis { position: relative; height: 42px; border-bottom: 1px solid var(--line-strong); transform-origin: left; }
-.rw-axis span { position: absolute; bottom: 4px; transform: translateX(-50%); font: 400 12px/16px var(--font-mono); color: var(--text-3); }
+.rw-wrap { display: grid; grid-template-columns: 56px minmax(0, 1fr); }
+.rw-labels { display: grid; grid-template-rows: 48px 56px 72px; padding-bottom: 12px; }
+.rw-labels span { align-self: center; font: 500 12px/16px var(--font-sans); color: var(--text-2); }
+.rw-l-axis { border-bottom: 1px solid var(--line-strong); align-self: stretch !important; }
+.rw-scroll { overflow-x: auto; overflow-y: hidden; padding-bottom: 12px; scrollbar-width: thin; scrollbar-color: var(--c-line-strong) transparent; }
+.rw { position: relative; min-width: calc(100% - 48px); margin: 0 24px; }
+.rw-grid { position: absolute; inset: 48px 0 0 0; pointer-events: none; }
+.rw-grid i { position: absolute; top: 0; bottom: 0; width: 1px; background: color-mix(in srgb, var(--c-line) 55%, transparent); }
+.rw-grid i.major { background: var(--c-line); }
+.rw-axis { position: relative; height: 48px; border-bottom: 1px solid var(--line-strong); transform-origin: left; }
+.rw-axis span { position: absolute; bottom: 4px; transform: translateX(-50%); font: 400 12px/16px var(--font-mono); color: var(--text-2); font-variant-numeric: tabular-nums; }
 .rw-lane { position: relative; height: 56px; border-bottom: 1px solid var(--line); }
 .rw-plan { height: 72px; }
-.lane-label { position: absolute; left: -64px; top: 50%; transform: translateY(-50%); font: 500 12px/16px var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
 .ev, .blk { position: absolute; top: 8px; bottom: 8px; min-width: 28px; border-radius: 6px; overflow: hidden; }
+.ev span, .blk-body span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ev { display: flex; align-items: center; gap: 6px; padding: 0 8px; border: 1px solid var(--c); color: var(--text); font: 500 12px/16px var(--font-sans); white-space: nowrap; cursor: grab;
   background: var(--s1) repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 22%, transparent) 0 5px, transparent 5px 11px); }
 .ev svg { flex: none; color: var(--text-2); }
@@ -133,14 +141,14 @@ input[type="number"] { font-family: var(--font-mono); font-variant-numeric: tabu
 .ghost { position: absolute; top: 6px; bottom: 6px; border-radius: 6px; display: flex; align-items: center; padding: 0 8px; font: 500 12px/16px var(--font-mono); pointer-events: none; z-index: 2; }
 .ghost.ok { border: 2px solid var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
 .ghost.bad { border: 2px solid var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
-.now { position: absolute; top: 24px; bottom: 0; width: 2px; margin-left: -1px; background: var(--now); pointer-events: none; z-index: 3; }
+.now { position: absolute; top: 22px; bottom: 0; z-index: 4; width: 2px; margin-left: -1px; background: var(--now); pointer-events: none; z-index: 3; }
 .now::before { content: ""; position: absolute; top: -4px; left: -3px; width: 8px; height: 8px; background: var(--now); }
 /* The exact local time, always visible: ink on fire (dark) or paper on dark fire (light), never fire text on paper. */
-.now-label { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); padding: 0 6px; border-radius: 4px; background: var(--now); color: var(--c-ground); font: 500 12px/18px var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.now-label { position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%); padding: 0 6px; border-radius: 4px; background: var(--now); color: var(--c-ground); font: 500 12px/18px var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* The end-of-day buffer: a quieter hatch than fixed events, so it reads as reserved, not busy. */
 .buf { position: absolute; top: 12px; bottom: 12px; border: 1px solid var(--line); border-radius: 6px; z-index: 1;
   background: var(--bg) repeating-linear-gradient(135deg, color-mix(in srgb, var(--text-3) 16%, transparent) 0 5px, transparent 5px 11px); }
-.buf span { position: absolute; right: 0; bottom: calc(100% + 1px); color: var(--text-2); font: 500 12px/14px var(--font-sans); white-space: nowrap; }
+.buf span { position: absolute; top: 50%; transform: translateY(-50%); padding: 0 4px; border-radius: 4px; background: var(--bg); color: var(--text-2); font: 500 12px/16px var(--font-sans); white-space: nowrap; }
 
 /* ---- Cards ---- */
 .card-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }

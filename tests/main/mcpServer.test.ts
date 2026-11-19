@@ -160,7 +160,7 @@ describe('end to end through callChronos', () => {
   it('a write call changes the data and returns an undoToken', async () => {
     const port = await server.start(0, () => token);
     writeDevice(port);
-    const r = await callChronos('add_task', { title: 'From Claude Desktop', finishCondition: 'It shows up in Chronos' }, dir);
+    const r = await callChronos('add_task', { title: 'From Claude Desktop', labels: ['claude'] }, dir);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect((r.result as { undoToken: string }).undoToken).toBeTruthy();

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { migrate } from '../../src/core/repo/migrate';
 import { isSortKey } from '../../src/core/model/sortKey';
-import { COLLS, type Coll, type Data } from '../../src/core/model/types';
+import { COLLS, SCHEMA_V, type Coll, type Data } from '../../src/core/model/types';
 import { recordProblem } from '../../src/core/validation';
 import { TODAY } from '../helpers';
 
@@ -123,11 +123,11 @@ describe('migrate v1 -> current (Josef fixture)', () => {
     expect(d.closures['hol-2026-12-25']).toMatchObject({ source: 'holiday', confirmed: false, startDate: '2026-12-25' });
   });
 
-  it('every record has v 3, fv {} and fw {}', () => {
+  it('every record has v SCHEMA_V, fv {} and fw {}', () => {
     const d = mig();
     for (const c of COLLS) {
       for (const r of recs(d, c)) {
-        expect(r.v, `${c}/${r.id}`).toBe(3);
+        expect(r.v, `${c}/${r.id}`).toBe(SCHEMA_V);
         expect(r.fv).toEqual({});
         expect(r.fw).toEqual({});
       }

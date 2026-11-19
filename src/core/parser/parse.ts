@@ -31,7 +31,9 @@ const RE_DAY_FIRST = new RegExp(String.raw`(?<![${AN}])(\d{1,2})(?:st|nd|rd|th)?
 const RE_CHRONO_PRE = /\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}|\bin\s+(?:\d+|a|an)\s+(?:day|week|month)/i;
 const RE_CHRONO_OK = /^(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|in\s+(?:\d+|a|an)\s+(?:day|week|month)s?)$/i;
 const RE_HASH = /(?<![\w#])#([A-Za-z][\w-]*)/g;
-const RE_PRIO = /(?<!\S)!([123])(?![\w])/g;
+const RE_PRIO = /(?<!\S)!([1234])(?![\w])/g;
+/** @label: a letter first, so "@5pm" and "@ 5pm" stay times. */
+const RE_LABEL = /(?<![\w@])@([A-Za-z][\w-]{0,39})(?![\w@])/g;
 const REC: [RegExp, (m: RegExpExecArray) => Recurrence | null][] = [
   [new RegExp(String.raw`(?<![${AN}])every\s+other\s+(${WD})(?![${AN}])`, 'gi'), (m) => ({ freq: 'weekly', interval: 2, weekdays: [wdNum(m[1])] })],
   [new RegExp(String.raw`(?<![${AN}])every\s+((?:${WD})(?:\s*(?:,|&|and|\/)?\s*(?:${WD}))*)(?![${AN}])`, 'gi'), (m) => ({ freq: 'weekly', interval: 1, weekdays: weekdaysIn(m[1] ?? '') })],
@@ -43,7 +45,8 @@ const REC: [RegExp, (m: RegExpExecArray) => Recurrence | null][] = [
 ];
 const RE_PREFIX: [RegExp, ParseKind][] = [
   [/^\s*(?:note\s+|\/\/\s*)(?=\S)/i, 'note'],
-  [/^\s*(?:task\s+|-\s+|\[\s?\]\s*)(?=\S)/i, 'task'],
+  // Phase 3.7: "task " or a checkbox marks a task; "- " is a plain bullet now.
+  [/^\s*(?:task\s+|\[\s?\]\s*)(?=\S)/i, 'task'],
   [/^\s*(?:event\s+|@\s+)(?=\S)/i, 'fixed'],
 ];
 
@@ -53,6 +56,9 @@ function weekdaysIn(s: string): number[] {
   for (const m of s.matchAll(new RegExp(WD, 'gi'))) out.add(wdNum(m[0]));
   return [...out].sort((a, b) => a - b);
 }
+
+/** Words after @ that are times, not labels ("@noon"). */
+const LEX_TIME_WORDS = new Set(['noon', 'midnight', 'midday', 'morning', 'tonight', 'evening', 'afternoon', 'lunch']);
 
 // ---------------------------------------------------------------- rule index (cached per rules array)
 
@@ -150,9 +156,15 @@ function rangeMins(a: Clock, b: Clock): { s: number; e: number } | null {
 
 // ---------------------------------------------------------------- phases
 
-function phaseHashAndPriority(s: St): { hash: boolean; priority?: 1 | 2 | 3 } {
+function phaseHashAndPriority(s: St): { hash: boolean; priority?: 1 | 2 | 3 | 4; labels: string[] } {
   let hash = false;
-  let priority: 1 | 2 | 3 | undefined;
+  let priority: 1 | 2 | 3 | 4 | undefined;
+  const labels: string[] = [];
+  for (const m of s.work.matchAll(RE_LABEL)) {
+    const l = m[1]!.toLowerCase();
+    if (LEX_TIME_WORDS.has(l)) continue;
+    if (take(s, m.index!, m.index! + m[0].length, 'label', l) && !labels.includes(l)) labels.push(l);
+  }
   for (const m of s.work.matchAll(RE_HASH)) {
     const name = m[1]!.toLowerCase();
     const proj = s.ctx.projects.find((p) => p.name.toLowerCase() === name || p.aliases?.some((a) => a.toLowerCase() === name));
@@ -161,9 +173,9 @@ function phaseHashAndPriority(s: St): { hash: boolean; priority?: 1 | 2 | 3 } {
     if (tag && take(s, m.index!, m.index! + m[0].length, 'tag', { tagId: tag.id })) hash = true;
   }
   for (const m of s.work.matchAll(RE_PRIO)) {
-    if (priority === undefined && take(s, m.index!, m.index! + m[0].length, 'priority', Number(m[1]))) priority = Number(m[1]) as 1 | 2 | 3;
+    if (priority === undefined && take(s, m.index!, m.index! + m[0].length, 'priority', Number(m[1]))) priority = Number(m[1]) as 1 | 2 | 3 | 4;
   }
-  return { hash, priority };
+  return { hash, priority, labels };
 }
 
 function phaseRecurrence(s: St): void {
@@ -435,7 +447,7 @@ export function parseUnsafe(input: string, ctx: ParseContext): ParseResult {
     if (a < b) { s.used.fill(1, a, b); s.work = s.work.slice(0, a) + '\u0001'.repeat(b - a) + s.work.slice(b); }
   }
 
-  // Explicit prefixes: note / // , task / - / [] , event / @
+  // Explicit prefixes: note / // , TASK / [] , event / @
   let forced: ParseKind | undefined;
   for (const [re, kind] of RE_PREFIX) {
     const m = re.exec(src);
@@ -443,7 +455,7 @@ export function parseUnsafe(input: string, ctx: ParseContext): ParseResult {
   }
   if (forced === 'note' || (!forced && ctx.mode === 'notepad')) return finishNote(s, forced ? 'high' : 'medium', forced ? undefined : []);
 
-  const { hash, priority } = phaseHashAndPriority(s);
+  const { hash, priority, labels } = phaseHashAndPriority(s);
   phaseRecurrence(s);
   phaseRanges(s, idx);
   phaseDuration(s);
@@ -471,10 +483,10 @@ export function parseUnsafe(input: string, ctx: ParseContext): ParseResult {
 
   const titleNow = buildTitle(s);
   const words = src.trim().split(/\s+/);
-  const verbStart = LEX.verbs.has(firstWord(titleNow)) || LEX.verbs.has(firstWord(src.replace(/^\s*(?:task|event|note)\s+|^\s*[-@]\s+|^\s*\[\s?\]\s*/i, '')));
+  const verbStart = LEX.verbs.has(firstWord(titleNow)) || LEX.verbs.has(firstWord(src.replace(/^\s*(?:(?:task|event|note)\s+|@\s+|\[\s?\]\s*)/i, '')));
   const taskKw = kindRules.some((r) => r.kind === 'task');
   const hashOrTag = hash;
-  const strong = taskKw || verbStart || hasTime || !!dur || priority !== undefined || hashOrTag;
+  const strong = taskKw || verbStart || hasTime || !!dur || priority !== undefined || hashOrTag || labels.length > 0;
 
   let kind: ParseKind;
   if (forced) kind = forced;
@@ -503,6 +515,7 @@ export function parseUnsafe(input: string, ctx: ParseContext): ParseResult {
   const tagId = (s.pieces.find((p) => p.role === 'tag')?.value as { tagId?: string } | undefined)?.tagId ?? matched.find((r) => r.tagId)?.tagId;
   if (tagId) out.tagId = tagId;
   if (priority !== undefined) out.priority = priority;
+  if (labels.length) out.labels = labels;
   if (s.rec) {
     out.recurrence = s.rec;
   }

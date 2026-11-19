@@ -46,7 +46,7 @@ function pickTask(v: Obj): Partial<TaskInput> {
   const out: Partial<TaskInput> = {};
   if ('kind' in v) out.kind = oneOf(v.kind, ['task', 'sprint'] as const);
   if ('title' in v) out.title = str(v.title, 200);
-  if ('finishCondition' in v) out.finishCondition = str(v.finishCondition, 600);
+  if (Array.isArray(v.labels)) out.labels = v.labels.slice(0, 20).map((x) => str(x, 40));
   if ('notes' in v) out.notes = str(v.notes, 5000);
   if ('tagId' in v) out.tagId = nullableId(v.tagId);
   if ('priority' in v) out.priority = v.priority as TaskInput['priority'];
@@ -133,6 +133,8 @@ function pickSettings(v: Obj): SettingsPatch {
   const flags = <K extends string>(o: unknown, keys: readonly K[]) => Object.fromEntries(keys.map((k) => [k, (isObj(o) ? o[k] : undefined) as boolean])) as Record<K, boolean>;
   if (isObj(v.energy)) p.energy = flags(v.energy, ['livingReactor', 'holographicDepth', 'reactiveData', 'motion'] as const);
   if (isObj(v.widgets)) p.widgets = flags(v.widgets, ['day', 'momentum', 'notes', 'wellness'] as const);
+  if (isObj(v.tasks)) p.tasks = { doneRetentionHours: num(v.tasks.doneRetentionHours) };
+  if ('pillShowsClass' in v) p.pillShowsClass = v.pillShowsClass as boolean;
   if (isObj(v.planning)) p.planning = { defaultBlockMin: num(v.planning.defaultBlockMin), learnEstimates: v.planning.learnEstimates as boolean, breakAfterMin: num(v.planning.breakAfterMin) };
   return p;
 }
@@ -159,6 +161,7 @@ function pickDevice(v: Obj): Extract<Command, { type: 'device.update' }>['patch'
   if ('projectList' in v) p.projectList = v.projectList as DeviceSettings['projectList'];
   if ('desktopTipSeen' in v) p.desktopTipSeen = v.desktopTipSeen as boolean;
   if (isObj(v.shortcuts)) p.shortcuts = { toggle: str(v.shortcuts.toggle, 60), startPause: str(v.shortcuts.startPause, 60), capture: str(v.shortcuts.capture, 60) };
+  if (isObj(v.notepad)) p.notepad = { position: v.notepad.position as DeviceSettings['notepad']['position'], recent: num(v.notepad.recent) };
   if ('displayId' in v) p.displayId = v.displayId === null ? null : num(v.displayId);
   if ('stackFolder' in v) p.stackFolder = v.stackFolder === null ? null : str(v.stackFolder, 1000);
   if ('composerProjectId' in v) p.composerProjectId = nullableId(v.composerProjectId);
@@ -196,6 +199,24 @@ export function parseCommand(raw: unknown): Command | null {
       const beforeId = raw.beforeId === null || raw.beforeId === undefined ? null : id(raw.beforeId);
       if (raw.beforeId != null && !beforeId) return null;
       return { type: 'task.moveCard', id: rid, columnId: str(raw.columnId, 60), beforeId };
+    }
+    case 'task.start':
+      return rid ? { type: 'task.start', id: rid, ...(raw.run === true ? { run: true } : {}) } : null;
+    case 'task.pause':
+      return rid ? { type: 'task.pause', id: rid } : null;
+    case 'task.sort': {
+      if (!rid) return null;
+      const afterId = raw.afterId == null ? null : id(raw.afterId);
+      const beforeId = raw.beforeId == null ? null : id(raw.beforeId);
+      if ((raw.afterId != null && !afterId) || (raw.beforeId != null && !beforeId)) return null;
+      return {
+        type: 'task.sort',
+        id: rid,
+        afterId,
+        beforeId,
+        ...(typeof raw.columnId === 'string' && raw.columnId.trim() ? { columnId: str(raw.columnId, 60) } : {}),
+        ...('dueDate' in raw ? { dueDate: raw.dueDate === null ? null : str(raw.dueDate, 10) } : {}),
+      };
     }
     case 'project.create': {
       if (typeof raw.name !== 'string') return null;
@@ -339,6 +360,7 @@ export interface IpcDeps {
   overlayExpand(expanded: boolean): void;
   closeNotepad(created: NotepadCreated | null): void;
   closePalette(): void;
+  notepadResize(height: number): void;
   notify(text: string, undoToken: string | undefined): void;
   askClaude(text: string): Promise<Result>;
   quit(): void;
@@ -379,6 +401,7 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.on(CHANNELS.overlayExpand, guard<[unknown], void>(undefined, (v) => deps.overlayExpand(v === true)));
   ipcMain.on(CHANNELS.closeNotepad, guard<[unknown], void>(undefined, (v) => deps.closeNotepad(pickCreated(v))));
   ipcMain.on(CHANNELS.closePalette, guard(undefined, () => deps.closePalette()));
+  ipcMain.on(CHANNELS.notepadResize, guard<[unknown], void>(undefined, (h) => { if (typeof h === 'number' && Number.isFinite(h)) deps.notepadResize(h); }));
   ipcMain.on(CHANNELS.notify, guard<[unknown, unknown], void>(undefined, (text, token) => {
     const t = str(text, 120).trim();
     if (t) deps.notify(t, typeof token === 'string' && TOKEN_RE.test(token) ? token : undefined);

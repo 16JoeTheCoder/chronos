@@ -1,4 +1,4 @@
-// Settings: six sections and Experimental at the bottom. Layout follows
+// Settings: seven sections and Experimental at the bottom. Layout follows
 // docs/design/StarkSettings.dc.html (nav on the left, one column of grouped rows on the right).
 // Synced settings go through settings.update; per-PC ones through device.update.
 
@@ -11,12 +11,14 @@ import { ExperimentalSection } from './ExperimentalSection';
 import { FocusSection } from './FocusSection';
 import { LookSection } from './LookSection';
 import { ParserSection } from './ParserSection';
+import { TasksSection } from './TasksSection';
 import './settings.css';
 
 export const SETTINGS_SECTIONS = [
   { id: 'look', label: 'Look and widgets' },
   { id: 'day', label: 'Day and planning' },
   { id: 'focus', label: 'Focus' },
+  { id: 'tasks', label: 'Tasks and notepad' },
   { id: 'parser', label: 'Parser rules' },
   { id: 'timetable', label: 'School timetable' },
   { id: 'account', label: 'Account and sync' },
@@ -41,6 +43,7 @@ export function Settings({ snap, onSchedule, onClose, section = 'look' }: Settin
     case 'look': body = <LookSection snap={snap} />; break;
     case 'day': body = <DaySection snap={snap} />; break;
     case 'focus': body = <FocusSection snap={snap} />; break;
+    case 'tasks': body = <TasksSection snap={snap} />; break;
     case 'parser': body = <ParserSection snap={snap} />; break;
     case 'timetable': body = <TimetableSection snap={snap} onOpenWeek={onSchedule} />; break;
     case 'account': body = <AccountSection snap={snap} />; break;

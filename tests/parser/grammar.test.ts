@@ -106,17 +106,18 @@ describe('tests and exams (D16) and fixed lengths (D17, D2)', () => {
 
 describe('prefixes and notepad mode', () => {
   it('prefix forces the kind and is removed', () => {
-    expect(p('- buy milk')).toMatchObject({ kind: 'task', title: 'buy milk' });
+    expect(p('Task buy milk')).toMatchObject({ kind: 'task', title: 'buy milk' });
+    expect(p('- gym 5pm')).toMatchObject({ kind: 'fixed', title: 'gym' }); // "- " is not a prefix any more
     expect(p('[] buy milk')).toMatchObject({ kind: 'task', title: 'buy milk' });
     expect(p('task gym 5pm').kind).toBe('task');
     expect(p('event buy milk')).toMatchObject({ kind: 'fixed', unplaced: true });
     expect(p('note buy milk 5pm')).toMatchObject({ kind: 'note', title: 'buy milk 5pm' });
   });
   it('notepad lines: prefixed lines parse, the rest stays a note', () => {
-    const out = parseNotepad('Ideas for the week\n- gym 5pm\r\n\n@ call dad 9pm\nplain text tomorrow', ctx);
+    const out = parseNotepad('Ideas for the week\ntask gym 5pm\r\n\n@ call dad 9pm\nplain text tomorrow', ctx);
     expect(out.map((l) => l.result.kind)).toEqual(['note', 'task', 'fixed', 'note']);
     expect(out[3]!.result.title).toBe('plain text tomorrow');
-    expect(out[2]!.offset).toBe('Ideas for the week\n- gym 5pm\r\n\n'.length);
+    expect(out[2]!.offset).toBe('Ideas for the week\ntask gym 5pm\r\n\n'.length);
   });
 });
 

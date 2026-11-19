@@ -1,10 +1,9 @@
-// Create or edit a task (or sprint). The finish condition may stay empty (an
-// inbox task) until the task needs to start (D-007). Choosing a tag offers
-// "Do before" with the next occurrences of events carrying that tag (§6.5).
+// Create or edit a task (or sprint). A title is all it needs (Phase 3.7, D-172). Choosing a
+// tag offers "Do before" with the next occurrences of events carrying that tag (§6.5).
 
 import { useState } from 'react';
 import type { TaskInput } from '../../core/commands';
-import { clockOf, dateLabel } from '../../core/format';
+import { clockOf, dateLabel, formatHM } from '../../core/format';
 import { TAG_COLORS, type Data, type Priority, type TagColor, type Task } from '../../core/model/types';
 import { isLocked, todayOf } from '../../core/tasks/tasks';
 import { upcoming } from '../../core/time/schedule';
@@ -16,15 +15,19 @@ export function TaskEditor({ d, task, now, onClose }: { d: Data; task: Task | nu
   const [f, setF] = useState<TaskInput>(() => ({
     kind: task?.kind ?? 'task',
     title: task?.title ?? '',
-    finishCondition: task?.finishCondition ?? '',
     notes: task?.notes ?? '',
+    labels: task?.labels ?? [],
     tagId: task?.tagId ?? null,
-    priority: task?.priority ?? 'should',
+    priority: task?.priority ?? 'none',
     estimateMin: task?.estimateMin ?? null,
     dueDate: task?.dueDate ?? null,
+    dueTime: task?.dueTime ?? null,
+    projectId: task?.projectId ?? null,
     dueEventId: task?.dueEventId ?? null,
     checkpointEveryMin: task?.checkpointEveryMin ?? settingsOf(d).checkpointEveryMin,
   }));
+  const [labelText, setLabelText] = useState(() => (task?.labels ?? []).map((l) => `@${l}`).join(' '));
+  const projects = Object.values(d.projects).filter((p) => p.deletedAt === null && !p.archived);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [newTag, setNewTag] = useState<{ name: string; color: TagColor } | null>(null);
   const set = (patch: Partial<TaskInput>) => setF((x) => ({ ...x, ...patch }));
@@ -39,8 +42,9 @@ export function TaskEditor({ d, task, now, onClose }: { d: Data; task: Task | nu
       if (!r.ok) return;
       tagId = r.id ?? null;
     }
-    const input: TaskInput = { ...f, tagId, checkpointEveryMin: f.kind === 'sprint' ? f.checkpointEveryMin : null };
-    const r = task ? await run({ type: 'task.update', id: task.id, input: locked ? { ...input, finishCondition: undefined, kind: undefined } : { ...input, kind: undefined } }, true) : await run({ type: 'task.create', input }, true);
+    const labels = labelText.split(/[\s,]+/).map((x) => x.replace(/^@/, '')).filter(Boolean);
+    const input: TaskInput = { ...f, labels, tagId, checkpointEveryMin: f.kind === 'sprint' ? f.checkpointEveryMin : null };
+    const r = task ? await run({ type: 'task.update', id: task.id, input: { ...input, kind: undefined, ...(locked ? { timer: undefined } : {}) } }, true) : await run({ type: 'task.create', input }, true);
     if (r.ok) onClose();
     else setErrors(r.fields ?? { title: r.error });
   }
@@ -58,8 +62,8 @@ export function TaskEditor({ d, task, now, onClose }: { d: Data; task: Task | nu
         <Field label="Title" error={errors.title}>
           <input value={f.title} maxLength={120} onChange={(e) => set({ title: e.target.value })} placeholder="Finish kinematics worksheet" />
         </Field>
-        <Field label="Finish condition" error={errors.finishCondition} help={locked ? 'Locked once the timer has started.' : 'What does finished look like? At least 8 characters. Can wait until you start.'}>
-          <input value={f.finishCondition} disabled={locked} maxLength={500} onChange={(e) => set({ finishCondition: e.target.value })} placeholder="All 12 questions answered and checked" />
+        <Field label="Priority">
+          <Segmented<Priority> label="Priority" value={f.priority ?? 'none'} options={[['must', 'P1'], ['should', 'P2'], ['nice', 'P3'], ['none', 'P4']]} onChange={(priority) => set({ priority })} />
         </Field>
         <div className="grid2">
           <Field label="Tag">
@@ -82,8 +86,13 @@ export function TaskEditor({ d, task, now, onClose }: { d: Data; task: Task | nu
               <option value="__new">New tag…</option>
             </select>
           </Field>
-          <Field label="Priority">
-            <Segmented<Priority> label="Priority" value={f.priority ?? 'should'} options={[['must', 'Must'], ['should', 'Should'], ['nice', 'Nice']]} onChange={(priority) => set({ priority })} />
+          <Field label="Project">
+            <select value={f.projectId ?? ''} onChange={(e) => set({ projectId: e.target.value || null })}>
+              <option value="">No project</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </Field>
         </div>
         {newTag && (
@@ -116,8 +125,19 @@ export function TaskEditor({ d, task, now, onClose }: { d: Data; task: Task | nu
           <Field label="Estimate (minutes)" error={errors.estimateMin}>
             <input type="number" min={1} max={1440} value={f.estimateMin ?? ''} onChange={(e) => set({ estimateMin: e.target.value ? Number(e.target.value) : null })} />
           </Field>
+          <Field label="Labels" error={errors.labels} help="Words starting with @, like @calls @home.">
+            <input value={labelText} maxLength={300} onChange={(e) => setLabelText(e.target.value)} placeholder="@calls" />
+          </Field>
+        </div>
+        <div className="grid2">
           <Field label="Due date" error={errors.dueDate}>
             <input type="date" value={f.dueDate ?? ''} onChange={(e) => set({ dueDate: e.target.value || null })} />
+          </Field>
+          <Field label="Due time" error={errors.dueTime}>
+            <input type="time" value={f.dueTime === null || f.dueTime === undefined ? '' : formatHM(f.dueTime)} onChange={(e) => {
+              const [h, m] = e.target.value.split(':').map(Number);
+              set({ dueTime: e.target.value ? (h ?? 0) * 60 + (m ?? 0) : null });
+            }} />
           </Field>
         </div>
         {f.kind === 'sprint' && (

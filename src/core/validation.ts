@@ -5,10 +5,9 @@
 import { isValidZone } from './time/zone';
 import { isSortKey } from './model/sortKey';
 import { isId } from './model/ids';
-import { SNAP_OPTIONS } from './model/defaults';
+import { RETENTION_OPTIONS, SNAP_OPTIONS } from './model/defaults';
 import { COLLS, PARSER_REPORTS_MAX, PRIORITIES, SCHEMA_V, SCOPES, TAG_COLORS, TASK_SOURCES, TASK_STATUSES, type Coll, type DeviceSettings, type Settings } from './model/types';
 
-export const MIN_FINISH_CONDITION = 8;
 const SEC = 1000;
 const MIN = 60 * SEC;
 const HOUR = 60 * MIN;
@@ -25,10 +24,6 @@ export const isMinute = (v: unknown): v is number => Number.isInteger(v) && inRa
 
 export function isDropReason(s: unknown): boolean {
   return isStr(s) && s.trim().length >= 3;
-}
-
-export function hasFinishCondition(s: string): boolean {
-  return s.trim().length >= MIN_FINISH_CONDITION;
 }
 
 export function validateTimer(cfg: unknown, prefix = 'timer'): Errors {
@@ -49,8 +44,8 @@ export function validateTimer(cfg: unknown, prefix = 'timer'): Errors {
 
 export interface TaskFields {
   title?: unknown;
-  finishCondition?: unknown;
   notes?: unknown;
+  labels?: unknown;
   priority?: unknown;
   estimateMin?: unknown;
   dueDate?: unknown;
@@ -68,14 +63,11 @@ export function isTaskRecurrence(r: unknown): boolean {
   return Array.isArray(r.weekdays) && r.weekdays.length <= 7 && r.weekdays.every((w) => Number.isInteger(w) && w >= 1 && w <= 7);
 }
 
-/** Title is required; the finish condition may be empty (inbox task) but if given must be >= 8 characters. */
+/** A title is all a task needs (Phase 3.7: no finish condition). */
 export function validateTaskFields(t: TaskFields): Errors {
   const e: Errors = {};
   if (t.title !== undefined && (!isStr(t.title) || t.title.trim().length < 1 || t.title.trim().length > 120)) e.title = 'Title must be 1-120 characters.';
-  if (t.finishCondition !== undefined) {
-    const fc = isStr(t.finishCondition) ? t.finishCondition.trim() : null;
-    if (fc === null || (fc.length > 0 && fc.length < MIN_FINISH_CONDITION) || fc.length > 500) e.finishCondition = 'Describe what finished looks like (at least 8 characters).';
-  }
+  if (t.labels !== undefined && !(Array.isArray(t.labels) && t.labels.length <= 20 && t.labels.every((l) => isStr(l) && l.trim().length > 0 && l.length <= 40))) e.labels = 'Labels are 1-40 characters, up to 20.';
   if (t.notes !== undefined && (!isStr(t.notes) || t.notes.length > 5000)) e.notes = 'Notes are too long.';
   if (t.priority !== undefined && !PRIORITIES.includes(t.priority as never)) e.priority = 'Invalid priority.';
   if (t.estimateMin !== undefined && t.estimateMin !== null && !(Number.isInteger(t.estimateMin) && inRange(t.estimateMin, 1, 24 * 60))) e.estimateMin = 'Estimate must be 1 minute to 24 hours.';
@@ -157,6 +149,9 @@ export function validateSettings(s: Settings): Errors {
   if (!Array.isArray(s.parserReports) || s.parserReports.length > PARSER_REPORTS_MAX || !s.parserReports.every(isParserReport)) e.parserReports = 'Invalid parser reports.';
   const pl = s.planning;
   if (!isObj(pl) || !(Number.isInteger(pl.defaultBlockMin) && inRange(pl.defaultBlockMin, 5, 480)) || !isBool(pl.learnEstimates) || !(Number.isInteger(pl.breakAfterMin) && inRange(pl.breakAfterMin, 15, 240))) e.planning = 'Invalid planning.';
+  // Phase 3.7 fields: absent on a settings doc from an older build (the defaults apply).
+  if (s.tasks !== undefined && !(isObj(s.tasks) && RETENTION_OPTIONS.includes(s.tasks.doneRetentionHours))) e.tasks = 'Keep done tasks for 24 hours, 3 days, 7 days or forever.';
+  if (s.pillShowsClass !== undefined && !isBool(s.pillShowsClass)) e.pillShowsClass = 'Invalid flag.';
   if (!Array.isArray(s.parserRules) || s.parserRules.length > 200 || !s.parserRules.every(isParserRule)) e.parserRules = 'Invalid parser rules.';
   return e;
 }
@@ -170,6 +165,11 @@ export function isValidAccelerator(acc: unknown): boolean {
   const key = (parts[parts.length - 1] ?? '').toLowerCase();
   const keyOk = /^([a-z0-9]|f([1-9]|1[0-9]|2[0-4])|space|tab|enter|return|backspace|delete|insert|home|end|pageup|pagedown|up|down|left|right|escape|esc|plus|[`\-=[\];',./\\])$/.test(key);
   return keyOk && !mods.has(key) && parts.slice(0, -1).every((m) => mods.has(m.toLowerCase()));
+}
+
+/** A single global key with no modifier: only keys that type nothing (Insert, F1-F24, Pause, Scroll Lock). */
+export function isBareKey(acc: unknown): boolean {
+  return isStr(acc) && /^(insert|f([1-9]|1[0-9]|2[0-4])|pause|scrolllock)$/i.test(acc.trim());
 }
 
 const optStr = (v: unknown, max: number) => v === undefined || (isStr(v) && v.length <= max);
@@ -204,7 +204,9 @@ export function validateDevice(s: DeviceSettings): Errors {
   if (s.widgetPos !== null && !(isObj(s.widgetPos) && isNum(s.widgetPos.x) && isNum(s.widgetPos.y))) e.widgetPos = 'Invalid position.';
   const sc = s.shortcuts;
   const keys = ['toggle', 'startPause', 'capture'] as const;
-  for (const k of keys) if (!isValidAccelerator(sc[k])) e[`shortcuts.${k}`] = 'Use a format like Ctrl+Alt+Space.';
+  for (const k of keys) if (!(isValidAccelerator(sc[k]) || (k === 'capture' && isBareKey(sc[k])))) e[`shortcuts.${k}`] = k === 'capture' ? 'Use a key like Insert or F8, or a format like Ctrl+Alt+N.' : 'Use a format like Ctrl+Alt+Space.';
+  const np = s.notepad;
+  if (!isObj(np) || !['top-right', 'top-left', 'centre', 'cursor'].includes(np.position as string) || !(Number.isInteger(np.recent) && inRange(np.recent, 0, 3))) e.notepad = 'Invalid notepad settings.';
   if (new Set(keys.map((k) => sc[k].toLowerCase())).size !== keys.length) e.shortcuts = 'Shortcuts must differ.';
   if (s.stackFolder !== null && (!isStr(s.stackFolder) || s.stackFolder.length > 1000)) e.stackFolder = 'Invalid folder.';
   if (s.displayId !== null && !isNum(s.displayId)) e.displayId = 'Invalid display.';
@@ -242,7 +244,7 @@ const columns: Check = arrOf((c) => isObj(c) && isStr(c.id) && c.id.length > 0 &
 
 const SHAPES: Record<Coll, Record<string, Check>> = {
   tasks: {
-    kind: oneOf(['task', 'sprint']), title: str(500), finishCondition: str(2000), notes: str(100_000), tagId: idRef, priority: oneOf(PRIORITIES),
+    kind: oneOf(['task', 'sprint']), title: str(500), finishCondition: (v) => v === undefined || str(2000)(v), labels: (v) => v === undefined || arrOf(str(40), 20)(v), notes: str(100_000), tagId: idRef, priority: oneOf(PRIORITIES),
     estimateMin: nullable(int(1, 24 * 60)), dueDate: nullable(DATE), dueTime: nullable(int(0, 1439)), dueEventId: idRef, projectId: idRef, columnId: nullable(str(60)),
     recurrence: nullable(isTaskRecurrence), recurrenceParentId: idRef, source: oneOf(TASK_SOURCES), order: anyNum, sortKey: isSortKey,
     status: oneOf(TASK_STATUSES), outcome: nullable(oneOf(['finished', 'shipped', 'killed'])), dropCount: int(0, 1e6), parkedAt: nullable(anyNum),

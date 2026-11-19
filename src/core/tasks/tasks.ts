@@ -1,18 +1,16 @@
-// Queue derivation and the single-focus rules (§6.4). Planning is free: tasks,
-// blocks and order change at will. Execution is strict: exactly one active task,
-// the head of the derived queue that has a finish condition; once its timer has
-// run it is locked, and only Finish (hold to complete) or Drop (typed reason) end it.
-// Status v2: the active task is 'doing'; other open tasks are 'planned' when they
-// have a block today or later, else 'inbox' (normalize keeps this derived value right).
+// Queue derivation and the single-focus rule (§6.4, Phase 3.7). Planning is free: tasks,
+// blocks and order change at will. At most one task is 'doing', and only an explicit
+// action makes it so (Start, a drop into the focus slot, the Doing column): every status
+// change goes through core/tasks/transition. Other open tasks are 'planned' when they have
+// a block today or later, else 'inbox' (normalize keeps this derived value right).
 
 import { sessionId } from '../model/ids';
 import type { Block, Data, Priority, Slice, Task, TaskStatus } from '../model/types';
 import { create, get, live, settingsOf, timerOf, update, type Ctx } from '../repo/repo';
-import { hasFinishCondition } from '../validation';
 import { dateOf, zonedToUtc } from '../time/zone';
 import { pauseAt, stop } from '../timer/timer';
 
-export const PRIORITY_RANK: Record<Priority, number> = { must: 0, should: 1, nice: 2 };
+export const PRIORITY_RANK: Record<Priority, number> = { must: 0, should: 1, nice: 2, none: 3 };
 
 export const todayOf = (d: Data, now: number): string => dateOf(now, settingsOf(d).timezone);
 
@@ -32,7 +30,7 @@ export function activeTask(d: Data): Task | undefined {
 /** Not done and not dropped. */
 export const isOpen = (t: Task): boolean => t.status !== 'done' && t.status !== 'dropped';
 
-/** Locked once its timer has run in the current run (Drop and Reopen start a new run). */
+/** Its timer has run in the current run: the timer mode is fixed from then on. */
 export const isLocked = (t: Task): boolean => t.startedAt !== null;
 
 /** Unscheduled order: priority, then fractional order; dropped (parked) tasks go to the back. */
@@ -49,9 +47,7 @@ const byId = (a: { id: string }, b: { id: string }) => (a.id < b.id ? -1 : a.id 
  */
 export function deriveQueue(d: Data, now: number): Task[] {
   const open = live(d, 'tasks').filter(isOpen);
-  // Two locked tasks only happen after a merge: the timer's task wins, then the lower id.
-  const owned = timerOf(d).taskId;
-  const locked = open.filter((t) => t.status === 'doing' && isLocked(t)).sort((a, b) => Number(b.id === owned) - Number(a.id === owned) || byId(a, b))[0];
+  const locked = keeper(d, open);
   const seen = new Set<string>(locked ? [locked.id] : []);
   const out: Task[] = locked ? [locked] : [];
   for (const b of blocksOn(d, todayOf(d, now))) {
@@ -64,13 +60,20 @@ export function deriveQueue(d: Data, now: number): Task[] {
   return out.concat(open.filter((t) => !seen.has(t.id)).sort(byPriority));
 }
 
+/** Two doing tasks only happen after a merge: the timer's task wins, then a running one, then the lower id. */
+function keeper(d: Data, open: Task[]): Task | undefined {
+  const owned = timerOf(d).taskId;
+  return open
+    .filter((t) => t.status === 'doing')
+    .sort((a, b) => Number(b.id === owned) - Number(a.id === owned) || Number(b.runtime.status === 'running') - Number(a.runtime.status === 'running') || byId(a, b))[0];
+}
+
 /**
- * Restore the invariants: exactly one 'doing' task (the locked one, else the first
- * startable head); every other open task is 'planned' (a block today or later) or 'inbox'.
+ * Restore the invariants: at most one 'doing' task (nothing is promoted automatically);
+ * every other open task is 'planned' (a block today or later) or 'inbox'.
  */
 export function normalize(d: Data, ctx: Ctx): Data {
-  const queue = deriveQueue(d, ctx.now);
-  const head = queue[0] && isLocked(queue[0]) && queue[0].status === 'doing' ? queue[0] : queue.find((t) => hasFinishCondition(t.finishCondition));
+  const head = keeper(d, live(d, 'tasks').filter(isOpen));
   const today = todayOf(d, ctx.now);
   const planned = new Set(live(d, 'blocks').filter((b) => b.taskId && b.date >= today).map((b) => b.taskId as string));
   let out = d;

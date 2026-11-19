@@ -1,8 +1,32 @@
 # Chronos build log
 
-A fresh session can resume from this file alone. Newest state first. Decisions: `decision.md` (D-001..D-170, unique and ascending). Spec for Phase 3.5: the prompt in the PR description (sections 0-15); Phase 2+3 spec: `docs/PHASE23_PROMPT.md`.
+A fresh session can resume from this file alone. Newest state first. Decisions: `decision.md` (D-001..D-183, unique and ascending). Spec for Phase 3.5: the prompt in the PR description (sections 0-15); Phase 2+3 spec: `docs/PHASE23_PROMPT.md`.
 
-## State (2026-11-15, end of the Phase 3.5 fix pass)
+## State (2026-11-19, end of Phase 3.7)
+
+Branch `claude/phase-3-7-refinements-iwku6e` (the prompt said `phase-3-7`; the session's branch rule wins). Checks: `npm run typecheck` clean; `npm test` 957 passed (72 files); `npm run audit` passed; smoke passed (Xvfb). Deploy: Firestore rules changed (schema v4); see `SETUP.md`.
+
+### Done in Phase 3.7 (by prompt section)
+
+- 1 One task model: `core/tasks/selectors.ts`, `core/tasks/screens.ts`, `core/tasks/transition.ts`; no automatic focus; `task.start`, `task.pause`, `task.sort`; Board column = status; done retention (D-173, D-177). Cross-screen test: `tests/core/crossScreen.test.ts`.
+- 2 Finish conditions removed everywhere (D-172).
+- 3 Tasks screen (rail, Inbox/Today/Upcoming/All, G I/T/U/A, project switch, List/Board, quick add with chips, P1-P4, @labels, sections = columns, inline rename, E, Del, Ctrl+Enter, S, Shift/Ctrl-click, drag reorder with an insertion line, Done list, empty states) (D-175, D-176, D-182).
+- 4 Home shelf, drag to pause, drop to start, empty drop target; Esc cancels any drag (D-178).
+- 5 Plan time grid at 2 px/min, minute-aligned now-line, plans over classes, class in the pill, planned task in the pill when nothing is in focus (D-179).
+- 6 Notepad: hotkey (bare Insert/F-keys allowed), position, recent notes, grows downward, Ctrl+Enter push (D-181).
+- 7 TASK markers (live in notepad and Focus, at post time in the Log); "- " is a bullet (D-180).
+- 8 Log: task offer in the post header, calendar drawer (closed, remembered), reading view R. Focus thinking-space list.
+- 9 Premium pass: sentence-case section headings and palette labels, narrow top bar, Home toolbar trimmed to Plan and Focus, ellipsis and full-title tooltips on grid blocks, buffer label clear of the now-line, help sheet updated.
+- 10 `SETUP.md` (Firebase deploy with rollback, Cloudflare placeholder for Phase 4); rules updated and statically tested.
+
+### Deferred (with reason)
+
+- Firestore emulator: still not runnable here (D-124); rules are guarded by a static test and need the Rules Playground checks in `SETUP.md`.
+- Windows-only behaviour (notepad hotkey with Insert, window growth, focus return, pill second line in the taskbar band): `docs/WINDOWS_CHECKLIST.md` 51-58.
+- The full 1366/1920 × four sizes × five themes visual matrix was checked by the smoke script's overflow matrix (D-170) and spot screenshots, not by eye on every combination.
+- `PRODUCT.md` still does not exist; not invented.
+
+## Previous: State (2026-11-15, end of the Phase 3.5 fix pass)
 
 Branch `claude/chronos-phase-3-5-build-ya77ix` (the prompt said `phase-3-5`; the session's branch rule wins). Checks: `npm run typecheck` clean; `npm test` 860 passed (63 files); `npm run audit` passed; `npm run smoke` passed (Xvfb). Impeccable detector (live app over CDP, 36 scans): all findings fixed except 12 kept by decision (Stark plasma, TARS cream ground). Critique 30/40 (27/36 excluding Help): target ≥30/36 **not met**; details and open issues in `docs/BUILD_REPORT.md`.
 

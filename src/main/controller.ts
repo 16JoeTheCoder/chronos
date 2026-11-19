@@ -9,7 +9,7 @@
 
 import fs from 'node:fs';
 import { apply, type Command, type Result } from '../core/commands';
-import { defaultActiveTimer, defaultDevice, defaultSettings, emptyData } from '../core/model/defaults';
+import { defaultActiveTimer, defaultDevice, defaultSettings, emptyData, taskPrefs } from '../core/model/defaults';
 import { newId } from '../core/model/ids';
 import { COLLS, type Coll, type Conflict, type Data, type DeviceSettings, type Gap, type QuarantineItem, type Rec, type Slice, type SyncStateKind, type Task, type TimerEvent } from '../core/model/types';
 import { fromMonolith, migrate } from '../core/repo/migrate';
@@ -18,7 +18,8 @@ import { clearSyncMeta, diffData, enqueue, replay } from '../core/sync/outbox';
 import type { OutboxEntry, SyncProvider } from '../core/sync/provider';
 import { dateOf } from '../core/time/zone';
 import { purge } from '../core/repo/recycle';
-import { settingsOf, update, type Ctx } from '../core/repo/repo';
+import { recycle, settingsOf, update, type Ctx } from '../core/repo/repo';
+import { expiredDone } from '../core/tasks/selectors';
 import { checkpointDue } from '../core/tasks/sprints';
 import { activeTask, blockSpan, blocksOn, normalize, ownsTimer, recordSlices, todayOf } from '../core/tasks/tasks';
 import { seedHolidays } from '../core/time/holidays';
@@ -299,6 +300,8 @@ export class Controller {
       d = purge(d, now, ctx.deviceId);
       this.lastPurge = now;
     }
+    // Done tasks leave after the retention window (Phase 3.7): soft delete, restorable from Trash.
+    for (const t of expiredDone(d, now, taskPrefs(settingsOf(d)).doneRetentionHours)) d = recycle(d, 'tasks', t.id, ctx);
     d = normalize(d, ctx);
     if (d !== this.data) {
       this.commit(d, now);

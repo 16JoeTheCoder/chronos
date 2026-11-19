@@ -9,7 +9,8 @@ import { settingsOf } from '../../core/repo/repo';
 import { todayOf } from '../../core/tasks/tasks';
 import { loadBells, timetableFor } from '../schedule/timetableData';
 
-const PRIORITY: Record<1 | 2 | 3, Priority> = { 1: 'must', 2: 'should', 3: 'nice' };
+const PRIORITY: Record<1 | 2 | 3 | 4, Priority> = { 1: 'must', 2: 'should', 3: 'nice', 4: 'none' };
+const PRIO_CHIP: Record<1 | 2 | 3 | 4, string> = { 1: 'P1', 2: 'P2', 3: 'P3', 4: 'P4' };
 
 /** Parser context for "now". Timetable and bells come from the schedule module (device-local bells). */
 export function parseCtx(d: Data, now: number, source: NonNullable<ParseContext['source']>, mode: ParseContext['mode'] = 'quick', date?: string): ParseContext {
@@ -22,11 +23,18 @@ export function parseLine(text: string, d: Data, now: number, source: NonNullabl
   return first.date && first.date !== todayOf(d, now) ? parse(text, parseCtx(d, now, source, mode, first.date)) : first;
 }
 
-/** Task, event or note for a parse; `asTask` forces a fixed event to a task (Shift+Enter). */
-export function commandFromParse(r: ParseResult, d: Data, now: number, asTask = false): Command | null {
+/** The text began with an explicit kind word ("note ", "//", "TASK ", "event ", "@ "). */
+export const explicitKind = (r: ParseResult): boolean => r.spans.some((x) => x.role === 'kindKeyword' && (x.value as { prefix?: boolean } | null)?.prefix === true);
+
+/**
+ * Task, event or note for a parse; `asTask` forces a fixed event to a task (Shift+Enter).
+ * Quick add (Phase 3.7): a line the parser reads as a note stays a task unless it was marked
+ * as a note ("note ", "//"), so Ctrl+K adds what you typed.
+ */
+export function commandFromParse(r: ParseResult, d: Data, now: number, asTask = false, quick = false): Command | null {
   const title = r.title.trim();
   if (!title) return null;
-  const kind = asTask && r.kind === 'fixed' ? 'task' : r.kind;
+  const kind = asTask && r.kind === 'fixed' ? 'task' : quick && r.kind === 'note' && !explicitKind(r) ? 'task' : r.kind;
   if (kind === 'note') return { type: 'idea.add', text: title, taskId: null };
   if (kind === 'task') {
     return {
@@ -37,6 +45,7 @@ export function commandFromParse(r: ParseResult, d: Data, now: number, asTask = 
         tagId: r.tagId ?? null,
         projectId: r.projectId ?? null,
         ...(r.priority ? { priority: PRIORITY[r.priority] } : {}),
+        ...(r.labels?.length ? { labels: r.labels } : {}),
         estimateMin: r.estimateMin ?? r.durationMin ?? null,
         dueDate: r.date ?? null,
         dueTime: r.dueTime ?? r.startMin ?? null,
@@ -86,7 +95,8 @@ export function chipsOf(r: ParseResult, d: Data): Chip[] {
   if (r.unplaced) c.push({ key: 'unplaced', label: 'time to place' });
   if (r.estimateMin ?? r.durationMin) c.push({ key: 'dur', label: dur((r.estimateMin ?? r.durationMin) as number) });
   if (r.recurrence) c.push({ key: 'rec', label: r.recurrence.freq === 'daily' ? 'every day' : r.recurrence.interval > 1 ? `every ${r.recurrence.interval} weeks` : 'every week' });
-  if (r.priority) c.push({ key: 'prio', label: PRIORITY[r.priority] });
+  if (r.priority) c.push({ key: 'prio', label: PRIO_CHIP[r.priority] });
+  for (const l of r.labels ?? []) c.push({ key: `label-${l}`, label: `@${l}` });
   if (r.projectId && d.projects[r.projectId]) c.push({ key: 'proj', label: d.projects[r.projectId]!.name });
   if (r.tagId && d.tags[r.tagId]) c.push({ key: 'tag', label: d.tags[r.tagId]!.name });
   return c;

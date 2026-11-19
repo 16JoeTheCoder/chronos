@@ -134,7 +134,7 @@ body { background-color: var(--c-ground); }
 .review-title { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
 .break-card { position: fixed; z-index: 30; right: 24px; bottom: 24px; width: min(340px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 6px; padding: 16px; border: 1px solid color-mix(in srgb, var(--c-wellness) 55%, transparent); border-radius: var(--r-lg); background: var(--c-ground); box-shadow: var(--depth-float); animation: rise var(--dur-base) var(--ease) both; }
 .break-card .row { margin-top: 6px; }
-.plan-back { display: flex; }
+.plan-back { display: flex; align-items: center; gap: 8px; }
 .foot-quiet { justify-content: flex-start; }
 
 /* ---- Runway extras ---- */
@@ -308,3 +308,53 @@ html[data-reactive-data="on"]:not([data-motion="off"]) .w-momentum.ignited .w-su
 .laps [data-lap="best"] { --lap: var(--c-best, var(--c-accent)); }
 .laps [data-lap="under"] { --lap: var(--c-ok); }
 .laps [data-lap="over"] { --lap: var(--c-warn); }
+
+/* ---- Home: the drop target and the Today shelf (Phase 3.7 §4) ---- */
+.now-grab { cursor: grab; user-select: none; }
+.dragging .now-grab { cursor: grabbing; }
+.now-hero.is-empty { border-style: dashed; }
+.now-hero.drop-on { border-color: var(--c-accent); border-style: solid; background: color-mix(in srgb, var(--c-accent) 6%, var(--c-panel-hero)); }
+.tshelf { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 12px; padding: 16px 20px; border: 1px solid var(--c-line); border-radius: var(--r-lg); background: var(--c-panel); min-width: 0; transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
+.tshelf.is-target { border-style: dashed; border-color: var(--c-line-strong); }
+.tshelf.drop-on { border-style: solid; border-color: var(--c-accent); background: color-mix(in srgb, var(--c-accent) 6%, var(--c-panel)); }
+.tshelf-head { display: flex; align-items: center; gap: 12px; min-height: 32px; }
+.tshelf-head h2 { font: 600 15px/20px var(--font-text); color: var(--c-text); }
+.tshelf-n, .tshelf-hint { font-size: 13px; color: var(--c-text-2); }
+.tshelf-hint { color: var(--c-text); font-weight: 500; }
+.tshelf-gap { flex: 1; }
+.tshelf-empty { color: var(--c-text-2); font-size: 14px; }
+.tshelf-row { list-style: none; margin: 0; padding: 0 0 4px; display: flex; gap: 12px; overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--c-line-strong) transparent; }
+.tcard { flex: 0 0 auto; width: 220px; min-height: 56px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 10px 14px; border: 1px solid var(--c-line-strong); border-radius: var(--r-md); background: var(--c-ground); cursor: grab; user-select: none; position: relative; transition: transform var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+.tcard::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 1px; background: var(--c); }
+.tcard:hover { border-color: var(--c-text-2); }
+.tcard:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.tcard.is-drag { opacity: .4; }
+.tcard-top { display: flex; align-items: flex-start; gap: 8px; }
+.tcard-title { flex: 1; min-width: 0; font: 500 14px/20px var(--font-text); color: var(--c-text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tcard-state { font-size: 12px; line-height: 16px; color: var(--c-text-2); }
+.tcard.is-paused { border-style: dashed; }
+.tcard-start { align-self: flex-start; }
+.tshelf.is-open .tcard { width: 260px; }
+@media (max-width: 760px) {
+  .now-bar { flex-wrap: wrap; row-gap: 8px; }
+  .now-bar .now-free { flex: 1 0 100%; }
+  .now-bar .now-bar-gap { display: none; }
+  .now-bar .btn kbd { display: none; }
+  .tcard { width: 180px; }
+}
+
+/* ---- Focus: the thinking space (Phase 3.7 §8) ---- */
+.ts-title { font: 600 15px/20px var(--font-text); color: var(--c-text); }
+.focus-side .stray { align-items: flex-start; padding: 8px 12px; border: 1px solid var(--c-line-strong); border-radius: var(--r-md); background: var(--c-panel); }
+.focus-side .stray svg { margin-top: 3px; flex: none; }
+.stray textarea { flex: 1; min-width: 0; min-height: 24px; max-height: 40vh; resize: none; overflow-y: auto; border: 0; padding: 0; background: transparent; color: var(--c-text); font: 400 15px/24px var(--font-text); outline: none; }
+.stray textarea::placeholder { color: var(--c-text-3); }
+.ts-hint { font-size: 12px; line-height: 16px; color: var(--c-text-2); }
+.ts-empty { font-size: 14px; color: var(--c-text-2); }
+.ts-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.ts-list li { display: flex; flex-direction: column; gap: 2px; padding: 12px 0; border-top: 1px solid var(--c-line); }
+.ts-list p { margin: 0; font-size: 15px; line-height: 22px; color: var(--c-text); white-space: pre-line; overflow-wrap: anywhere; }
+.ts-list time { font: 400 12px/16px var(--font-num); color: var(--c-text-2); font-variant-numeric: tabular-nums; }
+
+/* Phase 3.7: themes whose hero sizes to its content keep the shelf right under it (no empty band). */
+:is([data-signature="ticking-digits"], [data-signature="mission-clock"], [data-signature="lap-timer"], [data-signature="slab-monolith"]) .nowscreen { grid-template-rows: auto auto auto; align-content: start; }

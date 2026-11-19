@@ -1,8 +1,9 @@
 // Log post lines: which lines of a note are tasks. Pure; the parser does the reading.
 //
 // Thresholds (D-139):
-//   task  (auto-add, Undo toast): an explicit prefix (`- `, `[] `, `task `), or a high-confidence
-//         parse that has a task/fixed keyword AND a date or time ("call mom tomorrow 5pm").
+//   task  (auto-add, Undo toast): an explicit marker (`TASK ` at the start or ` TASK` at the end, in
+//         capitals, or a `[ ]` checkbox), or a high-confidence parse that has a task/fixed keyword
+//         AND a date or time ("call mom tomorrow 5pm"). Phase 3.7: `- ` is a plain bullet, never a task.
 //   chip  (faint "Add as task?"): a task/fixed parse that is not clear enough: no date or time,
 //         or medium confidence ("email Sarah", "math hw").
 //   text  (nothing): a note-kind parse, or a low-confidence one ("had a good session today").
@@ -25,8 +26,12 @@ export interface LineInfo {
   input: TaskInput | null;
 }
 
-/** `- `, `* `, `- [ ] `, `[] `, `[ ] `, `[x] `, `task `. Longest alternative first. */
-const PREFIX = /^\s*(?:[-*]\s+\[[ xX]?\]\s*|[-*]\s+|\[[ xX]?\]\s*|task\s+)/i;
+/** `TASK ` (capitals), `- [ ] `, `[] `, `[ ] `, `[x] `. Longest alternative first. A bare `- ` is a bullet. */
+const PREFIX = /^\s*(?:[-*]\s+\[[ xX]?\]\s*|\[[ xX]?\]\s*|TASK\s+)/;
+/** ` TASK` at the end of a line (capitals). */
+const SUFFIX = /\s+TASK\s*$/;
+/** A bullet line: `- ` or `* ` (not a task). */
+export const BULLET = /^(\s*)([-*])\s+/;
 /** Most task lines one post may queue by itself; the rest get chips. */
 export const MAX_AUTO_LINES = 20;
 
@@ -34,10 +39,17 @@ export const splitLines = (body: string): string[] => String(body ?? '').split('
 
 export const stripPrefix = (line: string): { body: string; explicit: boolean } => {
   const m = PREFIX.exec(line);
-  return m ? { body: line.slice(m[0].length).trim(), explicit: true } : { body: line.trim(), explicit: false };
+  if (m) return { body: line.slice(m[0].length).trim(), explicit: true };
+  const bullet = BULLET.exec(line);
+  const rest = bullet ? line.slice(bullet[0].length) : line;
+  const end = SUFFIX.exec(rest);
+  return end ? { body: rest.slice(0, end.index).trim(), explicit: true } : { body: rest.trim(), explicit: false };
 };
 
-const PRIORITY: Record<number, Priority> = { 1: 'must', 2: 'should', 3: 'nice' };
+/** Does this line end in the TASK marker? (The editors watch for it to offer Backspace-to-undo.) */
+export const endsWithTask = (line: string): boolean => SUFFIX.test(line) && line.replace(SUFFIX, '').trim().length > 0;
+
+const PRIORITY: Record<number, Priority> = { 1: 'must', 2: 'should', 3: 'nice', 4: 'none' };
 
 /** The task fields a parse result implies. */
 export function taskInputOf(r: ParseResult, fallbackTitle: string, projectId: string | null): TaskInput {
@@ -50,6 +62,7 @@ export function taskInputOf(r: ParseResult, fallbackTitle: string, projectId: st
   if (est !== undefined && est >= 1) input.estimateMin = est;
   if (r.tagId) input.tagId = r.tagId;
   if (r.priority) input.priority = PRIORITY[r.priority];
+  if (r.labels?.length) input.labels = r.labels;
   return input;
 }
 
@@ -77,4 +90,4 @@ export function analyzeBody(body: string, ctx: ParseContext, projectId: string |
 export const autoLines = (lines: LineInfo[]): LineInfo[] => lines.filter((l) => l.kind === 'task').slice(0, MAX_AUTO_LINES);
 
 /** Cheap prefix check used by `is:task` (no parser). */
-export const hasTaskPrefix = (body: string): boolean => splitLines(body).some((l) => PREFIX.test(l) && stripPrefix(l).body !== '');
+export const hasTaskPrefix = (body: string): boolean => splitLines(body).some((l) => { const s = stripPrefix(l); return s.explicit && s.body !== ''; });

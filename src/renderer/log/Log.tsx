@@ -127,7 +127,20 @@ function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnTyp
 
   // ---- calendar ----
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [calOpen, setCalOpen] = useState(false);
+  // The calendar is a right drawer, closed by default; R is the reading view (Phase 3.7). Both remembered on this PC.
+  const [calOpen, setCalOpenState] = useState(() => { try { return localStorage.getItem('chronos.log.cal') === '1'; } catch { return false; } });
+  const setCalOpen = (f: (v: boolean) => boolean) => setCalOpenState((v) => { const n = f(v); try { localStorage.setItem('chronos.log.cal', n ? '1' : '0'); } catch { /* per-viewer convenience */ } return n; });
+  const [reading, setReadingState] = useState(() => { try { return localStorage.getItem('chronos.log.reading') === '1'; } catch { return false; } });
+  const setReading = (f: (v: boolean) => boolean) => setReadingState((v) => { const n = f(v); try { localStorage.setItem('chronos.log.reading', n ? '1' : '0'); } catch { /* per-viewer convenience */ } return n; });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key !== 'r' && e.key !== 'R') || e.ctrlKey || e.altKey || e.metaKey || (e.target as HTMLElement).closest('input, textarea, select, [contenteditable]') || document.querySelector('[aria-modal="true"]')) return;
+      e.preventDefault();
+      setReading((v) => !v);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const pickDay = (date: string) => {
     setSelectedDay(date);
     scrollToIndex(indexForDay(feed, date, tz));
@@ -154,7 +167,7 @@ function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnTyp
   const q = found ? found.q : null;
 
   return (
-    <section className="log" aria-label="Log">
+    <section className={`log${reading ? ' is-reading' : ''}${calOpen && !reading ? ' cal-open' : ''}`} aria-label="Log">
       <header className="log-head">
         <h1>{projectName ? <>Log <span className="log-h-proj">· {projectName}</span></> : 'Log'}</h1>
         <div className="search">
@@ -202,13 +215,18 @@ function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnTyp
             </ul>
           )}
         </div>
-        <button className="log-btn cal-toggle" aria-expanded={calOpen} aria-controls="log-cal" onClick={() => setCalOpen((v) => !v)}>
-          Calendar
+        <button className="log-btn" aria-pressed={reading} aria-keyshortcuts="R" onClick={() => setReading((v) => !v)} title="Reading view (R)">
+          {reading ? 'Exit reading view' : 'Reading view'} <kbd>R</kbd>
         </button>
+        {!reading && (
+          <button className="log-btn cal-toggle" aria-expanded={calOpen} aria-controls="log-cal" onClick={() => setCalOpen((v) => !v)}>
+            {calOpen ? 'Hide calendar' : 'Calendar'}
+          </button>
+        )}
       </header>
       <div className="log-main">
         <div className="log-col">
-          <Composer
+          {!reading && <Composer
             ref={composer}
             data={d}
             projectId={composerProject}
@@ -218,8 +236,8 @@ function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnTyp
               setSelectedDay(null);
               if (scroller.current) scroller.current.scrollTop = 0;
             }}
-          />
-          {chipProjects.length > 0 && (
+          />}
+          {!reading && chipProjects.length > 0 && (
             <div className="log-chips" role="group" aria-label="Show posts from">
               <button type="button" className="log-chip" aria-pressed={chip === null} onClick={() => setChip(null)}>All</button>
               {chipProjects.map((p) => (
@@ -262,14 +280,14 @@ function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnTyp
           </div>
           </Boundary>
         </div>
-        <aside className={`log-side${calOpen ? ' open' : ''}`} id="log-cal" aria-label="Calendar">
+        {calOpen && !reading && <aside className="log-side open" id="log-cal" aria-label="Calendar">
           <Boundary what="the calendar">
             <Calendar notes={allNotes} tz={tz} today={today} projectId={marksProject} projectName={markName} selected={selectedDay} onSelect={pickDay} />
           </Boundary>
           <Boundary what="this month's numbers">
             <Stats notes={allNotes} tz={tz} today={today} />
           </Boundary>
-        </aside>
+        </aside>}
       </div>
     </section>
   );

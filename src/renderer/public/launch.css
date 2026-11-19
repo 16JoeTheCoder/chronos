@@ -17,7 +17,7 @@ html, body { margin: 0; height: 100%; background: var(--c-ground); color: var(--
 .launch-tag { margin: 8px 0 0; font: 300 18px/24px var(--font-text); color: var(--c-text-2); }
 .launch-greet { margin: 48px 0 0; font: 300 clamp(40px, 6vw, 72px)/1 var(--font-text); letter-spacing: -.035em; min-height: 1em; }
 .launch-stats { display: grid; grid-template-columns: repeat(3, minmax(160px, 1fr)); gap: 32px; margin: 48px 0 0; }
-.launch-stats dt { font: 500 12px/16px var(--font-text); letter-spacing: .08em; text-transform: uppercase; color: var(--c-text-2); }
+.launch-stats dt { font: 500 13px/16px var(--font-text); color: var(--c-text-2); }
 .launch-stats dt::before { content: ""; display: block; width: 28px; height: 6px; margin-bottom: 8px; background: var(--c-line-strong); }
 .launch-stats dd { margin: 8px 0 0; font: 300 28px/36px var(--font-text); font-variant-numeric: tabular-nums; min-height: 36px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sk { background: var(--surface-2); border-radius: 4px; color: transparent; }

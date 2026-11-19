@@ -169,7 +169,7 @@ function boot(): void {
   const homeFront = () => overlay.setHomeInFront(!home.win.isDestroyed() && home.win.isVisible() && home.win.isFocused() && !layer.attached);
   for (const ev of ['focus', 'blur', 'show', 'hide'] as const) home.win.on(ev as 'focus', homeFront);
   const popupOpts = { backgroundColor: '#00000000', transparent: true, hasShadow: false } as const;
-  const notepad = new PopupWindow('#notepad', notepadBounds, { ...popupOpts, ...NOTEPAD, title: 'Chronos notepad' }, false);
+  const notepad = new PopupWindow('#notepad', (wa, cursor) => notepadBounds(wa, controller.device.notepad?.position ?? 'top-right', cursor), { ...popupOpts, ...NOTEPAD, title: 'Chronos notepad' }, false);
   const palette = new PopupWindow('#palette', paletteBounds, { ...popupOpts, ...PALETTE, title: 'Chronos palette' }, true);
   // Smoke test only (scripts/smoke.mjs): global shortcuts cannot be pressed under Xvfb, so the script opens the popups here.
   if (process.env.CHRONOS_SMOKE) (globalThis as Record<string, unknown>).__chronosSmoke = { openNotepad: () => notepad.open(), openPalette: () => palette.open() };
@@ -355,6 +355,7 @@ function boot(): void {
       }
     },
     closePalette: () => palette.close(),
+    notepadResize: (h) => notepad.resize(h),
     notify: (text, undoToken) => notice({ text, undoToken }),
     askClaude,
     quit,

@@ -1,14 +1,19 @@
-// Focus Core (§9.4): one stage. Tag, title, finish condition, the huge timer,
+// Focus Core (§9.4): one stage. Tag, title, the huge timer,
 // Start/Pause (the one accent button), Skip phase in Pomodoro, mode switchable
 // only before the first start, Finish (hold Enter for 2 s) and a quiet Drop (typed
-// reason). A right rail shows what is next and the time left. A stray-thought
-// input at the bottom saves an Idea without leaving focus.
+// reason). The right column is the thinking space (Phase 3.7 §8): an input at the top that
+// grows with the text, then this task's notes, newest first, with times. A line with TASK at
+// its start or end becomes a task instead of a note.
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { formatHuman, modeLabel } from '../../core/format';
+import { clockOf, dateLabel, formatHuman, modeLabel } from '../../core/format';
+import { todayOf } from '../../core/tasks/tasks';
 import type { Data, Task, TimerMode } from '../../core/model/types';
 import { checkpointDue } from '../../core/tasks/sprints';
-import { activeTask, isLocked, ownsTimer } from '../../core/tasks/tasks';
+import { activeTask, deriveQueue, isLocked, ownsTimer } from '../../core/tasks/tasks';
+import { taskLineAt } from '../../core/log/smartText';
+import { taskFromLine } from '../components/smartText';
+import { api } from '../api';
 import { isDropReason } from '../../core/validation';
 import { live, settingsOf, timerOf } from '../../core/repo/repo';
 import { Icon } from '../components/Icon';
@@ -25,19 +30,39 @@ type Ritual = { kind: 'drop' } | { kind: 'kill' } | null;
 
 export function FocusCore({ d, m, now, deviceId, onPlan }: { d: Data; m: DayModel; now: number; deviceId: string; onPlan: () => void }) {
   const task = activeTask(d);
-  if (!task) {
+  if (!task) return <EmptyFocus d={d} now={now} onPlan={onPlan} />;
+  return <Stage d={d} m={m} now={now} task={task} deviceId={deviceId} />;
+}
+
+/** Nothing in focus: Space (or the button) starts the head of the queue. */
+function EmptyFocus({ d, now, onPlan }: { d: Data; now: number; onPlan: () => void }) {
+  const next = deriveQueue(d, now)[0];
+  useEffect(() => {
+    if (!next) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== ' ' || e.repeat || targetOf(document.activeElement) === 'text' || document.querySelector('[aria-modal="true"]')) return;
+      e.preventDefault();
+      void run({ type: 'task.start', id: next.id, run: true });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [next?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  {
     return (
       <section className="focus focus-empty" aria-label="Focus">
-        <p className="eyebrow">Focus</p>
-        <h2 className="focus-title">Nothing in focus.</h2>
-        <p className="muted">Give a task a finish condition and it moves here.</p>
-        <button className="btn btn-ghost" onClick={onPlan}>
-          Back to plan
-        </button>
+        <h2 className="focus-title">Nothing in focus</h2>
+        <p className="muted">{next ? 'Press Space to start the next task, or start one from Home or Tasks.' : 'Add a task with Ctrl+K, then start it here.'}</p>
+        <div className="row gap">
+          {next && (
+            <button className="btn btn-accent" onClick={() => void run({ type: 'task.start', id: next.id, run: true })}>
+              <Icon name="play" /> Start {next.title}
+            </button>
+          )}
+          <button className="btn btn-ghost" onClick={onPlan}>Open the plan</button>
+        </div>
       </section>
     );
   }
-  return <Stage d={d} m={m} now={now} task={task} deviceId={deviceId} />;
 }
 
 function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: number; task: Task; deviceId: string }) {
@@ -107,7 +132,19 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
 
   const ritualOk = isDropReason(text);
   const over = t ? t.overtime : 0;
-  const notes = live(d, 'ideas').filter((i) => i.taskId === task.id).sort((a, b) => b.createdAt - a.createdAt).slice(0, 3);
+  const notes = live(d, 'ideas').filter((i) => i.taskId === task.id).sort((a, b) => b.createdAt - a.createdAt);
+  const addThought = async () => {
+    const body = thought.trim();
+    if (!body) return;
+    const line = taskLineAt(body, body.length);
+    if (line && !body.includes('\n')) {
+      const id = await taskFromLine(line.body, d, { projectId: task.projectId });
+      if (id) { setThought(''); toast(`Task added: ${line.body}`, { undo: () => void api.command({ type: 'recycle', coll: 'tasks', id, confirmed: true }) }); }
+      return;
+    }
+    const r = await run({ type: 'idea.add', text: body, taskId: task.id, projectId: task.projectId });
+    if (r.ok) setThought('');
+  };
   const [lead, ...rest] = task.title.includes(': ') ? task.title.split(': ') : ['', task.title];
   const main = t ? (t.remaining !== null ? (over > 0 ? over : t.remaining) : t.elapsed) : 0;
   const sigSize = sizeFor(theme?.theme.motion.signature.kind, width);
@@ -120,7 +157,6 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
           {lead && <span className="light">{lead}: </span>}
           <span className="strong">{rest.join(': ')}</span>
         </h2>
-        <p className="focus-fc">{task.finishCondition}</p>
         <div className="timer-row">
           <div className="sig-slot">
             <SignatureTimer
@@ -158,28 +194,37 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
           </div>
         </div>
         <p id="hold-hint" className="muted hold-hint">
-          Hold Enter for 2 s to finish. Space starts or pauses.
+          Hold Enter for 2 seconds to finish. Space starts or pauses. Esc leaves Focus.
         </p>
       </div>
 
       <aside className="focus-side" aria-label="Thinking space">
-        <h3 className="eyebrow">Thinking space</h3>
-        {notes.map((n, i) => (
-          <p key={n.id} className={i === 0 ? 'note first' : 'note'}>
-            {n.text}
-          </p>
-        ))}
-        <form
-          className="stray"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!thought.trim()) return;
-            void run({ type: 'idea.add', text: thought, taskId: task.id }).then((r) => r.ok && setThought(''));
-          }}
-        >
+        <h3 className="ts-title">Thinking space</h3>
+        <div className="stray">
           <Icon name="idea" />
-          <input value={thought} onChange={(e) => setThought(e.target.value)} placeholder="Stray thought? Type, then Enter" aria-label="Stray thought" maxLength={1000} />
-        </form>
+          <textarea
+            value={thought}
+            rows={1}
+            onChange={(e) => { setThought(e.target.value); e.currentTarget.style.height = 'auto'; e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`; }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void addThought(); } }}
+            placeholder="A thought for later"
+            aria-label="A thought for later. Enter saves it, Shift Enter adds a line."
+            maxLength={1000}
+          />
+        </div>
+        <p className="ts-hint">Enter saves · end with TASK to add a task</p>
+        {notes.length === 0 ? (
+          <p className="ts-empty">Thoughts you save while working on this task collect here.</p>
+        ) : (
+          <ol className="ts-list">
+            {notes.map((n) => (
+              <li key={n.id}>
+                <p>{n.body || n.text}</p>
+                <time dateTime={new Date(n.createdAt).toISOString()}>{clockOf(n.createdAt, s.timezone)}{todayOf(d, n.createdAt) !== todayOf(d, now) ? ` · ${dateLabel(todayOf(d, n.createdAt))}` : ''}</time>
+              </li>
+            ))}
+          </ol>
+        )}
       </aside>
       <div className="focus-more">
         <div className="stage-more">

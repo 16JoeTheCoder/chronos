@@ -37,19 +37,21 @@ try {
     const tz = 'Asia/Jakarta';
     const all = { weekdays: [1, 2, 3, 4, 5, 6, 7], everyNWeeks: 1, anchorDate: '2026-10-26', from: null, until: null };
     await c({ type: 'event.create', input: { title: 'Football', tagId: null, scope: 'other', tz, startMin: 1020, endMin: 1110, date: null, recur: all, notes: '' } });
-    await c({ type: 'task.create', input: { title: 'Wind sim: blade pitch model', finishCondition: 'Power curve plateaus at rated speed', tagId: tag, estimateMin: 90, priority: 'must' } });
-    await c({ type: 'task.create', input: { title: 'Find NREL 5 MW data', finishCondition: 'Dataset downloaded and checked', estimateMin: 25 } });
-    await c({ type: 'task.create', input: { title: 'Reply to coach', finishCondition: 'Reply sent about Saturday', estimateMin: 15 } });
+    await c({ type: 'task.create', input: { title: 'Wind sim: blade pitch model', tagId: tag, estimateMin: 90, priority: 'must' } });
+    await c({ type: 'task.create', input: { title: 'Find NREL 5 MW data', estimateMin: 25 } });
+    await c({ type: 'task.create', input: { title: 'Reply to coach', estimateMin: 15 } });
     await c({ type: 'settings.update', patch: { dayStartMin: 0, dayEndMin: 1440 } });
     await c({ type: 'idea.add', text: 'Cp drops hard past 12 m/s. Ramp pitch from 10 m/s and compare.', taskId: null });
   });
-  await home.waitForSelector('.now-title');
+  await home.waitForSelector('.now-hero.is-empty');
+  await home.waitForSelector('.tshelf .tcard');
   await home.screenshot({ path: `${shots}/2-home.png` });
 
-  step('Focus: Space starts without clicking, a short Enter does not finish, a 2 s hold does');
+  step('Focus: nothing is auto-focused; Space starts the head of the queue, a short Enter does not finish, a 2 s hold does');
   await home.keyboard.press('f');
-  await home.waitForSelector('.focus .focus-title');
+  await home.waitForSelector('.focus-empty .focus-title');
   await home.keyboard.press('Space');
+  await home.waitForSelector('.focus:not(.focus-empty) .focus-title');
   await home.waitForSelector('button:has-text("Pause")');
   await home.waitForTimeout(1500);
   await home.screenshot({ path: `${shots}/3-focus.png` });
@@ -74,7 +76,10 @@ try {
   await home.waitForTimeout(1300);
   await home.keyboard.up('Enter');
   await home.waitForSelector('.toast:has-text("Done.")');
-  if ((await home.locator('.focus-title').textContent()) === title) throw new Error('finished task is still in focus');
+  // Finishing does not promote the next task: Focus shows the empty state.
+  await home.waitForSelector('.focus-empty');
+  if ((await home.locator('.focus-title').textContent()) !== 'Nothing in focus') throw new Error('finished task is still in focus, or the next one was promoted');
+  if (title && (await home.locator('.focus').textContent())?.includes(title)) throw new Error('finished task is still shown in Focus');
 
   step('Plan: Re-plan toast, drag a card onto the Plan lane, drag the block back');
   await home.keyboard.press('Escape');
@@ -93,6 +98,12 @@ try {
     await home.waitForTimeout(400);
   }
   await home.screenshot({ path: `${shots}/4-plan.png` });
+  step('Plan: the now-line is on the grid and labelled HH:MM');
+  await home.waitForSelector('.runway .now .now-label', { state: 'attached' });
+  if (!(await home.locator('.runway .now').count())) throw new Error('Plan has no .now line');
+  const nowLabel = (await home.locator('.runway .now .now-label').first().textContent())?.trim() ?? '';
+  if (!/^\d\d:\d\d$/.test(nowLabel)) throw new Error(`the now-line label is not HH:MM: "${nowLabel}"`);
+  await home.screenshot({ path: `${shots}/10-plan-grid.png` });
   const blocks = await home.locator('.blk').count();
   if (blocks > 0) {
     const bb = await home.locator('.blk-body').first().boundingBox();
@@ -108,8 +119,76 @@ try {
   }
   await home.keyboard.press('Escape');
 
+  step('Tasks: g then t opens Tasks; quick add makes a row; Ctrl+Enter completes it and an Undo toast appears');
+  await home.getByRole('button', { name: 'Home', exact: true }).click();
+  await home.waitForSelector('.nowscreen');
+  await home.keyboard.press('g');
+  await home.keyboard.press('t');
+  await home.waitForSelector('.tk');
+  await home.locator('.tk-add-input').click();
+  await home.keyboard.type('Essay draft fri !1 @school');
+  await home.keyboard.press('Enter');
+  const essay = home.locator('.tk-row:has-text("Essay draft")');
+  // "fri" dates it ahead, so the Today view may not list it; the All view always does.
+  const inToday = await essay.first().waitFor({ timeout: 1500 }).then(() => true, () => false);
+  if (!inToday) {
+    console.log('note: a quick add dated "fri" does not appear in the Tasks Today view (it is in All)');
+    await home.locator('.tk-view[aria-keyshortcuts="G A"]').click();
+  }
+  await essay.first().waitFor({ timeout: 4000 });
+  if ((await essay.count()) !== 1) throw new Error('quick add did not create exactly one "Essay draft" row');
+  const essayId = await essay.first().getAttribute('data-task');
+  const essayTask = await home.evaluate(async (id) => (await window.chronos.getSnapshot()).data.tasks[id], essayId);
+  if (essayTask.priority !== 'must' || !essayTask.labels.includes('school') || essayTask.title !== 'Essay draft') throw new Error(`quick add parsed wrongly: ${JSON.stringify({ t: essayTask.title, p: essayTask.priority, l: essayTask.labels })}`);
+  await essay.first().focus();
+  await home.keyboard.press('Control+Enter');
+  await home.waitForSelector('.toast:has-text("done") button:has-text("Undo")');
+  await essay.first().waitFor({ state: 'detached', timeout: 4000 });
+  await home.screenshot({ path: `${shots}/8-tasks.png` });
+
+  step('Home shelf: drag the running task onto the shelf pauses it; drag a card onto the hero starts it; Esc cancels a drag');
+  await home.getByRole('button', { name: 'Home', exact: true }).click();
+  await home.waitForSelector('.nowscreen');
+  const taskIdOf = (t) => home.evaluate(async (title) => Object.values((await window.chronos.getSnapshot()).data.tasks).find((x) => x.title === title && x.deletedAt === null)?.id, t);
+  const NREL = 'Find NREL 5 MW data';
+  const COACH = 'Reply to coach';
+  await home.evaluate(async (id) => window.chronos.command({ type: 'task.start', id, run: true }), await taskIdOf(NREL));
+  await home.waitForSelector(`.now-hero:not(.is-empty) .now-title:has-text("${NREL}")`);
+  await overlay.waitForFunction((t) => document.body.innerText.includes(t), NREL, { timeout: 5000 });
+  // The "Plan your day" banner can slide in and move the hero: dismiss it, then hover (which waits for a stable box) before pressing.
+  const notToday = home.getByRole('button', { name: /^Not today/ });
+  if (await notToday.first().waitFor({ timeout: 1500 }).then(() => true, () => false)) await notToday.first().click();
+  await home.waitForTimeout(400);
+  const drag = async (from, to, { escape = false } = {}) => {
+    await from.hover({ position: { x: 60, y: 24 } });
+    await home.mouse.down();
+    const b = await to.boundingBox();
+    if (!b) throw new Error('drag: no target box');
+    await home.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 12 });
+    if (escape) await home.keyboard.press('Escape');
+    await home.mouse.up();
+    await home.waitForTimeout(500);
+  };
+  await drag(home.locator('.now-grab'), home.locator('.tshelf'));
+  await home.waitForSelector('.now-hero.is-empty');
+  await home.waitForSelector(`.tshelf .tcard.is-paused:has-text("${NREL}")`);
+  await overlay.waitForFunction((t) => !document.body.innerText.includes(t), NREL, { timeout: 5000 });
+  await home.screenshot({ path: `${shots}/9-home-shelf.png` });
+
+  await drag(home.locator(`.tshelf .tcard:has-text("${COACH}")`), home.locator('.now-hero'));
+  await home.waitForSelector(`.now-hero:not(.is-empty) .now-title:has-text("${COACH}")`);
+  if (await home.locator(`.tshelf .tcard:has-text("${COACH}")`).count()) throw new Error('the active task is still on the shelf');
+
+  // Esc while the mouse is down and moved: nothing changes.
+  await drag(home.locator('.now-grab'), home.locator('.tshelf'), { escape: true });
+  if (await home.locator('.now-hero.is-empty').count()) throw new Error('Esc did not cancel the drag: the task was paused');
+  if (!(await home.locator('.now-hero .now-title').textContent())?.includes(COACH)) throw new Error('Esc during a drag changed the active task');
+  if (await home.locator(`.tshelf .tcard:has-text("${COACH}")`).count()) throw new Error('Esc during a drag put the task on the shelf');
+  await home.evaluate(async (id) => window.chronos.command({ type: 'task.pause', id }), await taskIdOf(COACH));
+  await home.waitForSelector('.now-hero.is-empty');
+
   step('Ctrl+K opens the centred palette; the top-bar field opens the same one; Esc restores focus; > commands run');
-  await home.keyboard.press('Escape');
+  // (No Escape here: on Home with no layer open, Esc hides the window.)
   await home.keyboard.press('Control+k');
   await home.waitForSelector('.pal[role="dialog"][aria-modal="true"]');
   await home.keyboard.type('reply to coach friday 4pm');
@@ -140,11 +219,12 @@ try {
   await home.keyboard.press('Escape');
   await home.waitForSelector('[role="dialog"][aria-label="Shortcuts and words"]', { state: 'detached' });
 
-  step('navigation closes layers: Schedule open, then Board, Log, Home each render');
+  step('navigation closes layers: Schedule (opened from Plan) open, then Tasks, Board, Log, Home each render');
   await home.getByRole('button', { name: 'Home', exact: true }).click();
-  for (const [name, sel] of [['Board', '.bd-shell'], ['Log', '.log'], ['Home', '.nowscreen']]) {
+  for (const [name, sel] of [['Tasks', '.tk'], ['Board', '.bd-shell'], ['Log', '.log'], ['Home', '.nowscreen']]) {
     await home.getByRole('button', { name: 'Home', exact: true }).click();
-    await home.getByRole('button', { name: 'Schedule' }).first().click();
+    await home.locator('.now-bar').getByRole('button', { name: /^Plan/ }).click();
+    await home.locator('.plan-back').getByRole('button', { name: 'Schedule' }).click();
     await home.waitForTimeout(250);
     if (!(await home.locator('.home-main').getByText(/schedule|timetable/i).count())) throw new Error('Schedule did not open');
     await home.getByRole('button', { name, exact: true }).click();
@@ -155,8 +235,12 @@ try {
   await app.evaluate(() => globalThis.__chronosSmoke.openNotepad());
   const notepad = await waitForWindow(app, 'windows.html#notepad');
   await notepad.waitForSelector('textarea');
+  await notepad.locator('textarea').click();
+  await notepad.keyboard.type('check wind data');
+  await notepad.keyboard.press('Control+Enter');
+  await notepad.waitForSelector('.np-recent li:has-text("check wind data")', { timeout: 5000 });
   await notepad.waitForTimeout(500);
-  await notepad.screenshot({ path: `${shots}/9-notepad.png` });
+  await notepad.screenshot({ path: `${shots}/11-notepad.png` });
   await app.evaluate(() => globalThis.__chronosSmoke.openPalette());
   const palette = await waitForWindow(app, 'windows.html#palette');
   await palette.waitForSelector('.pal-input');
@@ -202,6 +286,7 @@ try {
   await home.locator('.bd-nav').getByRole('button', { name: 'Hide the project list' }).click();
   await home.waitForSelector('.bd-nav', { state: 'detached' });
   await home.getByRole('button', { name: 'Log', exact: true }).click();
+  await home.getByRole('button', { name: 'Calendar', exact: true }).click(); // the calendar and "This month" sit behind this button
   await home.waitForSelector('.stats');
   await home.screenshot({ path: `${shots}/12-log.png` });
 

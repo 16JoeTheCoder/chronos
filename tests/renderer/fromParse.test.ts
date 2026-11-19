@@ -26,7 +26,8 @@ describe('commandFromParse', () => {
 
   it('notepad mode: only prefixed lines are tasks; plain lines stay notes', () => {
     expect(line('thinking about the curve', 'notepad').kind).toBe('note');
-    expect(line('- send the datasheet tomorrow', 'notepad').kind).toBe('task');
+    expect(line('task send the datasheet tomorrow', 'notepad').kind).toBe('task');
+    expect(line('- send the datasheet tomorrow', 'notepad').kind).toBe('note');
   });
 
   it('empty titles make no command; chips describe the parse', () => {

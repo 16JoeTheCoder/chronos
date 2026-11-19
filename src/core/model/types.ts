@@ -4,8 +4,8 @@
 
 import type { ParserRule } from '../parser/types';
 
-/** The schema this build reads and writes. A pulled record with a higher `v` puts sync in read-only mode (D-104). */
-export const SCHEMA_V = 3;
+/** The record schema this build writes (v4 = Phase 3.7: labels, priority P4 'none', task settings); the file format stays `schema: 3`. A pulled record with a higher `v` puts sync in read-only mode (D-104). */
+export const SCHEMA_V = 4;
 
 export interface Base {
   id: string;
@@ -40,8 +40,9 @@ export type Scope = 'school' | 'work' | 'uni' | 'other';
 export const SCOPES: Scope[] = ['school', 'work', 'uni', 'other'];
 export type TagColor = 'tag1' | 'tag2' | 'tag3' | 'tag4' | 'tag5' | 'tag6' | 'tag7' | 'tag8';
 export const TAG_COLORS: TagColor[] = ['tag1', 'tag2', 'tag3', 'tag4', 'tag5', 'tag6', 'tag7', 'tag8'];
-export type Priority = 'must' | 'should' | 'nice';
-export const PRIORITIES: Priority[] = ['must', 'should', 'nice'];
+/** P1 must, P2 should, P3 nice, P4 none (Phase 3.7). */
+export type Priority = 'must' | 'should' | 'nice' | 'none';
+export const PRIORITIES: Priority[] = ['must', 'should', 'nice', 'none'];
 
 // ---- Timer (ported from Monolith) ----
 export type TimerMode = 'countdown' | 'pomodoro' | 'stopwatch';
@@ -119,8 +120,10 @@ export interface TaskRecurrence {
 export interface Task extends Base {
   kind: 'task' | 'sprint';
   title: string;
-  /** Empty for an inbox task; needs >= 8 chars before it can become active. */
+  /** Retired in Phase 3.7 (D-172): still read from old records, never shown, never required. */
   finishCondition: string;
+  /** `@label` words (Phase 3.7), lower case, no '@'. */
+  labels: string[];
   notes: string;
   tagId: string | null;
   priority: Priority;
@@ -356,6 +359,10 @@ export interface Settings extends Base {
   runwayPosition: 'top' | 'bottom';
   reduceMotion: boolean | null;
   onboarded: boolean;
+  /** Phase 3.7: done tasks are recycled this many hours after finishing (0 = never). */
+  tasks: { doneRetentionHours: number };
+  /** Phase 3.7: the overlay pill shows the class that is on now under the task. */
+  pillShowsClass: boolean;
 }
 
 export interface DeviceSettings {
@@ -378,7 +385,10 @@ export interface DeviceSettings {
   /** The overlay hides while another app is full-screen. */
   overlayHideInFullscreen: boolean;
   widgetPos: { x: number; y: number } | null;
+  /** capture = the notepad hotkey (a bare Insert or F-key is allowed for it). */
   shortcuts: { toggle: string; startPause: string; capture: string };
+  /** Notepad window: where it opens and how many recent notes it shows above the editor (0-3). */
+  notepad: { position: 'top-right' | 'top-left' | 'centre' | 'cursor'; recent: number };
   displayId: number | null;
   stackFolder: string | null;
   sound: boolean;

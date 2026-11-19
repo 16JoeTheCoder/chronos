@@ -50,9 +50,9 @@ export function FocusSection({ snap }: { snap: Snapshot }) {
         <Toggle label="Start work automatically" checked={t.pomodoro.autoStartWork} onChange={(autoStartWork) => setT({ pomodoro: { ...t.pomodoro, autoStartWork } })} />
       </Group>
 
-      <Group title="Shortcuts" note={snap.shortcutError ?? 'Global shortcuts work from any app. Format: Ctrl+Alt+Space.'}>
-        {(['toggle', 'startPause', 'capture'] as const).map((k) => (
-          <TextField key={k} label={k === 'toggle' ? 'Show or hide Chronos' : k === 'startPause' ? 'Start or pause' : 'Notepad'} value={dev.shortcuts[k]} wide mono onCommit={(v) => D({ shortcuts: { ...dev.shortcuts, [k]: v.trim() } }).then((r) => r.ok)} />
+      <Group title="Shortcuts" note={snap.shortcutError ?? 'Global shortcuts work from any app. Format: Ctrl+Alt+Space. The notepad hotkey is under Tasks and notepad.'}>
+        {(['toggle', 'startPause'] as const).map((k) => (
+          <TextField key={k} label={k === 'toggle' ? 'Show or hide Chronos' : 'Start or pause'} value={dev.shortcuts[k]} wide mono onCommit={(v) => D({ shortcuts: { ...dev.shortcuts, [k]: v.trim() } }).then((r) => r.ok)} />
         ))}
       </Group>
     </>

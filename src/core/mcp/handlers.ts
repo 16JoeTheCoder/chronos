@@ -8,7 +8,7 @@
 // returns the changed record and an undoToken, and is logged as Claude activity.
 
 import type { Command, Result, RevertOp } from '../commands';
-import { blockFits } from '../commands';
+import { blockFits, slotFree } from '../commands';
 import { clockOf, formatHM, parseHM } from '../format';
 import { searchLog } from '../log/search';
 import { newId, reviewId } from '../model/ids';
@@ -44,7 +44,7 @@ export const WRITES_PER_MINUTE = 30;
 const UNDO_KEEP = 100;
 
 type Args = Record<string, unknown>;
-const PRIORITY_OF = { 1: 'must', 2: 'should', 3: 'nice' } as const;
+const PRIORITY_OF = { 1: 'must', 2: 'should', 3: 'nice', 4: 'none' } as const;
 
 /** The parse as Claude should see it: what was understood, nothing internal. */
 function summarizeParse(p: ParseResult) {
@@ -243,7 +243,7 @@ export class Mcp {
         return ok({
           ...this.task(t),
           kind: t.kind,
-          finishCondition: t.finishCondition,
+          labels: t.labels ?? [],
           notes: t.notes,
           recurrence: t.recurrence,
           recurrenceParentId: t.recurrenceParentId,
@@ -377,7 +377,7 @@ export class Mcp {
           input: {
             title,
             kind: a.kind as 'task' | undefined,
-            finishCondition: str(a.finishCondition),
+            labels: Array.isArray(a.labels) ? (a.labels as string[]) : undefined,
             notes: str(a.notes),
             tagId: tag.id,
             projectId: str(a.projectId) ?? parsed?.projectId ?? null,
@@ -398,7 +398,7 @@ export class Mcp {
         const p = a.patch as Args;
         const input: Extract<Command, { type: 'task.update' }>['input'] = {};
         if (p.title !== undefined) input.title = p.title as string;
-        if (p.finishCondition !== undefined) input.finishCondition = p.finishCondition as string;
+        if (Array.isArray(p.labels)) input.labels = p.labels as string[];
         if (p.notes !== undefined) input.notes = p.notes as string;
         if (p.priority !== undefined) input.priority = p.priority as Task['priority'];
         if (p.estimateMin !== undefined) input.estimateMin = p.estimateMin as number;
@@ -416,6 +416,13 @@ export class Mcp {
           input.tagId = tag.id;
         }
         return this.write('update_task', { type: 'task.update', id: t.id, input }, `updated "${t.title}"`, (x) => this.task(x.tasks[t.id] as Task), t.id);
+      }
+      case 'start_task':
+      case 'pause_task': {
+        const t = taskOf(a.id);
+        if (!t) return fail('No task with that id.');
+        const cmd: Command = name === 'start_task' ? { type: 'task.start', id: t.id, ...(a.run === true ? { run: true } : {}) } : { type: 'task.pause', id: t.id };
+        return this.write(name, cmd, `${name === 'start_task' ? 'focused' : 'paused'} "${t.title}"`, (x) => this.task(x.tasks[t.id] as Task), t.id);
       }
       case 'complete_task': {
         const t = taskOf(a.id);
@@ -484,7 +491,7 @@ export class Mcp {
         if (ev.startMin !== null || ev.endMin !== null) return fail(`"${ev.title}" already has a time.`);
         const sm = a.startMin as number;
         const em = sm + ev.durationMin;
-        if (!blockFits(d, ev.date, sm, em)) return fail(this.overlapReason(ev.date, sm, em));
+        if (!slotFree(d, ev.date, sm, em)) return fail(this.overlapReason(ev.date, sm, em));
         return this.write('place_event', { type: 'event.place', id: ev.id, startMin: sm }, `placed "${ev.title}" ${ev.date} ${formatHM(sm)}-${formatHM(em)}`, (x) => ({ eventId: ev.id, date: ev.date, start: formatHM(sm), end: formatHM(em), title: x.events[ev.id]?.title }));
       }
       case 'add_project':

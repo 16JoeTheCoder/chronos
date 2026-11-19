@@ -25,6 +25,11 @@ const P: Record<string, ReactElement> = {
   copy: <><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M4 16V4h12" /></>,
   search: <><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5L21 21" /></>,
   chevronDown: <path d="M6 9l6 6 6-6" />,
+  flag: <path d="M5 21V4M5 4h11l-2 4 2 4H5" />,
+  tasks: <><rect x="3" y="4" width="6" height="6" rx="1.5" /><path d="M4.5 7l1 1 2-2M13 7h8M3 16h6M13 16h8" /></>,
+  inbox: <path d="M3 13l3-8h12l3 8v6H3zM3 13h5l1 3h6l1-3h5" />,
+  sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5" /></>,
+  layers: <path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5" />,
   pin: <path d="M9 3h6l-1 6 4 3v2H6v-2l4-3zM12 14v7" />,
 };
 

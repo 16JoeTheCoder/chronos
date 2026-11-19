@@ -3,7 +3,7 @@
 // which closes the open layer first. Esc closes the layer, then leaves the screen, then hides.
 // Focus is silent: no rail, no top bar.
 
-import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from 'react';
 import type { Snapshot, Task } from '../../core/model/types';
 import { settingsOf } from '../../core/repo/repo';
 import { activeTask } from '../../core/tasks/tasks';
@@ -35,6 +35,7 @@ import { Help } from './Help';
 import { measureBlurOnce } from '../palette/blurCheck';
 import { BeforeClass, HeadsUp } from './Strips';
 import { SyncDot } from './SyncDot';
+import { Tasks, type TaskView } from '../tasks/Tasks';
 
 // Screens built by other parts of the app are mounted by glob so a missing file is a placeholder, not a build break.
 const boards = import.meta.glob('../board/Board.tsx');
@@ -68,6 +69,9 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
   const [range, setRange] = useState<'full' | 'next6'>('full');
   const [logProject, setLogProject] = useState<string | null>(null);
   const [boardProject, setBoardProject] = useState<string | null>(null);
+  const [taskView, setTaskView] = useState<TaskView>('today');
+  const [taskProject, setTaskProject] = useState<string | null>(null);
+  const gPending = useRef(0);
   const m = dayModel(d, now, range);
   /** Every navigation (rail, top bar, keys, palette commands) goes through here: it closes the open layer first. */
   const go = (to: Screen, opts: { logProject?: string | null; projectId?: string } = {}) => {
@@ -137,6 +141,22 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
         return;
       }
       if (typing || e.ctrlKey || e.altKey || e.metaKey || top || document.querySelector('[aria-modal="true"]')) return;
+      // G then I / T / U / A: the Tasks views (a second key within 1.2 s).
+      if (Date.now() - gPending.current < 1200) {
+        const v = ({ i: 'inbox', t: 'today', u: 'upcoming', a: 'all' } as const)[e.key.toLowerCase() as 'i'];
+        gPending.current = 0;
+        if (v) {
+          e.preventDefault();
+          setTaskView(v);
+          setTaskProject(null);
+          go('tasks');
+          return;
+        }
+      }
+      if (e.key === 'g' || e.key === 'G') {
+        gPending.current = Date.now();
+        return;
+      }
       if (e.key === '?') {
         e.preventDefault();
         open('help');
@@ -171,7 +191,6 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
   ];
   if (s.runwayPosition === 'bottom') planSections.reverse();
 
-  const full = top === 'schedule';
   const body = top === 'schedule' ? (
     <ScheduleEditor
       d={d}
@@ -186,6 +205,18 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
     />
   ) : screen === 'settings' ? (
     <Settings snap={snap} onSchedule={() => open('schedule')} onClose={() => go('home')} />
+  ) : screen === 'tasks' ? (
+    <Tasks
+      d={d}
+      now={now}
+      view={taskView}
+      onView={setTaskView}
+      projectId={taskProject}
+      onProject={setTaskProject}
+      onEdit={editTask}
+      onOpenLog={(id) => go('log', { logProject: id })}
+      onFocus={() => go('focus')}
+    />
   ) : screen === 'board' ? (
     <Suspense fallback={null}>
       <LazyBoard
@@ -205,13 +236,15 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
         <span className="plan-back-gap" />
         <button className="btn btn-ghost btn-s" onClick={() => open('drawer')}><Icon name="list" size={14} /> Done today</button>
         <button className="btn btn-ghost btn-s" onClick={() => open('schedule')}><Icon name="calendar" size={14} /> Schedule</button>
+        <button className="btn btn-ghost btn-s" onClick={() => open('shelf')} aria-expanded={top === 'shelf'}><Icon name="folder" size={14} /> Desktop</button>
+        <TrashButton onOpen={() => open('trash')} />
       </div>
       {planSections}
     </main>
   ) : (
     <>
       <MorningStart d={d} now={now} active deviceId={snap.device.deviceId} />
-      <NowScreen d={d} m={m} now={now} deviceId={snap.device.deviceId} onFocus={() => go('focus')} onPlan={() => go('plan')} onDone={() => open('drawer')} onSchedule={() => open('schedule')} />
+      <NowScreen d={d} m={m} now={now} deviceId={snap.device.deviceId} onFocus={() => go('focus')} onPlan={() => go('plan')} />
     </>
   );
 
@@ -223,14 +256,6 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
 
         <div className="screen">{body}</div>
 
-        {!full && screen === 'plan' && (
-          <footer className="foot">
-            <button className="btn btn-ghost btn-s" onClick={() => open('shelf')} aria-expanded={top === 'shelf'}>
-              <Icon name="chevronUp" size={14} /> Desktop
-            </button>
-            <TrashButton onOpen={() => open('trash')} />
-          </footer>
-        )}
       </div>
 
       {top === 'drawer' && <DoneDrawer d={d} now={now} onClose={() => close('drawer')} />}

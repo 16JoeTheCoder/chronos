@@ -18,7 +18,7 @@ export async function queueLines(note: Pick<Idea, 'id' | 'parsedTaskIds'>, lines
   }
   if (!made.length) return 0;
   await run({ type: 'idea.edit', id: note.id, parsedTaskIds: encodeLinks(links, note.parsedTaskIds) }, true);
-  toast(opts.toastText?.(made.length) ?? (made.length === 1 ? 'Added to your queue' : `Added ${made.length} tasks to your queue`), {
+  toast(opts.toastText?.(made.length) ?? (made.length === 1 ? 'Added to your tasks' : `Added ${made.length} tasks`), {
     undo: () => {
       void (async () => {
         for (const id of made) await run({ type: 'recycle', coll: 'tasks', id, confirmed: true }, true);

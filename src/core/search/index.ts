@@ -1,5 +1,5 @@
 // Search (engine only; the Ctrl+K palette is Phase 3). One MiniSearch index over
-// tasks (title, notes, finish condition, tag and project names), notes, projects
+// tasks (title, notes, labels, tag and project names), notes, projects
 // and events. update(d) is incremental: only records whose object changed since
 // the last call are re-indexed (core/repo replaces a record's object on every
 // write), so a keystroke costs a handful of index operations, not a rebuild.
@@ -93,7 +93,7 @@ export class SearchIndex {
     switch (type) {
       case 'task': {
         const t = rec as Data['tasks'][string];
-        return { ...base, title: t.title, body: `${t.finishCondition}\n${t.notes}`, tags: t.tagId ? (d.tags[t.tagId]?.name ?? '') : '', project: t.projectId ? (d.projects[t.projectId]?.name ?? '') : '' };
+        return { ...base, title: t.title, body: `${(t.labels ?? []).map((l) => `@${l}`).join(' ')}\n${t.notes}`, tags: t.tagId ? (d.tags[t.tagId]?.name ?? '') : '', project: t.projectId ? (d.projects[t.projectId]?.name ?? '') : '' };
       }
       case 'note': {
         const n = rec as Data['ideas'][string];

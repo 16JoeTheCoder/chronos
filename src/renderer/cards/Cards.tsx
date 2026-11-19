@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } f
 import { formatHM } from '../../core/format';
 import type { Data, Task } from '../../core/model/types';
 import { deriveQueue, todayOf } from '../../core/tasks/tasks';
-import { hasFinishCondition } from '../../core/validation';
+import { PrioFlag, TaskMeta } from '../tasks/bits';
 import { Icon } from '../components/Icon';
 import { recycleWithUndo } from '../components/actions';
 import { beginDrag, registerTarget, useDrag } from '../components/drag';
@@ -65,7 +65,6 @@ export function Unscheduled({ d, m, now, onEdit, onNew }: { d: Data; m: DayModel
 function TaskCard({ d, t, index, rest, onEdit, onSchedule }: { d: Data; t: Task; index: number; rest: number | null; onEdit: (t: Task) => void; onSchedule: (dur: number) => void }) {
   const tag = t.tagId ? d.tags[t.tagId] : undefined;
   const dur = rest ?? t.estimateMin ?? DEFAULT_DUR;
-  const ready = hasFinishCondition(t.finishCondition);
   const keys = (e: KeyboardEvent) => {
     if (e.target !== e.currentTarget) return;
     if (e.key === 's' || e.key === 'S') {
@@ -83,17 +82,17 @@ function TaskCard({ d, t, index, rest, onEdit, onSchedule }: { d: Data; t: Task;
       className={`card rv-card${t.status === 'doing' ? ' card-active' : ''}${t.kind === 'sprint' ? ' card-sprint' : ''}`}
       style={{ '--c': `var(--${tag?.color ?? 'tag7'})`, '--i': index } as CSSProperties}
       tabIndex={0}
-      aria-label={`${t.title}${t.status === 'doing' ? ', in focus' : ''}, ${t.priority}. S schedules, Enter edits, Delete removes, Alt and arrows reorder.`}
+      aria-label={`${t.title}${t.status === 'doing' ? ', in focus' : ''}. S schedules, Enter edits, Delete removes, Alt and arrows reorder.`}
       onKeyDown={keys}
       onPointerDown={(e) => (e.target as HTMLElement).closest('button') || beginDrag(e, { kind: 'task', taskId: t.id, title: t.title, dur }, () => onEdit(t))}
     >
       <div className="card-top">
         {tag && <span className="chip-tag">{tag.name}</span>}
-        <span className={`prio prio-${t.priority}`}>{t.priority}</span>
+        <PrioFlag p={t.priority} />
         {t.kind === 'sprint' && <span className="prio">sprint</span>}
       </div>
       <p className="card-title">{t.title}</p>
-      <p className={`card-fc${ready ? '' : ' warn'}`}>{ready ? t.finishCondition : 'Needs a finish condition before it can start.'}</p>
+      <p className="card-fc"><TaskMeta d={d} t={t} today={todayOf(d, Date.now())} /></p>
       <div className="card-chips">
         {rest !== null && rest > 0 ? (
           <span className="chip chip-rest">+{rest}m unscheduled</span>

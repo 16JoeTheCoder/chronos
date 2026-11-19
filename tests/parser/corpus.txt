@@ -137,7 +137,7 @@ chronos phase 4 notes → task | project=chronos | title=chronos phase 4 notes
 
 # ---- overrides
 task dinner with ko theo 7pm → task | 2026-11-11 | due 19:00 | title=dinner with ko theo
-- gym 5pm → task | 2026-11-11 | due 17:00 | title=gym
+- gym 5pm → fixed | 2026-11-11 | 17:00-18:00 | title=gym ## "- " is no longer a prefix: parses like "gym 5pm"
 event study group 4pm → fixed | 2026-11-11 | 16:00-17:00 | title=study group ## D17: 1 h default
 @ call dad 9pm → fixed | 2026-11-11 | 21:00-21:30 | title=call dad
 // buy 4 tires → note | title=buy 4 tires

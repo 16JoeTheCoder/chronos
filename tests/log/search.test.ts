@@ -17,7 +17,7 @@ function world() {
     d = r.d;
     return r.id!;
   };
-  const a = post('Servo tuning went well\n- order new servos', '2026-10-20', proj.id);
+  const a = post('Servo tuning went well\norder new servos TASK', '2026-10-20', proj.id);
   const b = post('Check-in: tired but fine', '2026-10-22');
   const c = post('Servo noise is back, the quick brown fox', '2026-10-25', proj.id);
   const e = post('Lunch with the team', '2026-10-25');

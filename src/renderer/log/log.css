@@ -7,7 +7,9 @@
 .log ::selection { background: var(--c-selection); color: var(--c-on-accent); }
 
 .log-head { display: flex; align-items: center; gap: 20px; position: relative; z-index: 3; }
-.log-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 32px; flex: 1; min-height: 0; }
+.log-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; flex: 1; min-height: 0; }
+.log.cal-open .log-main { grid-template-columns: minmax(0, 1fr) 340px; }
+.log.is-reading .log-col { width: 100%; max-width: 76ch; margin: 0 auto; }
 .log-col { display: flex; flex-direction: column; gap: 20px; min-height: 0; min-width: 0; }
 .log-side { align-self: start; display: flex; flex-direction: column; gap: 16px; }
 
@@ -82,7 +84,7 @@ button.tick:hover .tick-box { border-color: var(--c-accent); }
 .tick-off { border-style: dashed; border-color: var(--c-line-strong); }
 .tick:focus-visible { outline-offset: 0; border-radius: var(--r-sm); }
 
-.chip-ask { flex: none; align-self: center; min-height: 24px; padding: 0 10px; border: 1px dashed var(--c-line-strong); border-radius: var(--r-pill); background: transparent; color: var(--c-text-2); font: 500 12px/1 var(--font-text); cursor: pointer; }
+.log-btn.chip-ask { min-height: 28px; border: 1px dashed var(--c-line-strong); color: var(--c-text-2); font-size: 12px; }
 .chip-ask:hover, .chip-ask:focus-visible { color: var(--c-text); border-color: var(--c-accent); opacity: 1; }
 
 /* ---- calendar ---- */
@@ -105,7 +107,6 @@ button.tick:hover .tick-box { border-color: var(--c-accent); }
 .mark-ring { box-sizing: border-box; border: 1.5px solid currentColor; }
 .cal-legend { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; color: var(--c-text-3); font-size: 12px; line-height: 16px; }
 .cal-legend i + i, .cal-legend i:not(:first-child) { margin-left: 8px; }
-.cal-toggle { display: none; }
 
 /* ---- narrow ---- */
 @media (max-width: 900px) {
@@ -114,7 +115,7 @@ button.tick:hover .tick-box { border-color: var(--c-accent); }
   .log-head { flex-wrap: wrap; gap: 10px; }
   .log h1 { font-size: 24px; line-height: 32px; flex: 1; }
   .search { order: 3; flex-basis: 100%; }
-  .cal-toggle { display: inline-flex; }
+  .log.cal-open .log-main { grid-template-columns: minmax(0, 1fr); }
   .log-side { display: none; position: absolute; right: var(--gut); left: var(--gut); top: 56px; z-index: 4; box-shadow: var(--depth-float); border-radius: var(--r-md); }
   .log-side.open { display: block; }
   .log-side .cal { background: var(--c-ground); border-color: var(--c-line-strong); }

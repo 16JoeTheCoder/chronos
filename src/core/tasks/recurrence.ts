@@ -39,7 +39,8 @@ export function spawnNext(d: Data, t: Task, ctx: Ctx): Data {
     {
       kind: t.kind,
       title: t.title,
-      finishCondition: t.finishCondition,
+      finishCondition: '',
+      labels: t.labels ?? [],
       notes: t.notes,
       tagId: t.tagId,
       priority: t.priority,

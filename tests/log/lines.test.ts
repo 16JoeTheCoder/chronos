@@ -11,13 +11,15 @@ const kind = (t: string) => classifyLine(t, pc).kind;
 
 describe('auto-add vs chip thresholds', () => {
   it('explicit prefixes are auto-added', () => {
-    expect(kind('- call mom')).toBe('task');
+    expect(kind('TASK call mom')).toBe('task');
+    expect(kind('call mom TASK')).toBe('task');
     expect(kind('[] buy milk')).toBe('task');
     expect(kind('[ ] buy milk')).toBe('task');
     expect(kind('- [ ] buy milk')).toBe('task');
-    expect(kind('task finish report')).toBe('task');
+    expect(classifyLine('task finish report', pc).explicit).toBe(false); // lowercase is not a marker
+    expect(classifyLine('- call mom', pc).explicit).toBe(false); // a plain bullet is not a marker
     // even a sentence-like line is a task when the user marks it
-    expect(kind('- I think this might work out')).toBe('task');
+    expect(kind('TASK I think this might work out')).toBe('task');
   });
   it('a task keyword plus a date or time is auto-added', () => {
     const l = classifyLine('call mom tomorrow 5pm', pc);
@@ -38,22 +40,30 @@ describe('auto-add vs chip thresholds', () => {
   });
   it('strips the prefix and keeps parsed fields', () => {
     expect(stripPrefix('- [ ] x')).toEqual({ body: 'x', explicit: true });
-    expect(stripPrefix('task  x')).toEqual({ body: 'x', explicit: true });
-    expect(stripPrefix('taskforce x').explicit).toBe(false);
-    const l = classifyLine('- gym 4pm', pc, 'p1');
+    expect(stripPrefix('- x')).toEqual({ body: 'x', explicit: false });
+    expect(stripPrefix('* x')).toEqual({ body: 'x', explicit: false });
+    expect(stripPrefix('task x').explicit).toBe(false);
+    expect(stripPrefix('call mom TASK')).toEqual({ body: 'call mom', explicit: true });
+    expect(stripPrefix('TASK call mom')).toEqual({ body: 'call mom', explicit: true });
+    expect(stripPrefix('TASK  x')).toEqual({ body: 'x', explicit: true });
+    expect(stripPrefix('TASKFORCE x').explicit).toBe(false);
+    const l = classifyLine('TASK gym 4pm', pc, 'p1');
     expect(l.input).toMatchObject({ source: 'parsed', projectId: 'p1' });
     expect(l.input?.dueTime).toBe(16 * 60);
   });
   it('analyzes a whole post and caps auto lines', () => {
-    const lines = analyzeBody('Check-in: tired\n- call mom\nemail Sarah\n\n[] buy milk', pc);
+    const lines = analyzeBody('Check-in: tired\nTASK call mom\nemail Sarah\n\n[] buy milk', pc);
     expect(lines.map((l) => l.kind)).toEqual(['text', 'task', 'chip', 'text', 'task']);
     expect(autoLines(lines).map((l) => l.index)).toEqual([1, 4]);
-    const many = analyzeBody(Array.from({ length: 40 }, (_, i) => `- t${i}`).join('\n'), pc);
+    const many = analyzeBody(Array.from({ length: 40 }, (_, i) => `TASK t${i}`).join('\n'), pc);
     expect(autoLines(many)).toHaveLength(MAX_AUTO_LINES);
   });
   it('hasTaskPrefix is a cheap check for is:task', () => {
-    expect(hasTaskPrefix('hello\n- a')).toBe(true);
-    expect(hasTaskPrefix('hello\n- ')).toBe(false);
+    expect(hasTaskPrefix('hello\nTASK a')).toBe(true);
+    expect(hasTaskPrefix('hello\na TASK')).toBe(true);
+    expect(hasTaskPrefix('hello\n- a')).toBe(false);
+    expect(hasTaskPrefix('hello\ntask a')).toBe(false);
+    expect(hasTaskPrefix('hello\nTASK ')).toBe(false);
     expect(hasTaskPrefix('hello')).toBe(false);
   });
 });
@@ -67,16 +77,16 @@ describe('line <-> task links', () => {
   });
   const isTask = (l: string) => stripPrefix(l).explicit;
   it('a link follows its line when lines are inserted above', () => {
-    const out = relink('a\n- call mom', 'new\na\n- call mom', new Map([[1, 't1']]), isTask);
+    const out = relink('a\nTASK call mom', 'new\na\nTASK call mom', new Map([[1, 't1']]), isTask);
     expect([...out]).toEqual([[2, 't1']]);
   });
   it('keeps the link when the task line is edited in place, drops it when the line stops being a task', () => {
-    expect([...relink('- call mom', '- call mom tonight', new Map([[0, 't1']]), isTask)]).toEqual([[0, 't1']]);
-    expect(relink('- call mom', 'call mom', new Map([[0, 't1']]), isTask).size).toBe(0);
-    expect(relink('- call mom', '', new Map([[0, 't1']]), isTask).size).toBe(0);
+    expect([...relink('TASK call mom', 'TASK call mom tonight', new Map([[0, 't1']]), isTask)]).toEqual([[0, 't1']]);
+    expect(relink('TASK call mom', 'call mom', new Map([[0, 't1']]), isTask).size).toBe(0);
+    expect(relink('TASK call mom', '', new Map([[0, 't1']]), isTask).size).toBe(0);
   });
   it('two identical lines keep distinct links', () => {
-    const out = relink('- x\n- x', '- x\n- x', new Map([[0, 'a'], [1, 'b']]), isTask);
+    const out = relink('TASK x\nTASK x', 'TASK x\nTASK x', new Map([[0, 'a'], [1, 'b']]), isTask);
     expect([...out]).toEqual([[0, 'a'], [1, 'b']]);
   });
 });
