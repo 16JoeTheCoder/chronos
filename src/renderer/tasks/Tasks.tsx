@@ -229,7 +229,13 @@ function QuickAdd({ d, now, defaults, placeholder }: { d: Data; now: number; def
     if (!cmd || cmd.type !== 'task.create') return;
     const input = { ...cmd.input, projectId: cmd.input.projectId ?? defaults.projectId ?? null, dueDate: cmd.input.dueDate ?? defaults.dueDate ?? null };
     const r = await run({ type: 'task.create', input });
-    if (r.ok) setText('');
+    if (r.ok) {
+      setText('');
+      // Say where it went when the current view will not show it (e.g. a dated task added from Today).
+      const today = todayOf(d, now);
+      if (input.dueDate && input.dueDate > today) toast(`Added to Upcoming · ${dueLabel(input.dueDate, today)}`);
+      else if (input.projectId && !defaults.projectId) toast(`Added to ${d.projects[input.projectId]?.name ?? 'the project'}`);
+    }
     else toast(describeError(cmd, r.ok ? '' : r.error), { error: true });
   }
   return (

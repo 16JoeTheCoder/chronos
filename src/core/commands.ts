@@ -18,6 +18,7 @@ import { checkpointDue, nextCheckpoint } from './tasks/sprints';
 import { activeTask, blockSpan, blocksOn, deriveQueue, isLocked, isOpen, maxOrder, normalize, ownsTimer, recordSlices, stopTask, todayOf, trackedMs } from './tasks/tasks';
 import { addDays, zonedToUtc } from './time/zone';
 import { overlaps } from './time/intervals';
+import { expandEvents } from './time/schedule';
 
 import { pauseAt, skipPhase, reset } from './timer/timer';
 import {
@@ -148,6 +149,14 @@ const fail = (error: string, fields?: Errors): Mutation => ({ ok: false, error, 
 const checked = (fields: Errors, then: () => Mutation): Mutation => (Object.keys(fields).length ? fail('Please fix the highlighted fields.', fields) : then());
 const MIN = 60_000;
 const fromTransition = (r: TransitionResult): Mutation => (r.ok ? ok(r.d) : fail(r.error));
+
+/** Is [startMin, endMin) on date clear of fixed events and blocks? (Placing a fixed event: events never stack on classes.) */
+export function slotFree(d: Data, date: string, startMin: number, endMin: number): boolean {
+  if (!blockFits(d, date, startMin, endMin)) return false;
+  const tz = settingsOf(d).timezone;
+  const span: [number, number] = [zonedToUtc(date, startMin, tz), zonedToUtc(date, endMin, tz)];
+  return !expandEvents(d, date).some((i) => overlaps(span, [i.start, i.end]));
+}
 
 /**
  * Does [startMin, endMin) on date fit around the other blocks? Plan blocks may sit over fixed

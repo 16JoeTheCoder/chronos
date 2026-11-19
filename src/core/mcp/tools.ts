@@ -78,8 +78,8 @@ export const TOOLS: ToolDef[] = [
   { name: 'pause_task', write: true, description: 'Take the task in focus out of focus: its timer pauses and its time is kept.', inputSchema: obj({ id: ID }, ['id']) },
   { name: 'complete_task', write: true, description: 'Mark a task done. A recurring task creates its next instance.', inputSchema: obj({ id: ID }, ['id']) },
   { name: 'drop_task', write: true, description: 'Close a task without finishing it. A reason is required.', inputSchema: obj({ id: ID, reason: { type: 'string', minLength: 3, maxLength: 500 } }, ['id', 'reason']) },
-  { name: 'place_block', write: true, description: 'Plan time for a task on the runway. Refused, with the reason, if it overlaps a fixed event or another block.', inputSchema: obj({ taskId: ID, date: DATE, startMin: MINUTE('Start'), endMin: MINUTE('End') }, ['taskId', 'date', 'startMin', 'endMin']) },
-  { name: 'move_block', write: true, description: 'Move or resize a planned block. Refused, with the reason, on overlap.', inputSchema: obj({ id: ID, date: DATE, startMin: MINUTE('Start'), endMin: MINUTE('End') }, ['id']) },
+  { name: 'place_block', write: true, description: 'Plan time for a task on the runway. It may sit over a fixed event (the task wins for what is happening now); refused, with the reason, if it overlaps another block.', inputSchema: obj({ taskId: ID, date: DATE, startMin: MINUTE('Start'), endMin: MINUTE('End') }, ['taskId', 'date', 'startMin', 'endMin']) },
+  { name: 'move_block', write: true, description: 'Move or resize a planned block. Refused, with the reason, if it overlaps another block.', inputSchema: obj({ id: ID, date: DATE, startMin: MINUTE('Start'), endMin: MINUTE('End') }, ['id']) },
   { name: 'remove_block', write: true, description: 'Remove a planned block (it goes to Recently deleted, restorable).', inputSchema: obj({ id: ID }, ['id']) },
   { name: 'skip_event_on', write: true, description: 'Skip one date of a repeating event; the series is unchanged.', inputSchema: obj({ eventId: ID, date: DATE }, ['eventId', 'date']) },
   {

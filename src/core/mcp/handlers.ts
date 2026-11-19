@@ -8,7 +8,7 @@
 // returns the changed record and an undoToken, and is logged as Claude activity.
 
 import type { Command, Result, RevertOp } from '../commands';
-import { blockFits } from '../commands';
+import { blockFits, slotFree } from '../commands';
 import { clockOf, formatHM, parseHM } from '../format';
 import { searchLog } from '../log/search';
 import { newId, reviewId } from '../model/ids';
@@ -491,7 +491,7 @@ export class Mcp {
         if (ev.startMin !== null || ev.endMin !== null) return fail(`"${ev.title}" already has a time.`);
         const sm = a.startMin as number;
         const em = sm + ev.durationMin;
-        if (!blockFits(d, ev.date, sm, em)) return fail(this.overlapReason(ev.date, sm, em));
+        if (!slotFree(d, ev.date, sm, em)) return fail(this.overlapReason(ev.date, sm, em));
         return this.write('place_event', { type: 'event.place', id: ev.id, startMin: sm }, `placed "${ev.title}" ${ev.date} ${formatHM(sm)}-${formatHM(em)}`, (x) => ({ eventId: ev.id, date: ev.date, start: formatHM(sm), end: formatHM(em), title: x.events[ev.id]?.title }));
       }
       case 'add_project':

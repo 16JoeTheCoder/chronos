@@ -5,6 +5,7 @@ import type { Command } from '../../src/core/commands';
 import type { Data } from '../../src/core/model/types';
 import { live, timerOf } from '../../src/core/repo/repo';
 import { active } from '../../src/core/tasks/selectors';
+import { targetForColumn, targetOf, transition } from '../../src/core/tasks/transition';
 import { addTask, ctx, fresh, MIN, run, T0 } from '../helpers';
 
 const doingIds = (d: Data) => live(d, 'tasks').filter((t) => t.status === 'doing').map((t) => t.id);
@@ -152,5 +153,36 @@ describe('back to back starts', () => {
     expect(timerOf(r2.d).taskId).toBe(b);
     expect(r2.d.tasks[a]!.runtime.status).not.toBe('running');
     expect(r2.d.tasks[b]!.runtime.status).toBe('running');
+  });
+});
+
+describe('transition() and targetForColumn() directly', () => {
+  it('moves a task through every target and refuses a missing one', () => {
+    const { d: d0, a } = two();
+    const t = (d: Data, to: Parameters<typeof transition>[2], now = T0) => {
+      const r = transition(d, a, to, ctx(now));
+      if (!r.ok) throw new Error(r.error);
+      return r.d;
+    };
+    expect(targetOf(d0.tasks[a]!)).toBe('open');
+    let d = t(d0, 'doing');
+    expect(targetOf(d.tasks[a]!)).toBe('doing');
+    d = t(d, 'done', T0 + MIN);
+    expect(targetOf(d.tasks[a]!)).toBe('done');
+    d = t(d, 'open', T0 + 2 * MIN);
+    expect(d.tasks[a]).toMatchObject({ completedAt: null, outcome: null });
+    d = t(d, 'dropped', T0 + 3 * MIN);
+    expect(targetOf(d.tasks[a]!)).toBe('dropped');
+    expect(transition(d, 'nope', 'doing', ctx())).toEqual({ ok: false, error: 'Task not found.' });
+  });
+  it('maps board columns to targets', () => {
+    const p = run(fresh(), { type: 'project.create', name: 'P' });
+    const a = addTask(p.d, 'A', { projectId: p.id, columnId: 'todo' });
+    const task = a.d.tasks[a.id]!;
+    expect(targetForColumn(a.d, task, 'doing')).toBe('doing');
+    expect(targetForColumn(a.d, task, 'done')).toBe('done');
+    expect(targetForColumn(a.d, task, 'todo')).toBe('open');
+    const loose = addTask(fresh(), 'loose');
+    expect(targetForColumn(loose.d, loose.d.tasks[loose.id]!, 'doing')).toBe('open');
   });
 });

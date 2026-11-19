@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { OPEN, overlayBounds, PILL, taskbarBand } from '../../src/main/windows/overlay';
-import { NOTEPAD, notepadBounds, PALETTE, paletteBounds } from '../../src/main/windows/popup';
+import { NOTEPAD, NOTEPAD_MAX_SHARE, notepadBounds, notepadHeight, PALETTE, paletteBounds } from '../../src/main/windows/popup';
 import { readFirebaseConfig } from '../../src/main/config';
 
 const wa = { x: 0, y: 0, width: 1920, height: 1032 };
@@ -53,5 +53,75 @@ describe('readFirebaseConfig', () => {
     fs.writeFileSync(path.join(dir, 'firebase.config.json'), JSON.stringify({ apiKey: 'f', authDomain: 'd', projectId: 'p', appId: 'x', googleClientId: 'c', googleClientSecret: 's' }));
     expect(readFirebaseConfig(dir, {})?.apiKey).toBe('f');
     fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe('notepad placement (Settings -> Tasks and notepad)', () => {
+  const MARGIN = 16;
+  const inside = (b: { x: number; y: number; width: number; height: number }, area = wa) => {
+    expect(b.x).toBeGreaterThanOrEqual(area.x + MARGIN);
+    expect(b.y).toBeGreaterThanOrEqual(area.y + MARGIN);
+    expect(b.x + b.width).toBeLessThanOrEqual(area.x + area.width - MARGIN);
+    expect(b.y + b.height).toBeLessThanOrEqual(area.y + area.height - MARGIN);
+  };
+
+  it('defaults to the top-right corner at the start size', () => {
+    expect(notepadBounds(wa)).toEqual({ x: 1920 - NOTEPAD.width - MARGIN, y: MARGIN, width: NOTEPAD.width, height: NOTEPAD.height });
+    expect(notepadBounds(wa, 'top-right')).toEqual(notepadBounds(wa));
+  });
+  it('top-left sits in the opposite corner', () => {
+    expect(notepadBounds(wa, 'top-left')).toEqual({ x: MARGIN, y: MARGIN, ...NOTEPAD });
+  });
+  it('centre is horizontally centred, a fifth of the way down', () => {
+    const c = notepadBounds(wa, 'centre');
+    expect(c.x * 2 + c.width).toBe(1920);
+    expect(c.y).toBe(Math.round(1032 * 0.2));
+    expect({ width: c.width, height: c.height }).toEqual(NOTEPAD);
+  });
+  it('cursor opens just below the pointer, centred on it', () => {
+    const b = notepadBounds(wa, 'cursor', { x: 900, y: 400 });
+    expect(b).toMatchObject({ x: 900 - NOTEPAD.width / 2, y: 412 });
+    inside(b);
+  });
+  it('cursor is clamped inside the work area at every edge', () => {
+    for (const cursor of [{ x: 0, y: 0 }, { x: 1919, y: 1031 }, { x: 5000, y: 5000 }, { x: -300, y: 900 }]) inside(notepadBounds(wa, 'cursor', cursor));
+    expect(notepadBounds(wa, 'cursor', { x: 0, y: 0 })).toMatchObject({ x: MARGIN, y: MARGIN });
+    // a work area that does not start at the origin (second monitor, taskbar on top)
+    const shifted = { x: 1920, y: 40, width: 1280, height: 1000 };
+    for (const cursor of [{ x: 1920, y: 40 }, { x: 3199, y: 1039 }]) inside(notepadBounds(shifted, 'cursor', cursor), shifted);
+  });
+  it('cursor without a pointer position falls back to top-right', () => {
+    expect(notepadBounds(wa, 'cursor')).toEqual(notepadBounds(wa));
+  });
+});
+
+const MARGIN_TOP = 16;
+
+describe('notepadHeight', () => {
+  it('never goes below the start height', () => {
+    expect(notepadHeight(0, MARGIN_TOP, wa)).toBe(NOTEPAD.height);
+    expect(notepadHeight(100, MARGIN_TOP, wa)).toBe(NOTEPAD.height);
+    expect(notepadHeight(NOTEPAD.height, MARGIN_TOP, wa)).toBe(NOTEPAD.height);
+  });
+  it('follows the content in between', () => {
+    expect(notepadHeight(400, MARGIN_TOP, wa)).toBe(400);
+  });
+  it('never exceeds 70 % of the work area', () => {
+    const cap = Math.round(wa.height * NOTEPAD_MAX_SHARE);
+    expect(NOTEPAD_MAX_SHARE).toBe(0.7);
+    expect(notepadHeight(5000, MARGIN_TOP, wa)).toBe(cap);
+    expect(notepadHeight(cap + 1, MARGIN_TOP, wa)).toBe(cap);
+  });
+  it('never reaches past the bottom of the work area', () => {
+    for (const top of [100, 500, 800, 1000]) {
+      const h = notepadHeight(5000, top, wa);
+      expect(top + h).toBeLessThanOrEqual(wa.y + wa.height - 16);
+    }
+    expect(notepadHeight(5000, 900, wa)).toBe(1032 - 16 - 900);
+  });
+  it('on a screen smaller than the start height, the cap wins', () => {
+    const tiny = { x: 0, y: 0, width: 800, height: 200 };
+    expect(notepadHeight(100, MARGIN_TOP, tiny)).toBe(140);
+    expect(notepadHeight(5000, MARGIN_TOP, tiny)).toBe(140);
   });
 });
