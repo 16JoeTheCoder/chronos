@@ -18,7 +18,7 @@ function day() {
     tomorrow: { priority: 'should', estimateMin: 45 },
     later: { priority: 'nice' },
     drop: { priority: 'nice', dueDate: TODAY },
-    overdue: { dueDate: '2026-10-20' },
+    overdue: { priority: 'should', dueDate: '2026-10-20' },
   })) {
     const t = addTask(d, key, extra);
     d = t.d;

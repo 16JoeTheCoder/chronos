@@ -29,11 +29,11 @@ describe('migrate v2 -> v3 (Josef fixture)', () => {
     expect(v2.blocks['b-lab'].auto).toBe(true);
   });
 
-  it('returns schema 3 and does not mutate its input', () => {
+  it('returns the current schema and does not mutate its input', () => {
     const input = load();
     const d = migrate(input, TODAY) as Data;
-    expect(d.schema).toBe(3);
-    expect(SCHEMA_V).toBe(3);
+    expect(d.schema).toBe(3); // the data FILE marker stays 3
+    expect(SCHEMA_V).toBe(4);
     expect(input).toEqual(v2);
   });
 
@@ -78,9 +78,9 @@ describe('migrate v2 -> v3 (Josef fixture)', () => {
     expect(s.planning).toEqual(def.planning);
   });
 
-  it('every record is stamped v 3, so a Phase 1 client treats it as newer and goes read-only', () => {
+  it('every record is stamped v SCHEMA_V, so a Phase 1 client treats it as newer and goes read-only', () => {
     const d = mig();
-    for (const c of COLLS) for (const r of recs(d, c)) expect(r.v, `${c}/${r.id}`).toBe(3);
+    for (const c of COLLS) for (const r of recs(d, c)) expect(r.v, `${c}/${r.id}`).toBe(SCHEMA_V);
     for (const c of COLLS) for (const r of recs(d, c)) expect(r.v > PHASE1_SCHEMA, `${c}/${r.id}`).toBe(true);
   });
 

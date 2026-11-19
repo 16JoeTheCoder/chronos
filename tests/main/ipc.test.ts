@@ -6,8 +6,8 @@ import { ctx, fresh } from '../helpers';
 
 describe('parseCommand', () => {
   it('drops unknown keys and rejects malformed payloads', () => {
-    const cmd = parseCommand({ type: 'task.create', input: { title: 'Essay', finishCondition: 'Essay is submitted', evil: 'x', priority: 'must' }, extra: 1 });
-    expect(cmd).toEqual({ type: 'task.create', input: { title: 'Essay', finishCondition: 'Essay is submitted', priority: 'must' } });
+    const cmd = parseCommand({ type: 'task.create', input: { title: 'Essay', finishCondition: 'Essay is submitted', labels: ['a', 'b'.repeat(60), 7 as never], evil: 'x', priority: 'must' }, extra: 1 });
+    expect(cmd).toEqual({ type: 'task.create', input: { title: 'Essay', labels: ['a', 'b'.repeat(40), ''], priority: 'must' } });
     expect(parseCommand({ type: 'task.finish', id: '../../etc', phrase: 'x' })).toBeNull();
     expect(parseCommand({ type: 'timer', action: 'explode' })).toBeNull();
     expect(parseCommand({ type: 'recycle', coll: 'settings', id: 'main' })).toBeNull();

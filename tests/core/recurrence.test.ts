@@ -78,9 +78,9 @@ describe('task.finish on a recurring task', () => {
 
   it('copies the fields that define the task', () => {
     const tag = run(fresh(), { type: 'tag.create', input: { name: 'Home', color: 'tag1', kind: 'general' } });
-    const a = recurring(tag.d, 'Water plants', { freq: 'daily', interval: 1 }, { tagId: tag.id, priority: 'must', estimateMin: 15, finishCondition: 'All plants watered', notes: 'Use the green can', dueTime: 480 });
+    const a = recurring(tag.d, 'Water plants', { freq: 'daily', interval: 1 }, { tagId: tag.id, priority: 'must', estimateMin: 15, labels: ['home', 'chore'], notes: 'Use the green can', dueTime: 480 });
     const { d } = run(a.d, { type: 'task.finish', id: a.id });
-    expect(d.tasks[`${a.id}:2026-10-27`]).toMatchObject({ tagId: tag.id, priority: 'must', estimateMin: 15, finishCondition: 'All plants watered', notes: 'Use the green can', dueTime: 480, kind: 'task' });
+    expect(d.tasks[`${a.id}:2026-10-27`]).toMatchObject({ tagId: tag.id, priority: 'must', estimateMin: 15, labels: ['home', 'chore'], finishCondition: '', notes: 'Use the green can', dueTime: 480, kind: 'task' });
   });
 
   it('finishing the instance creates <rootId>:<date2>, not a nested id', () => {

@@ -1,7 +1,7 @@
 // Validation of the schema v2 fields: field validators and whole-record checks.
 import { describe, expect, it } from 'vitest';
 import { defaultDevice } from '../../src/core/model/defaults';
-import type { DeviceSettings, Settings, Task } from '../../src/core/model/types';
+import { SCHEMA_V, type DeviceSettings, type Settings, type Task } from '../../src/core/model/types';
 import { isTaskRecurrence, recordProblem, validateDevice, validateSettings, validateTaskFields } from '../../src/core/validation';
 import { addTask, fresh, run } from '../helpers';
 
@@ -268,9 +268,9 @@ describe('validateDevice v2 fields', () => {
 describe('recordProblem', () => {
   const t = S.task as unknown as Obj;
   it('rejects a schemaVersion newer than this app', () => {
-    expect(recordProblem('tasks', { ...t, v: 4 })).toMatch(/newer/);
+    expect(recordProblem('tasks', { ...t, v: SCHEMA_V + 1 })).toMatch(/newer/);
     expect(recordProblem('tasks', { ...t, v: 99 })).toMatch(/newer/);
-    expect(recordProblem('tasks', { ...t, v: 3 })).toBeNull();
+    expect(recordProblem('tasks', { ...t, v: SCHEMA_V })).toBeNull();
     expect(recordProblem('tasks', { ...t, v: 1 })).toBeNull();
   });
   it('rejects bad v', () => {

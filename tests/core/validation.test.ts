@@ -10,9 +10,10 @@ describe('validation', () => {
     expect(isDropReason(' abc ')).toBe(true);
   });
 
-  it('allows inbox tasks but enforces 8 characters once a finish condition is given', () => {
-    expect(validateTaskFields({ title: 'Read', finishCondition: '' })).toEqual({});
-    expect(validateTaskFields({ title: 'Read', finishCondition: 'short' }).finishCondition).toBeDefined();
+  it('needs only a title (no finish condition, Phase 3.7) and checks labels', () => {
+    expect(validateTaskFields({ title: 'Read' })).toEqual({});
+    expect(validateTaskFields({ title: 'Read', labels: ['calls', 'home'] })).toEqual({});
+    expect(validateTaskFields({ title: 'Read', labels: [''] }).labels).toBeDefined();
     expect(validateTaskFields({ title: '' }).title).toBeDefined();
     expect(validateTaskFields({ estimateMin: 0 }).estimateMin).toBeDefined();
   });

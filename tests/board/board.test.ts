@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { apply, type Command } from '../../src/core/commands';
 import { boardCards, doingColumnId, focusSlotOverflow, neighbourColumn, planMove, stepWithin, summarize, type Move } from '../../src/core/board';
 import type { Data } from '../../src/core/model/types';
+import { update } from '../../src/core/repo/repo';
 import { addTask, ctx, fresh, run } from '../helpers';
 
 function setup() {
@@ -102,7 +103,9 @@ describe('board: focus slot', () => {
 
   it('flags overflow created outside the board', () => {
     const { d, pid, ids } = setup();
-    const cur = exec(d, [{ id: ids.A!, columnId: 'doing', beforeId: null }, { id: ids.B!, columnId: 'doing', beforeId: null }]);
+    // moveCard now keeps one doing task, so overflow only comes from writing records directly (a sync or merge).
+    let cur = update(d, 'tasks', ids.A!, { columnId: 'doing', status: 'doing' }, ctx());
+    cur = update(cur, 'tasks', ids.B!, { columnId: 'doing', status: 'doing' }, ctx());
     expect(focusSlotOverflow(cur, cur.projects[pid]!).map((t) => t.title)).toEqual(['B']);
   });
 

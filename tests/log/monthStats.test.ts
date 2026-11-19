@@ -29,7 +29,7 @@ describe('monthStats', () => {
   it('an empty month is all zeros', () => {
     expect(monthStats([], TZ, 2026, 10, '2026-10-26')).toEqual({ posts: 0, words: 0, activeDays: 0, streak: 0, tasks: 0 });
   });
-  it('words ignore task markers and punctuation', () => {
+  it('words ignore bullet dashes and punctuation', () => {
     expect(wordCount('- Find data — now')).toBe(3);
     expect(wordCount('   ')).toBe(0);
   });

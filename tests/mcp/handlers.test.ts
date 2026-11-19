@@ -23,7 +23,7 @@ interface Rig {
   ids: Record<string, string>;
 }
 
-/** A small world: Math tag, a weekly Monday class 13:00-14:00, a one-off dentist, three tasks, one block today. */
+/** A small world: Math tag, a weekly Monday class 13:00-14:00, a one-off dentist, three tasks, one block today, the paper started. */
 function seed(): { d: Data; ids: Record<string, string> } {
   let d = fresh();
   const ids: Record<string, string> = {};
@@ -35,10 +35,11 @@ function seed(): { d: Data; ids: Record<string, string> } {
   step('home', run(d, { type: 'tag.create', input: { name: 'Home', color: 'tag3', kind: 'general' } }));
   step('class', run(d, { type: 'event.create', input: { title: 'Physics class', tagId: null, scope: 'school', tz: 'Asia/Jakarta', startMin: 780, endMin: 840, date: null, recur: { weekdays: [1], everyNWeeks: 1, anchorDate: TODAY, from: null, until: null }, notes: '' } }));
   step('dentist', run(d, { type: 'event.create', input: { title: 'Dentist', tagId: null, scope: 'other', tz: 'Asia/Jakarta', startMin: 900, endMin: 960, date: '2026-10-27', recur: null, notes: '' } }));
-  step('report', run(d, { type: 'task.create', input: { title: 'Write report', finishCondition: 'Report is sent', tagId: ids.math, dueDate: '2026-10-24', estimateMin: 60, priority: 'must' } }));
-  step('paper', run(d, { type: 'task.create', input: { title: 'Read paper', finishCondition: 'Notes on the paper', dueDate: '2026-10-30' } }));
+  step('report', run(d, { type: 'task.create', input: { title: 'Write report', labels: ['school'], tagId: ids.math, dueDate: '2026-10-24', estimateMin: 60, priority: 'must' } }));
+  step('paper', run(d, { type: 'task.create', input: { title: 'Read paper', labels: ['reading'], dueDate: '2026-10-30' } }));
   step('trip', run(d, { type: 'task.create', input: { title: 'Plan trip', tagId: ids.home } }));
   step('blockPaper', run(d, { type: 'block.create', taskId: ids.paper!, date: TODAY, startMin: 600, endMin: 660 }));
+  d = run(d, { type: 'task.start', id: ids.paper! }).d; // nothing becomes 'doing' on its own: the paper is started explicitly
   return { d, ids };
 }
 
@@ -80,14 +81,14 @@ const claudeLog = (d: Data) => live(d, 'activity').filter((a) => a.type === 'cla
 const task = (r: Rig, key: string) => r.st.d.tasks[r.ids[key]!]!;
 
 describe('tool catalogue', () => {
-  it('lists 28 tools with strict schemas', () => {
-    expect(TOOLS).toHaveLength(28);
-    expect(new Set(TOOLS.map((t) => t.name)).size).toBe(28);
+  it('lists 30 tools with strict schemas', () => {
+    expect(TOOLS).toHaveLength(30);
+    expect(new Set(TOOLS.map((t) => t.name)).size).toBe(30);
     for (const t of TOOLS) {
       expect(t.inputSchema.additionalProperties, t.name).toBe(false);
       expect(t.description.length, t.name).toBeGreaterThan(10);
     }
-    expect(TOOLS.filter((t) => t.write).map((t) => t.name).sort()).toEqual(['add_note', 'add_project', 'add_task', 'complete_task', 'drop_task', 'edit_event_on', 'move_block', 'move_card', 'place_block', 'place_event', 'post_log', 'remove_block', 'skip_event_on', 'undo', 'update_task']);
+    expect(TOOLS.filter((t) => t.write).map((t) => t.name).sort()).toEqual(['add_note', 'add_project', 'add_task', 'complete_task', 'drop_task', 'edit_event_on', 'move_block', 'move_card', 'pause_task', 'place_block', 'place_event', 'post_log', 'remove_block', 'skip_event_on', 'start_task', 'undo', 'update_task']);
   });
 });
 
@@ -107,7 +108,7 @@ describe('read tools', () => {
     expect(day.buffer).toEqual({ start: '21:30', end: '22:00', minutes: 30 });
     // 09:00 -> 21:30 is 750 min; minus the 60 min class = 690; the block commits 60 of it
     expect(day.timeLeft).toMatchObject({ workableMin: 690, fixedMin: 60, committedMin: 60, openMin: 630, bufferMin: 30 });
-    // the task with today's first block is the one in focus
+    // the started task is the one in focus
     expect(day.focus).toMatchObject({ title: 'Read paper', status: 'doing' });
     expect(day.prep).toEqual([]);
   });
@@ -188,7 +189,7 @@ describe('read tools', () => {
   it('get_task: full task with blocks, tracked time and recurrence', () => {
     const r = rig();
     const t = r.ok('get_task', { id: r.ids.paper });
-    expect(t).toMatchObject({ id: r.ids.paper, title: 'Read paper', status: 'doing', finishCondition: 'Notes on the paper', kind: 'task', recurrence: null, source: 'typed', trackedMin: 0, completedAt: null });
+    expect(t).toMatchObject({ id: r.ids.paper, title: 'Read paper', status: 'doing', labels: ['reading'], kind: 'task', recurrence: null, source: 'typed', trackedMin: 0, completedAt: null });
     expect(t.blocks).toEqual([expect.objectContaining({ id: r.ids.blockPaper, date: TODAY, start: '10:00', end: '11:00' })]);
     expect(r.err('get_task', { id: 'nope' })).toMatch(/No task/);
   });
@@ -235,17 +236,20 @@ describe('read tools', () => {
     expect(moved.changed).toMatchObject({ title: 'Card B', columnId: cols[1]!.id });
     r.ok('move_card', { taskId: a, columnId: cols[1]!.id, beforeTaskId: b });
     p = r.ok('get_project', { id: proj.id });
-    expect(names(p, 0)).toEqual(['Card C']);
-    expect(names(p, 1)).toEqual(['Card A', 'Card B']);
+    // the Doing column holds one card: moving A in sends B (paused) back to Todo
+    expect(names(p, 0)).toEqual(['Card C', 'Card B']);
+    expect(names(p, 1)).toEqual(['Card A']);
     expect(names(p, 2)).toEqual([]);
+    expect(r.st.d.tasks[b]!.status).not.toBe('doing');
+    expect(r.st.d.tasks[a]!.status).toBe('doing');
 
     const list = r.ok('list_projects', {}).projects as Any[];
     const entry = list.find((x) => x.id === proj.id)!;
-    expect(entry.columns.map((x: Any) => x.cards)).toEqual([1, 2, 0]);
+    expect(entry.columns.map((x: Any) => x.cards)).toEqual([2, 1, 0]);
 
     expect(r.err('move_card', { taskId: a, columnId: 'nope' })).toMatch(/Unknown column/);
     expect(r.err('move_card', { taskId: r.ids.trip, columnId: cols[0]!.id })).toMatch(/not in a project/);
-    expect(r.err('move_card', { taskId: a, columnId: cols[0]!.id, beforeTaskId: b })).toMatch(/not in this column/);
+    expect(r.err('move_card', { taskId: a, columnId: cols[2]!.id, beforeTaskId: b })).toMatch(/not in this column/);
     expect(r.err('get_project', { id: 'nope' })).toMatch(/No project/);
   });
 
@@ -330,7 +334,7 @@ describe('read tools', () => {
 describe('write tools', () => {
   it('add_task: source claude, inbox, tag by name; unknown tag lists the known ones', () => {
     const r = rig();
-    const res = r.ok('add_task', { title: 'Email the teacher', finishCondition: 'Email sent to Ms Rina', tag: 'math', priority: 'must', dueDate: '2026-10-29', dueTime: '14:30', estimateMin: 10 });
+    const res = r.ok('add_task', { title: 'Email the teacher', labels: ['email', 'teacher'], tag: 'math', priority: 'must', dueDate: '2026-10-29', dueTime: '14:30', estimateMin: 10 });
     const t = r.st.d.tasks[res.changed.id]!;
     expect(t).toMatchObject({ source: 'claude', title: 'Email the teacher', tagId: r.ids.math, priority: 'must', dueDate: '2026-10-29', dueTime: 870, estimateMin: 10 });
     expect(res.changed).toMatchObject({ tag: 'Math', dueTime: '14:30', status: expect.stringMatching(/inbox|planned|doing/) });
@@ -341,7 +345,8 @@ describe('write tools', () => {
     expect(msg).toContain('Home');
     expect(r.err('add_task', { title: 'x', dueTime: '99:99' })).toMatch(/dueTime/);
     expect(r.err('add_task', { title: 'x', projectId: 'nope' })).toMatch(/No project/);
-    expect(r.err('add_task', { title: 'short fc', finishCondition: 'abc' })).toMatch(/finish/i);
+    expect(r.err('add_task', { title: 'old field', finishCondition: 'abc' })).toMatch(/finishCondition/);
+    expect(t.labels).toEqual(['email', 'teacher']);
   });
 
   it('add_task accepts a recurrence and a sprint kind', () => {
@@ -361,7 +366,7 @@ describe('write tools', () => {
     const after = task(r, 'trip');
     expect(after).toMatchObject({ title: 'Plan the trip', tagId: r.ids.math, dueTime: 495, notes: 'ask Dad' });
     expect(after.estimateMin).toBe(before.estimateMin);
-    expect(after.finishCondition).toBe(before.finishCondition);
+    expect(after.labels).toEqual(before.labels);
     expect(r.err('update_task', { id: r.ids.trip, patch: { dueTime: '25:00' } })).toMatch(/HH:MM/);
     expect(r.err('update_task', { id: r.ids.trip, patch: { tag: 'Nope' } })).toMatch(/Unknown tag/);
     expect(r.err('update_task', { id: 'missing', patch: { title: 'x' } })).toMatch(/No task/);
@@ -392,19 +397,16 @@ describe('write tools', () => {
     expect(r.err('drop_task', { id: r.ids.paper })).toMatch(/required/);
   });
 
-  it('place_block: success, then rejection naming the fixed event or the block it overlaps', () => {
+  it('place_block: success, may sit over a fixed event, rejection naming the block it overlaps', () => {
     const r = rig();
     const ok = r.ok('place_block', { taskId: r.ids.trip, date: TODAY, startMin: 900, endMin: 960 });
     expect(ok.changed).toMatchObject({ taskId: r.ids.trip, date: TODAY, start: '15:00', end: '16:00', kind: 'work', auto: false });
     expect(r.st.d.blocks[ok.changed.id]).toBeDefined();
     expect(task(r, 'trip').status).toBe('planned');
 
-    const clash = r.err('place_block', { taskId: r.ids.trip, date: TODAY, startMin: 810, endMin: 870 });
-    expect(clash).toMatch(/Not placed/);
-    expect(clash).toContain('Physics class');
-    expect(clash).toContain('13:00-14:00');
-    const partial = r.err('place_block', { taskId: r.ids.trip, date: TODAY, startMin: 770, endMin: 790 });
-    expect(partial).toContain('Physics class');
+    // a fixed event does not block a plan block (the task wins for "what am I doing now")
+    r.ok('place_block', { taskId: r.ids.trip, date: TODAY, startMin: 810, endMin: 830 });
+    r.ok('place_block', { taskId: r.ids.trip, date: TODAY, startMin: 770, endMin: 790 });
     const blockClash = r.err('place_block', { taskId: r.ids.trip, date: TODAY, startMin: 630, endMin: 700 });
     expect(blockClash).toContain('Read paper');
     expect(blockClash).toMatch(/planned block/);
@@ -412,7 +414,7 @@ describe('write tools', () => {
     expect(r.err('place_block', { taskId: 'nope', date: TODAY, startMin: 700, endMin: 720 })).toMatch(/No open task/);
     // touching edges are fine
     r.ok('place_block', { taskId: r.ids.trip, date: TODAY, startMin: 840, endMin: 900 });
-    expect(live(r.st.d, 'blocks').filter((b) => b.taskId === r.ids.trip)).toHaveLength(2);
+    expect(live(r.st.d, 'blocks').filter((b) => b.taskId === r.ids.trip)).toHaveLength(4);
   });
 
   it('place_block refuses a finished task', () => {
@@ -435,8 +437,8 @@ describe('write tools', () => {
     // a block may overlap its own old position
     r.ok('move_block', { id: b2, startMin: 500, endMin: 560 });
     expect(r.err('move_block', { id: 'nope', startMin: 1 })).toMatch(/No block/);
-    // fixed events refuse too
-    expect(r.err('move_block', { id: b2, date: TODAY, startMin: 790, endMin: 850 })).toContain('Physics class');
+    // fixed events do not refuse
+    r.ok('move_block', { id: b2, date: TODAY, startMin: 790, endMin: 850 });
   });
 
   it('remove_block: recycles (the record stays), and undo restores it', () => {
@@ -447,11 +449,11 @@ describe('write tools', () => {
     expect(Object.keys(r.st.d.blocks)).toContain(id);
     expect(r.st.d.blocks[id]!.deletedAt).not.toBeNull();
     expect(live(r.st.d, 'blocks')).toHaveLength(0);
-    expect(task(r, 'paper').status).toBe('inbox');
+    expect(task(r, 'paper').status).toBe('doing'); // removing its block does not change a started task
     r.ok('undo', { undoToken: res.undoToken });
     expect(Object.keys(r.st.d.blocks)).toContain(id);
     expect(r.st.d.blocks[id]!.deletedAt).toBeNull();
-    expect(task(r, 'paper').status).toBe('doing'); // its block is today's first again
+    expect(task(r, 'paper').status).toBe('doing');
     expect(r.err('remove_block', { id: 'nope' })).toMatch(/No block/);
   });
 
@@ -610,7 +612,7 @@ describe('every write is logged and announced', () => {
     const r = rig();
     r.ok('get_day', {});
     r.ok('list_tasks', {});
-    r.err('place_block', { taskId: r.ids.trip, date: TODAY, startMin: 810, endMin: 870 });
+    r.err('place_block', { taskId: r.ids.trip, date: TODAY, startMin: 630, endMin: 700 });
     r.err('add_task', { title: 'x', tag: 'Nope' });
     expect(claudeLog(r.st.d)).toHaveLength(0);
     expect(r.notes).toHaveLength(0);
@@ -748,7 +750,7 @@ describe('coverage', () => {
       ['list_events', {}], ['get_stats', { from: TODAY, to: TODAY }], ['get_review', { date: TODAY }], ['list_notes', {}], ['search_log', { query: 'cov' }], ['list_unplaced', {}], ['place_event', { eventId: unplaced.id, startMin: 1080 }], ['post_log', { body: 'cov post' }],
       ['update_task', { id: r.ids.trip, patch: { notes: 'x' } }], ['move_block', { id: block, startMin: 1000 }], ['remove_block', { id: block }],
       ['skip_event_on', { eventId: r.ids.class, date: MON2 }], ['edit_event_on', { eventId: r.ids.class, date: '2026-11-09', patch: { title: 'E' } }],
-      ['move_card', { taskId: card, columnId: proj.columns[1].id }], ['drop_task', { id: r.ids.trip, reason: 'coverage' }], ['complete_task', { id: r.ids.paper }], ['undo', { undoToken: note.undoToken }],
+      ['move_card', { taskId: card, columnId: proj.columns[1].id }], ['start_task', { id: r.ids.trip }], ['pause_task', { id: r.ids.trip }], ['drop_task', { id: r.ids.trip, reason: 'coverage' }], ['complete_task', { id: r.ids.paper }], ['undo', { undoToken: note.undoToken }],
     ];
     for (const [name, args] of calls) expect(r.call(name, args).ok, name).toBe(true);
     for (const n of ['add_project', 'add_task', 'add_note', 'place_block']) r.called.add(n);

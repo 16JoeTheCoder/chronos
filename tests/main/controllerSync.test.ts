@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { COLLS, type Data, type QuarantineItem, type Rec } from '../../src/core/model/types';
+import { COLLS, SCHEMA_V, type Data, type QuarantineItem, type Rec } from '../../src/core/model/types';
 import { live } from '../../src/core/repo/repo';
 import { memoryProvider, memoryServer } from '../../src/core/sync/memoryProvider';
 import type { OutboxEntry } from '../../src/core/sync/provider';
@@ -184,7 +184,7 @@ describe('invalid records on load', () => {
       const t = d.tasks[Object.keys(d.tasks)[1]!]!;
       return {
         ...d,
-        tasks: { ...d.tasks, [t.id]: { ...t, v: 4 } },
+        tasks: { ...d.tasks, [t.id]: { ...t, v: SCHEMA_V + 1 } },
         blocks: { b1: { id: 'b1', createdAt: 1, updatedAt: 1, deviceId: 'x', deletedAt: null, v: 2, fv: {}, fw: {}, taskId: null, tagId: null, title: 'B', date: '2026-10-26', startMin: 600, endMin: 660, tz: 'Asia/Jakarta', kind: 'work', auto: 'maybe' } as never },
       };
     });
@@ -247,8 +247,11 @@ describe('a v1 data file on disk', () => {
   it('migrated records are not fabricated into the outbox (they upload as a first-sign-in seed)', () => {
     new Store(dir).data.save(v1());
     const c = boot();
-    expect(c.outbox.filter((e) => e.coll === 'tasks' && e.id.startsWith('t-') && !e.id.includes(':'))).toEqual([]);
-    for (const t of Object.values(c.data.tasks)) expect(t.fv).toEqual({});
+    // The only outbox entries are the done-retention recycles (old done tasks past doneRetentionHours), never migration writes.
+    const entries = c.outbox.filter((e) => e.coll === 'tasks' && e.id.startsWith('t-') && !e.id.includes(':'));
+    for (const e of entries) expect(Object.keys(e.fields), e.id).toContain('deletedAt');
+    expect(entries.map((e) => e.id).sort()).toEqual(Object.values(c.data.tasks).filter((t) => t.deletedAt !== null).map((t) => t.id).sort());
+    for (const t of Object.values(c.data.tasks).filter((t) => t.deletedAt === null)) expect(t.fv).toEqual({});
   });
 });
 
