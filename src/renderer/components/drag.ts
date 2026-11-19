@@ -1,6 +1,7 @@
 // Pointer-based drag and drop (no library). A press becomes a drag after 4 px;
 // targets register themselves and get over/drop callbacks. A press that never
-// moves is a click. Every drag here also has a keyboard path (see Home/Runway).
+// moves is a click; Esc or a lost pointer cancels a drag (nothing is dropped).
+// Every drag here also has a keyboard path (see Home/Runway/Tasks).
 
 import { useSyncExternalStore, type PointerEvent as RPointerEvent } from 'react';
 
@@ -38,6 +39,9 @@ export function registerTarget(id: string, t: Target): () => void {
   return () => targets.delete(id);
 }
 
+/** Is a drag in progress (past the 4 px threshold)? */
+export const dragging = (): boolean => state !== null;
+
 export function useDrag(): DragState | null {
   return useSyncExternalStore(
     (l) => {
@@ -74,10 +78,15 @@ export function beginDrag(e: RPointerEvent, item: DragItem | (() => DragItem), o
     state = { item: it, x: ev.clientX, y: ev.clientY, target, preview, free: ev.altKey };
     emit();
   };
+  let done = false;
   const up = () => {
+    if (done) return;
+    done = true;
     window.removeEventListener('pointermove', move);
     window.removeEventListener('pointerup', up);
     window.removeEventListener('pointercancel', cancel);
+    window.removeEventListener('keydown', esc, true);
+    window.removeEventListener('blur', cancel);
     document.documentElement.classList.remove('dragging');
     const s = state;
     state = null;
@@ -86,11 +95,22 @@ export function beginDrag(e: RPointerEvent, item: DragItem | (() => DragItem), o
     else if (s?.target) targets.get(s.target)?.drop(s.item, s.preview);
   };
   const cancel = () => {
+    const was = active;
     active = false;
     onClick = undefined;
+    // A cancelled drag drops nothing: clear the state before up() reads it.
+    if (was) state = null;
     up();
+  };
+  const esc = (ev: KeyboardEvent) => {
+    if (ev.key !== 'Escape' || !active) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    cancel();
   };
   window.addEventListener('pointermove', move);
   window.addEventListener('pointerup', up);
   window.addEventListener('pointercancel', cancel);
+  window.addEventListener('keydown', esc, true);
+  window.addEventListener('blur', cancel);
 }

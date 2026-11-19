@@ -384,3 +384,41 @@ Plan blocks are at least 28 px wide (a 25-minute block on a full-day runway was 
 
 ### D-171 CSS order and detector exceptions
 Vite emits `styles/shell.css` in a chunk shared with `windows.tsx`, which the page links before `index`'s CSS, so a shell rule with the same specificity as a `screens.css` rule loses (the morning strip stayed a 500 px column). Overrides in `shell.css` use a higher specificity; the file says so at the top. Detector findings kept by decision: `ai-color-palette` on Stark's reactor plasma and `cream-palette` on TARS day's ground (theme identity, as approved in Phase 2+3). Esc in a text field now blurs it first (a draft is never lost to one Esc); Ctrl+L is ignored while the task editor is open.
+
+## Phase 3.7 (one task model, Tasks, polish)
+
+### D-172 Finish conditions retired
+Context: requiring one before a task could start was friction Josef no longer wanted (and quick capture already allowed an empty one). Decision: removed from the UI, validation, commands (TaskInput.finishCondition is accepted and ignored), the parser setup, Focus, Home, the Plan cards, MCP tools (`labels` replaces the field) and docs. The record field stays (readable on old records, written as ''). Nothing is gated on it any more. Bare-name tasks land in the Inbox (no date, no project). Supersedes D-007's gate.
+
+### D-173 One task model: selectors, one transition, explicit focus
+Context: "a task in the board doesn't register in Home, Focus or Plan"; Done → Doing kept the strikethrough. Each screen derived tasks its own way, `normalize` promoted the queue head to 'doing' automatically, and `task.moveCard` changed only the column. Decision: `core/tasks/selectors.ts` (inbox, today, upcoming, all, byProject, active, paused, done, forDay) and `core/tasks/screens.ts` (home, pill, focus, plan models) are what screens read; `core/tasks/transition.ts` is the only code that changes status: leaving done clears completedAt/outcome; leaving doing pauses the timer and closes the session (time kept); becoming doing pauses any other doing task; a project task moves to the matching column. `normalize` keeps at most one doing task and never promotes one. A task becomes doing only by Start (`task.start`), a drop into the focus slot, the Doing column, or `timer start` with nothing in focus (takes the queue head, so Space and the global shortcut still work). New commands `task.start {id, run?}`, `task.pause {id}`, `task.sort {id, afterId, beforeId, columnId?, dueDate?}`; `task.moveCard` now sets status from the column. MCP gains `start_task` and `pause_task`.
+
+### D-174 Schema v4 for records, file format stays 3
+New fields: task `labels: string[]`, priority `none` (P4; new tasks default to it), settings `tasks.doneRetentionHours` (24/72/168/0) and `pillShowsClass`. An old build would quarantine a record with priority 'none', so `SCHEMA_V` goes to 4: an old build sees v4 records as newer and switches sync to read-only (D-104), which is the designed upgrade path. The data file marker stays `schema: 3` (same structure). `upgradeRecord` fills the new fields on records pulled from v3 devices; validators accept their absence. Firestore rules check the new fields when present.
+
+### D-175 P1-P4 map onto the existing priorities
+P1 must, P2 should, P3 nice, P4 none. Existing tasks keep 'should' and so show as P2 until changed (no migration rewrites user data). Colours come from theme tokens: P1 danger, P2 warn, P3 the blue tag colour, P4 no flag.
+
+### D-176 Sections are project columns
+Todoist sections map onto the board columns a project already has, so List (grouped by section) and Board are two views of the same data, and moving a row between sections is the same as moving a card (status follows the column, D-173). No new entity.
+
+### D-177 Done retention by soft delete
+Done tasks are recycled `settings.tasks.doneRetentionHours` after completion (default 24, options 24 h / 3 days / 7 days / always), by the controller's housekeeping (startup and the slow tick). Inside the window they are in Done (Tasks) where the circle reopens them; the completion toast has Undo. After it they are in Recently deleted for 7 days (the existing recycle rules).
+
+### D-178 Home: shelf and drag-to-pause
+Home keeps its layout and gains a bottom shelf of today's cards (paused first). Dragging the task in focus onto the shelf, or Home's Pause button, runs `task.pause` (the focus area becomes a drop target); dropping a card on the focus area runs `task.start run:true`. Focus's Space and the overlay pill still pause the timer without leaving focus (pausing from the pill should not empty Home behind your back). The shared pointer drag now cancels on Esc or window blur, and a cancelled drag drops nothing.
+
+### D-179 Plan: a fixed-scale time grid; plans may sit over classes
+The runway draws at 2 px per minute in a horizontal scroller (runway/grid.ts, pure): half-hour lines, hour labels, the now-line on the current minute (seconds dropped) with its label above the hour labels, so labels never collide and 21:39 is exactly one minute left of 21:40. `blockFits` checks other blocks only: a plan block may overlap a fixed event, and `doingNow` lets the task win. Fixed events still may not be dropped on blocks (unchanged). The buffer label moves right of the now-line when now is inside it.
+
+### D-180 TASK markers replace "- "
+A line ending in ` TASK` or starting with `TASK ` (capitals) is a task: live in the notepad (on Enter, Backspace right after undoes it and restores TASK), in Focus's thinking space (on Enter, toast Undo), and at post time in the Log (`lines.ts`). `- ` is a bullet (continues on Enter in the notepad, Shift+Enter in the Log composer; an empty bullet ends the list). The parser keeps lowercase `task ` as a quick-add prefix (Ctrl+K, MCP text), drops `- `, and reads `!1`-`!4` and `@label` (a letter first, so `@5pm` stays a time).
+
+### D-181 Notepad as a push-to-Log scratchpad
+The notepad no longer edits the focused task's notes or converts lines on close. It holds one draft (this PC), shows the last 0-3 notes, grows downward with the text (renderer reports the height on `win:notepadResize`; main clamps to 70 % of the work area and keeps the top edge), and Ctrl+Enter / Push posts it to the Log with the task in focus and its project. Hotkey: any accelerator, or a bare Insert / Pause / Scroll Lock / F-key (`isBareKey`), recorded by pressing it (Settings → Tasks and notepad). Position: top-right (default), top-left, centre, at the pointer.
+
+### D-182 Ctrl+K adds what you typed
+Quick add from the palette and the Tasks box treats a line the parser reads as a note as a task, unless it was marked as a note (`note `, `//`); "Post to the Log instead" is the second row. A task with no date lands in Today (selector: created today) and on Home's shelf at once.
+
+### D-183 Main bundle budget 200 KB
+The one task model (transition, selectors, screen models) and the new commands live in core and are bundled into main as well as the renderer; `dist/main.js` went from ~172 KB to ~185 KB (minified). Main loads once from local disk, so the audit limit moves from 180 KB to 200 KB rather than splitting core into another lazy chunk.

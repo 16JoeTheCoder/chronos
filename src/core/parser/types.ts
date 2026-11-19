@@ -57,7 +57,7 @@ export interface ParseContext {
   source?: 'user' | 'claude' | 'voice' | 'notepad' | 'log';
 }
 
-export type SpanRole = 'date' | 'time' | 'timeRange' | 'duration' | 'recurrence' | 'kindKeyword' | 'project' | 'tag' | 'priority';
+export type SpanRole = 'date' | 'time' | 'timeRange' | 'duration' | 'recurrence' | 'kindKeyword' | 'project' | 'tag' | 'priority' | 'label';
 
 export interface Span {
   start: number;
@@ -85,7 +85,10 @@ export interface ParseResult {
   recurrence?: Recurrence;
   projectId?: string;
   tagId?: string;
-  priority?: 1 | 2 | 3;
+  /** !1-!4 (P1-P4). */
+  priority?: 1 | 2 | 3 | 4;
+  /** @label words, lower case, without the @ (Phase 3.7). */
+  labels?: string[];
   spans: Span[];
   confidence: 'high' | 'medium' | 'low';
   warnings: string[];

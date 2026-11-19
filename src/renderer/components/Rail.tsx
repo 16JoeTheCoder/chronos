@@ -1,10 +1,11 @@
-// The app rail: Home, Board, Log, Settings. Real buttons with names and aria-current.
+// The app rail: Home, Tasks, Board, Log, Settings. Real buttons with names and aria-current.
 import { Icon, type IconName } from './Icon';
 
-export type Screen = 'home' | 'plan' | 'focus' | 'board' | 'log' | 'settings';
+export type Screen = 'home' | 'plan' | 'focus' | 'tasks' | 'board' | 'log' | 'settings';
 
-const ITEMS: { id: 'home' | 'board' | 'log' | 'settings'; label: string; icon: IconName; key?: string }[] = [
+const ITEMS: { id: 'home' | 'tasks' | 'board' | 'log' | 'settings'; label: string; icon: IconName; key?: string }[] = [
   { id: 'home', label: 'Home', icon: 'home' },
+  { id: 'tasks', label: 'Tasks', icon: 'tasks', key: 'G' },
   { id: 'board', label: 'Board', icon: 'board' },
   { id: 'log', label: 'Log', icon: 'log', key: 'Control+L' },
   { id: 'settings', label: 'Settings', icon: 'gear' },

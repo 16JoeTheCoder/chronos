@@ -31,6 +31,8 @@ export interface ChronosApi {
      */
     closeNotepad(created?: NotepadCreated): void;
     closePalette(): void;
+    /** Notepad: the height its content needs (main clamps it to 70 % of the screen and keeps the top edge). */
+    notepadResize(height: number): void;
     /** Show a toast with an optional Undo (a token from a command result) on the overlay or Home: for windows that close right after acting. */
     notify(text: string, undoToken?: string): void;
     /** Notepad and palette: main showed the (persistent, hidden) window again. */
@@ -80,6 +82,7 @@ export const CHANNELS = {
   overlayExpand: 'win:overlayExpand',
   closeNotepad: 'win:closeNotepad',
   closePalette: 'win:closePalette',
+  notepadResize: 'win:notepadResize',
   notify: 'win:notify',
   open: 'win:open',
   quit: 'win:quit',

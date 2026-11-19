@@ -13,7 +13,8 @@ import { listThemeChoices } from '../themes';
 import { describeError, toast, useSnap } from '../store';
 import { useOptionalTheme } from '../theme/ThemeProvider';
 import { paletteCommands, type PalAction } from './commands';
-import { chipsOf, commandFromParse, describeParse, parseLine } from './fromParse';
+import { chipsOf, commandFromParse, describeParse, explicitKind, parseLine } from './fromParse';
+import { todayOf } from '../../core/tasks/tasks';
 
 export interface PaletteProps {
   open: boolean;
@@ -103,14 +104,17 @@ export function Palette({ open, onClose, standalone, onNavigate }: PaletteProps)
     if (!text) return [];
     const out: Row[] = [];
     const r = parseLine(text, d, Date.now());
-    const add = (asTask: boolean) => async () => {
-      const cmd = commandFromParse(r, d, Date.now(), asTask);
+    // Ctrl+K adds what you typed: a line the parser reads as a note is still a task unless it says "note" or "//".
+    const asNote = r.kind === 'note' && explicitKind(r);
+    const add = (asTask: boolean, note = false) => async () => {
+      const cmd = note ? { type: 'idea.add' as const, text: text.slice(0, 20_000), taskId: null } : commandFromParse(r, d, Date.now(), asTask, true);
       if (!cmd) return;
       last.current = text;
-      await exec(cmd, () => (cmd.type === 'event.create' ? 'Event added' : cmd.type === 'idea.add' ? 'Posted to the Log' : 'Task added'));
+      await exec(cmd, () => (cmd.type === 'event.create' ? 'Event added' : cmd.type === 'idea.add' ? 'Posted to the Log' : cmd.type === 'task.create' && cmd.input.dueDate && cmd.input.dueDate > todayOf(d, Date.now()) ? 'Task added to Upcoming' : 'Task added to Today'));
     };
-    out.push({ key: 'add', label: r.kind === 'fixed' ? 'Add fixed event' : r.kind === 'note' ? 'Post to the Log' : 'Add task', hint: 'Enter', run: add(false) });
+    out.push({ key: 'add', label: r.kind === 'fixed' ? 'Add fixed event' : asNote ? 'Post to the Log' : 'Add task', hint: 'Enter', run: add(false) });
     if (r.kind === 'fixed') out.push({ key: 'addtask', label: 'Add as a task instead', hint: 'Shift Enter', run: add(true) });
+    else if (!asNote) out.push({ key: 'addnote', label: 'Post to the Log instead', run: add(false, true) });
     out.push({ key: 'ask', label: `Ask Claude: "${text.slice(0, 60)}"`, hint: 'Tab', run: () => askClaude(text) });
     index.current.update(d);
     index.current.search(text, { limit: 6 }).filter((h) => !h.deleted).forEach((h, i) => out.push({
@@ -119,7 +123,7 @@ export function Palette({ open, onClose, standalone, onNavigate }: PaletteProps)
         if (h.type === 'project') go('board', { projectId: h.id });
         else if (h.type === 'note') go('log', { logProject: null });
         else if (h.type === 'event') go('plan');
-        else go('home');
+        else go('tasks');
       },
     }));
     return out;

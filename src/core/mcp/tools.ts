@@ -30,12 +30,12 @@ const RECURRENCE = obj(
   ['freq', 'interval'],
 );
 const STATUS = { type: 'string', enum: ['inbox', 'planned', 'doing', 'done', 'dropped'] } as const;
-const PRIORITY = { type: 'string', enum: ['must', 'should', 'nice'] } as const;
+const PRIORITY = { type: 'string', enum: ['must', 'should', 'nice', 'none'], description: 'P1 must, P2 should, P3 nice, P4 none (default).' } as const;
 const COLOR = { type: 'string', enum: ['tag1', 'tag2', 'tag3', 'tag4', 'tag5', 'tag6', 'tag7', 'tag8'] } as const;
 
 const TASK_FIELDS = {
   title: { type: 'string', minLength: 1, maxLength: 120 },
-  finishCondition: { type: 'string', maxLength: 500, description: 'What "finished" looks like (8+ characters, or empty). Needed before the task can be focused.' },
+  labels: { type: 'array', items: { type: 'string', minLength: 1, maxLength: 40 }, maxItems: 20, description: 'Label words without the @.' },
   notes: { type: 'string', maxLength: 5000 },
   tag: { type: 'string', maxLength: 60, description: 'Tag name (case-insensitive) or id.' },
   projectId: ID,
@@ -72,8 +72,10 @@ export const TOOLS: ToolDef[] = [
   { name: 'search_log', write: false, description: 'Search Log posts (notes) by text, with their project.', inputSchema: obj({ query: { type: 'string', minLength: 1, maxLength: 200 } }, ['query']) },
   { name: 'list_unplaced', write: false, description: 'Fixed events with a date and length but no time yet ("to place"): that day, or all from today on. See place_event.', inputSchema: obj({ date: DATE }) },
   // ---- Write (each returns the changed record and an undoToken) ----
-  { name: 'add_task', write: true, description: 'Add a task from structured fields, or from one line of natural language in `text` (Chronos parses date, time, estimate, priority, project and tag like its quick-add box). Give `title` or `text`. If the parse is not certain, nothing is added and the parse comes back for you to confirm: repeat the call with explicit fields. It lands in the inbox; give a finishCondition so it can be focused.', inputSchema: obj({ ...TASK_FIELDS, text: { type: 'string', minLength: 1, maxLength: 300 }, kind: { type: 'string', enum: ['task', 'sprint'] } }) },
+  { name: 'add_task', write: true, description: 'Add a task from structured fields, or from one line of natural language in `text` (Chronos parses date, time, estimate, priority, project and tag like its quick-add box). Give `title` or `text`. If the parse is not certain, nothing is added and the parse comes back for you to confirm: repeat the call with explicit fields. A task with no date and no project lands in the Inbox.', inputSchema: obj({ ...TASK_FIELDS, text: { type: 'string', minLength: 1, maxLength: 300 }, kind: { type: 'string', enum: ['task', 'sprint'] } }) },
   { name: 'update_task', write: true, description: 'Change fields of a task. Only the fields given change.', inputSchema: obj({ id: ID, patch: obj(TASK_FIELDS) }, ['id', 'patch']) },
+  { name: 'start_task', write: true, description: 'Put a task in focus (any other task in focus is paused first). run=true also starts its timer.', inputSchema: obj({ id: ID, run: { type: 'boolean' } }, ['id']) },
+  { name: 'pause_task', write: true, description: 'Take the task in focus out of focus: its timer pauses and its time is kept.', inputSchema: obj({ id: ID }, ['id']) },
   { name: 'complete_task', write: true, description: 'Mark a task done. A recurring task creates its next instance.', inputSchema: obj({ id: ID }, ['id']) },
   { name: 'drop_task', write: true, description: 'Close a task without finishing it. A reason is required.', inputSchema: obj({ id: ID, reason: { type: 'string', minLength: 3, maxLength: 500 } }, ['id', 'reason']) },
   { name: 'place_block', write: true, description: 'Plan time for a task on the runway. Refused, with the reason, if it overlaps a fixed event or another block.', inputSchema: obj({ taskId: ID, date: DATE, startMin: MINUTE('Start'), endMin: MINUTE('End') }, ['taskId', 'date', 'startMin', 'endMin']) },

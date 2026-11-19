@@ -56,7 +56,7 @@ Times are local wall time; every read states the time zone. Writes return the ch
 
 | Write | What it does |
 | --- | --- |
-| `add_task({title, kind?, projectId?, tag?, estimateMin?, dueDate?, dueTime?, priority?, recurrence?, finishCondition?})` | a new inbox task, `source: 'claude'` (structured fields only for now; a parser-backed `text` argument is planned, D-130) |
+| `add_task({title, kind?, projectId?, tag?, estimateMin?, dueDate?, dueTime?, priority?, recurrence?, labels?})` | a new task (Inbox when it has no date and no project), `source: 'claude'`. Phase 3.7 adds `start_task({id, run?})` (put in focus, pausing any other) and `pause_task({id})` (out of focus, time kept); priority `none` = P4 (structured fields only for now; a parser-backed `text` argument is planned, D-130) |
 | `update_task(id, patch)`, `complete_task(id)`, `drop_task(id, reason)` | edit; complete (a recurring task spawns its next instance); close as dropped |
 | `place_block({taskId, date, startMin, endMin})`, `move_block(id, {…})`, `remove_block(id)` | plan time; refused with the reason ("overlaps the fixed event Physics 13:00-14:30") on overlap |
 | `skip_event_on(eventId, date)`, `edit_event_on(eventId, date, patch)` | change one date of a repeating event |

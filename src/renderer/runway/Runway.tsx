@@ -1,7 +1,7 @@
-// The runway (§9.3): one time axis, two lanes. Fixed: events as hatched,
-// locked obstacles. Plan: blocks, free stretches and the drag ghost. The now-line
-// moves with the clock
-// (15 s ticks, and always labelled with the exact minute). Every drag has a keyboard path: arrows move a focused
+// The runway (§9.3, Phase 3.7 §5): a horizontal time grid with a fixed width per minute
+// (runway/grid.ts), hour and half-hour lines, two lanes. Fixed: events as hatched blocks.
+// Plan: blocks (they may sit over a class), free stretches and the drag ghost. The now-line
+// sits on the current minute, moves every 15 s and is labelled with the exact time. Every drag has a keyboard path: arrows move a focused
 // block 5 min (Shift 15), Alt+arrows resize it, Delete recycles it.
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
@@ -12,7 +12,8 @@ import { SPRINTABLE_MIN } from '../../core/time/timeLeft';
 import type { Block, Data } from '../../core/model/types';
 import { blockSpan } from '../../core/tasks/tasks';
 import { settingsOf } from '../../core/repo/repo';
-import { localParts, zonedToUtc } from '../../core/time/zone';
+import { zonedToUtc } from '../../core/time/zone';
+import { timeGrid } from './grid';
 import { Icon } from '../components/Icon';
 import { beginDrag, registerTarget, useDrag, type DragItem } from '../components/drag';
 import { dropOnTrash, recycleWithUndo } from '../components/actions';
@@ -40,9 +41,15 @@ export function Runway({ d, m, now, range, setRange, onEditEvent }: { d: Data; m
   }, []);
   const bufferMin = settingsOf(d).bufferMin;
   const dayEndMin = settingsOf(d).dayEndMin;
-  const span = m.to - m.from;
-  const pct = (ts: number) => `${Math.min(100, Math.max(0, ((ts - m.from) / span) * 100))}%`;
-  const width = (a: number, b: number) => `${Math.max(0, ((Math.min(b, m.to) - Math.max(a, m.from)) / span) * 100)}%`;
+  const grid = timeGrid(m.from, m.to, now, m.tz);
+  const pct = (ts: number) => `${grid.x(ts)}px`;
+  const width = (a: number, b: number) => `${Math.max(0, grid.x(Math.min(b, m.to)) - grid.x(Math.max(a, m.from)))}px`;
+  const scroller = useRef<HTMLDivElement>(null);
+  // Open with now a third of the way in (and again when the range changes).
+  useEffect(() => {
+    const el = scroller.current;
+    if (el && grid.now) el.scrollLeft = Math.max(0, grid.now.x - el.clientWidth / 3);
+  }, [range, m.date]); // eslint-disable-line react-hooks/exhaustive-deps
   const at = (min: number) => zonedToUtc(m.date, min, m.tz);
 
   const fixedLane = useRef<HTMLDivElement>(null);
@@ -80,16 +87,6 @@ export function Runway({ d, m, now, range, setRange, onEditEvent }: { d: Data; m
     return () => (offPlan(), offFixed());
   }, [d, m, now, snapMin, drop]);
 
-  // Ticks sit on real instants (whole local hours between from and to), so they
-  // are right for any window, including one that crosses midnight.
-  const ticks: number[] = [];
-  const wide = span > 8 * 3_600_000;
-  const lp = localParts(m.from, m.tz);
-  for (let ts = m.from + ((60 - (lp.minutes % 60)) % 60) * MIN; ts <= m.to; ts += 60 * MIN) {
-    if (wide && Math.round(localParts(ts, m.tz).minutes / 60) % 2 !== 0) continue;
-    if (Math.abs(ts - now) < span * 0.035) continue; // the now label takes this spot
-    ticks.push(ts);
-  }
   const bufStart = at(dayEndMin - bufferMin);
   const bufEnd = at(dayEndMin);
   const showBuffer = bufferMin > 0 && bufEnd > m.from && bufStart < m.to;
@@ -128,16 +125,19 @@ export function Runway({ d, m, now, range, setRange, onEditEvent }: { d: Data; m
           <span className="badge badge-ok">Holiday</span> {m.holidays.map((c) => c.name).join(', ')}: {m.holidays.flatMap((c) => c.scopes).join(', ')} off today.
         </p>
       )}
-      <div className="rw">
+      <div className="rw-wrap">
+      <div className="rw-labels" aria-hidden="true"><span className="rw-l-axis" /><span>Fixed</span><span className="rw-l-plan">Plan</span></div>
+      <div className="rw-scroll" ref={scroller}>
+      <div className="rw" style={{ width: grid.width }}>
+        <div className="rw-grid" aria-hidden="true">
+          {grid.lines.map((l) => <i key={l.ts} className={l.major ? 'major' : undefined} style={{ left: l.x }} />)}
+        </div>
         <div className="rw-axis" aria-hidden="true">
-          {ticks.map((t) => (
-            <span key={t} style={{ left: pct(t) }}>
-              {clockOf(t, m.tz)}
-            </span>
+          {grid.lines.filter((l) => l.label).map((l) => (
+            <span key={l.ts} style={{ left: l.x }}>{l.label}</span>
           ))}
         </div>
         <div className="rw-lane rw-fixed" ref={fixedLane}>
-          <span className="lane-label">Fixed</span>
           {m.instances.map((i, n) => {
             const tag = i.event.tagId ? d.tags[i.event.tagId] : undefined;
             const sMin = minuteOf(m, i.start);
@@ -181,10 +181,10 @@ export function Runway({ d, m, now, range, setRange, onEditEvent }: { d: Data; m
           )}
         </div>
         <div className="rw-lane rw-plan" ref={lane}>
-          <span className="lane-label">Plan</span>
           {showBuffer && (
             <div className="buf" style={{ left: pct(bufStart), width: width(bufStart, bufEnd) }} title={`Buffer ${bufferLabel}: kept free at the end of the day`} role="img" aria-label={`Buffer, ${bufferLabel}, kept free at the end of the day`}>
-              <span aria-hidden="true">Buffer {bufferLabel}</span>
+              {/* The label moves right of the now-line when now is inside the buffer, so they never overlap. */}
+              <span aria-hidden="true" style={{ left: grid.now && now > bufStart && now < bufEnd ? Math.min(grid.now.x - grid.x(bufStart) + 10, Math.max(0, grid.x(bufEnd) - grid.x(bufStart) - 96)) : 8 }}>Buffer {bufferLabel}</span>
             </div>
           )}
           {m.tl.free.map(([a, b]) => (
@@ -225,13 +225,13 @@ export function Runway({ d, m, now, range, setRange, onEditEvent }: { d: Data; m
             </div>
           )}
         </div>
-        {now >= m.from && now <= m.to && (
-          <div className="now rv-now" style={{ left: pct(now) }} aria-label={`Now, ${clockOf(now, m.tz)}`} role="img">
-            <span className="now-label" aria-hidden="true">
-              {clockOf(now, m.tz)}
-            </span>
+        {grid.now && (
+          <div className="now rv-now" style={{ left: grid.now.x }} aria-label={`Now, ${grid.now.label}`} role="img">
+            <span className="now-label" aria-hidden="true">{grid.now.label}</span>
           </div>
         )}
+      </div>
+      </div>
       </div>
       {unplaced.length > 0 && (
         <div className="tray" aria-label="To place">
@@ -287,7 +287,8 @@ function previewFor(d: Data, m: DayModel, now: number, it: DragItem, x: number, 
   const min = snap(pointerMinute(m, x, el), g);
   if (it.kind === 'task' || (it.kind === 'event' && !it.unplaced)) {
     const dur = it.kind === 'task' ? it.dur : (it.durMin ?? 30);
-    const p = place(freeGaps(d, m, now, undefined, g), min, dur, g);
+    // Plan blocks may sit over classes (Phase 3.7): only other blocks are in the way.
+    const p = place(freeGaps(d, m, now, undefined, g, true), min, dur, g);
     return p ? { ...p, valid: true } : { startMin: min, endMin: min + dur, valid: false };
   }
   if (it.kind !== 'block') return null;

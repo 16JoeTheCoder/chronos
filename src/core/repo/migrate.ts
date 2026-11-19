@@ -76,6 +76,10 @@ export function upgradeRecord(coll: Coll | string, rec: Obj): Obj {
       return { ...rec, projectId: rec.projectId ?? null };
     case 'blocks':
       return { ...rec, auto: rec.auto === undefined ? false : rec.auto };
+    case 'tasks':
+      return { ...rec, labels: Array.isArray(rec.labels) ? rec.labels : [] };
+    case 'settings':
+      return { ...rec, tasks: isObj(rec.tasks) ? rec.tasks : { doneRetentionHours: 24 }, pillShowsClass: typeof rec.pillShowsClass === 'boolean' ? rec.pillShowsClass : false };
     default:
       return rec;
   }
@@ -132,7 +136,8 @@ export function fromMonolith(d: Data, raw: unknown, ctx: Ctx): { d: Data; count:
       {
         kind: 'task',
         title: str(t.name, 120) || 'Imported task',
-        finishCondition: str(t.finishCondition, 500),
+        finishCondition: '',
+        labels: [],
         notes: str(t.notes, 5000),
         tagId: null,
         priority: PRIORITY[String(t.priority)] ?? 'should',

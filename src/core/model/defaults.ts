@@ -19,6 +19,8 @@ export function idleRuntime(): Runtime {
 const base = (id: string) => ({ id, createdAt: 0, updatedAt: 0, deviceId: '', deletedAt: null, v: SCHEMA_V, fv: {}, fw: {} });
 
 export const SNAP_OPTIONS = [5, 10, 15, 30];
+/** Settings → Tasks → Keep done tasks (hours; 0 = forever). */
+export const RETENTION_OPTIONS = [24, 72, 168, 0];
 
 export function defaultColumns(): ProjectColumn[] {
   return [
@@ -59,8 +61,16 @@ export function defaultSettings(): Settings {
     runwayPosition: 'top',
     reduceMotion: null,
     onboarded: false,
+    tasks: { doneRetentionHours: 24 },
+    pillShowsClass: false,
   };
 }
+
+/** Phase 3.7 settings with their defaults (a settings doc from an older build may lack them). */
+export const taskPrefs = (s: Settings): { doneRetentionHours: number; pillShowsClass: boolean } => ({
+  doneRetentionHours: s.tasks?.doneRetentionHours ?? 24,
+  pillShowsClass: s.pillShowsClass ?? false,
+});
 
 export function defaultActiveTimer(): ActiveTimer {
   return { ...base('current'), taskId: null, ownerDeviceId: '', ownerName: '', takeoverAt: null };
@@ -101,6 +111,7 @@ export function defaultDevice(deviceId: string, deviceName: string): DeviceSetti
     overlayHideInFullscreen: true,
     widgetPos: null,
     shortcuts: { toggle: 'Ctrl+Alt+Space', startPause: 'Ctrl+Alt+P', capture: 'Ctrl+Alt+N' },
+    notepad: { position: 'top-right', recent: 3 },
     displayId: null,
     stackFolder: null,
     sound: true,

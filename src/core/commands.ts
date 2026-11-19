@@ -13,14 +13,13 @@ import { autoPlan, byPlanOrder, placeTasks, replan } from './planning/plan';
 import { isReviewed } from './planning/review';
 import { revertOpsBetween } from './undo';
 import { create, get, live, recycle, restore, settingsOf, timerOf, update, updateSettings, type Ctx, type Fields } from './repo/repo';
-import { spawnNext } from './tasks/recurrence';
+import { startTimer, targetForColumn, transition, type TransitionResult } from './tasks/transition';
 import { checkpointDue, nextCheckpoint } from './tasks/sprints';
-import { activeTask, blockSpan, blocksOn, deriveQueue, isLocked, isOpen, maxOrder, minOrder, normalize, ownsTimer, recordSlices, stopTask, todayOf, trackedMs } from './tasks/tasks';
-import { expandEvents } from './time/schedule';
+import { activeTask, blockSpan, blocksOn, deriveQueue, isLocked, isOpen, maxOrder, normalize, ownsTimer, recordSlices, stopTask, todayOf, trackedMs } from './tasks/tasks';
 import { addDays, zonedToUtc } from './time/zone';
 import { overlaps } from './time/intervals';
 
-import { advance, pauseAt, skipPhase, start, reset } from './timer/timer';
+import { pauseAt, skipPhase, reset } from './timer/timer';
 import {
   isDate, isDropReason, isMinute, validateEventFields, validateSettings, validateTag, validateTaskFields, type Errors,
 } from './validation';
@@ -29,8 +28,10 @@ import type { DeviceSettings } from './model/types';
 export interface TaskInput {
   kind?: 'task' | 'sprint';
   title: string;
+  /** Retired (D-172): accepted from old callers and ignored. */
   finishCondition?: string;
   notes?: string;
+  labels?: string[];
   tagId?: string | null;
   priority?: Priority;
   estimateMin?: number | null;
@@ -79,6 +80,12 @@ export type Command =
   | { type: 'task.close'; id: string; reason: string }
   | { type: 'task.reopen'; id: string }
   | { type: 'task.moveCard'; id: string; columnId: string; beforeId: string | null }
+  /** Make this the task in focus (pausing any other); `run` also starts its timer. */
+  | { type: 'task.start'; id: string; run?: boolean }
+  /** Take the task out of focus: the timer pauses, the session closes, the time is kept; the focus slot is empty. */
+  | { type: 'task.pause'; id: string }
+  /** Manual list order: put the task between two neighbours (either may be null), optionally into another section or day. */
+  | { type: 'task.sort'; id: string; afterId: string | null; beforeId: string | null; columnId?: string; dueDate?: string | null }
   | { type: 'timer'; action: 'start' | 'pause' | 'resume' | 'reset' | 'skipPhase' }
   | { type: 'sprint.checkpoint'; id: string; choice: 'continue' | 'kill'; reason?: string }
   | { type: 'block.create'; taskId: string | null; date: string; startMin: number; endMin: number; title?: string; kind?: Block['kind'] }
@@ -140,15 +147,17 @@ const ok = (d: Data, events: TimerEvent[] = [], id?: string): Mutation => ({ ok:
 const fail = (error: string, fields?: Errors): Mutation => ({ ok: false, error, fields });
 const checked = (fields: Errors, then: () => Mutation): Mutation => (Object.keys(fields).length ? fail('Please fix the highlighted fields.', fields) : then());
 const MIN = 60_000;
+const fromTransition = (r: TransitionResult): Mutation => (r.ok ? ok(r.d) : fail(r.error));
 
-/** Does [startMin, endMin) on date fit around fixed events and other blocks? */
+/**
+ * Does [startMin, endMin) on date fit around the other blocks? Plan blocks may sit over fixed
+ * events (Phase 3.7: plan over a class; the task wins for "what am I doing now").
+ */
 export function blockFits(d: Data, date: string, startMin: number, endMin: number, ignoreId?: string): boolean {
   if (!(Number.isInteger(startMin) && Number.isInteger(endMin) && startMin >= 0 && endMin <= 1440 && endMin > startMin)) return false;
   const tz = settingsOf(d).timezone;
   const span: [number, number] = [zonedToUtc(date, startMin, tz), zonedToUtc(date, endMin, tz)];
-  const fixed = expandEvents(d, date).map((i): [number, number] => [i.start, i.end]);
-  const blocks = blocksOn(d, date).filter((b) => b.id !== ignoreId).map(blockSpan);
-  return ![...fixed, ...blocks].some((x) => overlaps(span, x));
+  return !blocksOn(d, date).filter((b) => b.id !== ignoreId).map(blockSpan).some((x) => overlaps(span, x));
 }
 
 const lastSortKey = (d: Data): string | null => live(d, 'tasks').reduce<string | null>((m, t) => (m === null || t.sortKey > m ? t.sortKey : m), null);
@@ -160,6 +169,8 @@ function liveProject(d: Data, id: string | null | undefined) {
   return p && p.deletedAt === null ? p : undefined;
 }
 
+export const cleanLabels = (xs: string[]): string[] => [...new Set(xs.map((x) => x.trim().replace(/^@/, '').toLowerCase()).filter(Boolean))].slice(0, 20);
+
 function newTask(d: Data, input: TaskInput): Fields<'tasks'> {
   const s = settingsOf(d);
   const project = liveProject(d, input.projectId);
@@ -169,10 +180,11 @@ function newTask(d: Data, input: TaskInput): Fields<'tasks'> {
   return {
     kind: sprint ? 'sprint' : 'task',
     title: input.title.trim(),
-    finishCondition: (input.finishCondition ?? '').trim(),
+    finishCondition: '',
+    labels: cleanLabels(input.labels ?? []),
     notes: input.notes ?? '',
     tagId: input.tagId && get(d, 'tags', input.tagId) ? input.tagId : null,
-    priority: input.priority ?? 'should',
+    priority: input.priority ?? 'none',
     estimateMin: input.estimateMin ?? null,
     dueDate: input.dueDate ?? null,
     dueTime: input.dueTime ?? null,
@@ -227,14 +239,13 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
       if (!t || t.deletedAt !== null) return fail('Task not found.');
       const i = cmd.input;
       const e = validateTaskFields(i);
-      if (i.finishCondition !== undefined && isLocked(t) && i.finishCondition.trim() !== t.finishCondition) e.finishCondition = 'The finish condition is locked once the timer has started.';
       if (i.timer !== undefined && isLocked(t) && JSON.stringify(i.timer) !== JSON.stringify(t.timer)) e.timer = 'The timer mode is fixed once it has started.';
       if (i.tagId && !get(d, 'tags', i.tagId)) e.tagId = 'Unknown tag.';
       if (i.projectId && !liveProject(d, i.projectId)) e.projectId = 'Unknown project.';
       return checked(e, () => {
         const patch: Partial<Task> = {};
         if (i.title !== undefined) patch.title = i.title.trim();
-        if (i.finishCondition !== undefined) patch.finishCondition = i.finishCondition.trim();
+        if (i.labels !== undefined) patch.labels = cleanLabels(i.labels);
         if (i.notes !== undefined) patch.notes = i.notes;
         if (i.tagId !== undefined) patch.tagId = i.tagId;
         if (i.priority !== undefined) patch.priority = i.priority;
@@ -272,26 +283,14 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
 
     case 'timer': {
       const t = activeTask(d);
-      if (!t) return fail('No task in focus. Give a task a finish condition to start.');
-      if (!ownsTimer(d, ctx.deviceId)) return fail(`Running on ${timerOf(d).ownerName || 'another device'}. Take over to control it here.`);
-      if (cmd.action === 'start' || cmd.action === 'resume') {
-        if (t.runtime.status === 'running') return ok(d);
-        let next: Task = { ...t, parkedAt: null };
-        // Inside one of its blocks, a fresh countdown runs to the block's end (§6.6).
-        const block = blocksOn(d, todayOf(d, ctx.now)).find((b) => b.taskId === t.id && blockSpan(b)[0] <= ctx.now && ctx.now < blockSpan(b)[1]);
-        if (block && t.runtime.status === 'idle' && t.timer.mode === 'countdown') {
-          next.timer = { ...t.timer, countdown: { durationMs: Math.max(60_000, blockSpan(block)[1] - ctx.now), onExpire: settingsOf(d).blockEnd } };
-        }
-        next = start(advance(next, ctx.now).task, ctx.now);
-        let out = d;
-        if (t.startedAt === null) {
-          next.startedAt = ctx.now;
-          out = create(out, 'activity', { type: 'started', taskId: t.id, at: ctx.now, reason: '' }, ctx).d;
-        }
-        out = update(out, 'tasks', t.id, next, ctx);
-        out = update(out, 'timer', 'current', { taskId: t.id, ownerDeviceId: ctx.deviceId, ownerName: ctx.deviceName ?? '', takeoverAt: null }, ctx);
-        return ok(out);
+      if (!t) {
+        // Nothing in focus: Start takes the head of the queue (Space and the global shortcut keep working).
+        const head = (cmd.action === 'start' || cmd.action === 'resume') && deriveQueue(d, ctx.now)[0];
+        if (!head) return fail('Nothing to start. Add a task with N or Ctrl+K.');
+        return fromTransition(transition(d, head.id, 'doing', ctx, { start: true }));
       }
+      if (!ownsTimer(d, ctx.deviceId)) return fail(`Running on ${timerOf(d).ownerName || 'another device'}. Take over to control it here.`);
+      if (cmd.action === 'start' || cmd.action === 'resume') return t.runtime.status === 'running' ? ok(d) : ok(startTimer(d, t, ctx));
       if (cmd.action === 'skipPhase' && t.timer.mode !== 'pomodoro') return fail('Skip is only available in Pomodoro mode.');
       const s = cmd.action === 'pause' ? pauseAt(t, ctx.now) : cmd.action === 'reset' ? reset(t, ctx.now) : skipPhase(t, ctx.now);
       return ok(recordSlices(update(d, 'tasks', t.id, s.task, ctx), t.id, s.slices, ctx), s.events);
@@ -300,28 +299,59 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
     case 'task.finish': {
       const t = get(d, 'tasks', cmd.id);
       if (!t || t.deletedAt !== null || !isOpen(t)) return fail('Only an open task can be finished.');
-      const focused = activeTask(d)?.id === t.id;
-      if (focused && !ownsTimer(d, ctx.deviceId)) return fail('Take over the timer on this device first.');
-      const s = stopTask(d, t, ctx);
-      let out = update(s.d, 'tasks', t.id, { ...s.task, status: 'done', outcome: t.kind === 'sprint' ? 'shipped' : 'finished', completedAt: ctx.now, nextCheckpointMs: null }, ctx);
-      out = create(out, 'activity', { type: 'finished', taskId: t.id, at: ctx.now, reason: '' }, ctx).d;
-      out = spawnNext(out, t, ctx);
-      return ok(focused || timerOf(out).taskId === t.id ? update(out, 'timer', 'current', { taskId: null }, ctx) : out);
+      return fromTransition(transition(d, t.id, 'done', ctx));
     }
 
     case 'task.close': {
       const t = get(d, 'tasks', cmd.id);
       if (!t || t.deletedAt !== null || !isOpen(t)) return fail('Only an open task can be dropped.');
       if (!isDropReason(cmd.reason)) return fail('Give a reason (at least 3 characters).');
-      const focused = activeTask(d)?.id === t.id;
-      if (focused && !ownsTimer(d, ctx.deviceId)) return fail('Take over the timer on this device first.');
-      const s = stopTask(d, t, ctx);
-      const today = todayOf(d, ctx.now);
-      let out = s.d;
-      for (const b of live(d, 'blocks')) if (b.taskId === t.id && b.date >= today) out = recycle(out, 'blocks', b.id, ctx);
-      out = update(out, 'tasks', t.id, { ...s.task, status: 'dropped', outcome: null, completedAt: ctx.now, nextCheckpointMs: null }, ctx);
-      out = create(out, 'activity', { type: 'dropped', taskId: t.id, at: ctx.now, reason: cmd.reason.trim() }, ctx).d;
-      return ok(focused || timerOf(out).taskId === t.id ? update(out, 'timer', 'current', { taskId: null }, ctx) : out);
+      return fromTransition(transition(d, t.id, 'dropped', ctx, { reason: cmd.reason }));
+    }
+
+    case 'task.start': {
+      const t = get(d, 'tasks', cmd.id);
+      if (!t || t.deletedAt !== null) return fail('Task not found.');
+      if (t.status === 'doing') return cmd.run && t.runtime.status !== 'running' ? (ownsTimer(d, ctx.deviceId) ? ok(startTimer(d, t, ctx)) : fail('Take over the timer on this device first.')) : ok(d);
+      return fromTransition(transition(d, t.id, 'doing', ctx, { start: cmd.run === true }));
+    }
+
+    case 'task.pause': {
+      const t = get(d, 'tasks', cmd.id);
+      if (!t || t.deletedAt !== null) return fail('Task not found.');
+      if (t.status !== 'doing') return ok(d);
+      return fromTransition(transition(d, t.id, 'open', ctx));
+    }
+
+    case 'task.sort': {
+      const t = get(d, 'tasks', cmd.id);
+      if (!t || t.deletedAt !== null) return fail('Task not found.');
+      const a = cmd.afterId ? get(d, 'tasks', cmd.afterId) : null;
+      const b = cmd.beforeId ? get(d, 'tasks', cmd.beforeId) : null;
+      if ((cmd.afterId && !a) || (cmd.beforeId && !b)) return fail('That neighbour is gone.');
+      let key: string;
+      try {
+        const lo = a?.sortKey ?? null;
+        const hi = b?.sortKey ?? null;
+        key = lo !== null && hi !== null && lo >= hi ? keyBetween(lo, null) : keyBetween(lo, hi);
+      } catch {
+        return fail('Could not order that task.');
+      }
+      const patch: Partial<Task> = { sortKey: key, order: a ? a.order + 0.5 : b ? b.order - 0.5 : t.order };
+      if (cmd.dueDate !== undefined) {
+        if (cmd.dueDate !== null && !isDate(cmd.dueDate)) return fail('Invalid date.');
+        patch.dueDate = cmd.dueDate;
+      }
+      let out = update(d, 'tasks', t.id, patch, ctx);
+      if (cmd.columnId !== undefined && cmd.columnId !== t.columnId) {
+        const p = liveProject(d, t.projectId);
+        if (!p || !p.columns.some((c) => c.id === cmd.columnId)) return fail('Unknown section.');
+        const to = targetForColumn(out, get(out, 'tasks', t.id) as Task, cmd.columnId);
+        const r = transition(out, t.id, to, ctx, { columnId: cmd.columnId });
+        if (!r.ok) return fail(r.error);
+        out = r.d;
+      }
+      return ok(out);
     }
 
     case 'task.moveCard': {
@@ -343,7 +373,10 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
       } catch {
         return fail('Could not order that card.');
       }
-      return ok(update(d, 'tasks', t.id, { columnId: cmd.columnId, sortKey: key }, ctx));
+      const moved = update(d, 'tasks', t.id, { columnId: cmd.columnId, sortKey: key }, ctx);
+      // The column is the status: Doing = in focus, Done = finished, any other = open (Phase 3.7 §1).
+      const to = targetForColumn(moved, get(moved, 'tasks', t.id) as Task, cmd.columnId);
+      return fromTransition(transition(moved, t.id, to, ctx, { columnId: cmd.columnId }));
     }
 
     case 'task.drop':
@@ -358,37 +391,29 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
       if (!ownsTimer(d, ctx.deviceId)) return fail('Take over the timer on this device first.');
       const kill = cmd.type === 'sprint.checkpoint';
       if (kill && t.kind !== 'sprint') return fail('Only sprints have checkpoints.');
-      const s = stopTask(d, t, ctx);
-      let out = s.d;
+      if (kill) return fromTransition(transition(d, t.id, 'done', ctx, { outcome: 'killed', reason: reason.trim() }));
+      // Drop parks the task at the back and frees today's planned time; the time worked is kept.
       const today = todayOf(d, ctx.now);
-      // Drop clears the task's blocks from today on, so the runway frees that time.
+      let out = d;
       for (const b of live(d, 'blocks')) if (b.taskId === t.id && b.date >= today) out = recycle(out, 'blocks', b.id, ctx);
-      out = update(
-        out,
-        'tasks',
-        t.id,
-        kill
-          ? { ...s.task, status: 'done', outcome: 'killed', completedAt: ctx.now, nextCheckpointMs: null }
-          : // startedAt cleared: the lock (§6.4) applies to the current run, so a dropped task is free again.
-            { ...s.task, status: 'inbox', startedAt: null, dropCount: t.dropCount + 1, parkedAt: ctx.now, order: maxOrder(d) + 1 },
-        ctx,
-      );
-      out = create(out, 'activity', { type: kill ? 'killed' : 'dropped', taskId: t.id, at: ctx.now, reason: reason.trim() }, ctx).d;
-      return ok(update(out, 'timer', 'current', { taskId: null }, ctx));
+      const r = transition(out, t.id, 'open', ctx, { park: true });
+      if (!r.ok) return fail(r.error);
+      out = update(r.d, 'tasks', t.id, { startedAt: null, order: maxOrder(d) + 1 }, ctx);
+      out = create(out, 'activity', { type: 'dropped', taskId: t.id, at: ctx.now, reason: reason.trim() }, ctx).d;
+      return ok(out);
     }
 
     case 'task.reopen': {
       const t = get(d, 'tasks', cmd.id);
       if (!t || isOpen(t)) return fail('Only finished or dropped tasks can be reopened.');
-      const every = t.checkpointEveryMin ?? settingsOf(d).checkpointEveryMin;
-      return ok(update(d, 'tasks', t.id, { status: 'inbox', outcome: null, completedAt: null, startedAt: null, parkedAt: null, order: minOrder(d) - 1, nextCheckpointMs: t.kind === 'sprint' ? t.workMs + every * MIN : null }, ctx));
+      return fromTransition(transition(d, t.id, 'open', ctx));
     }
 
     case 'block.create': {
       if (!isDate(cmd.date)) return fail('Invalid date.');
       const t = cmd.taskId ? get(d, 'tasks', cmd.taskId) : undefined;
       if (cmd.taskId && (!t || t.deletedAt !== null)) return fail('Task not found.');
-      if (!blockFits(d, cmd.date, cmd.startMin, cmd.endMin)) return fail('That time overlaps a fixed event or another block.');
+      if (!blockFits(d, cmd.date, cmd.startMin, cmd.endMin)) return fail('That time overlaps another planned block.');
       const kind = cmd.kind ?? (t?.kind === 'sprint' ? 'sprint' : 'work');
       const r = create(d, 'blocks', { taskId: cmd.taskId, tagId: t?.tagId ?? null, title: (cmd.title ?? t?.title ?? 'Block').slice(0, 120), date: cmd.date, startMin: cmd.startMin, endMin: cmd.endMin, tz: settingsOf(d).timezone, kind, auto: false }, ctx);
       return ok(r.d, [], r.rec.id);
@@ -397,7 +422,7 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
     case 'block.move': {
       const b = get(d, 'blocks', cmd.id);
       if (!b || b.deletedAt !== null) return fail('Block not found.');
-      if (!isDate(cmd.date) || !blockFits(d, cmd.date, cmd.startMin, cmd.endMin, b.id)) return fail('That time overlaps a fixed event or another block.');
+      if (!isDate(cmd.date) || !blockFits(d, cmd.date, cmd.startMin, cmd.endMin, b.id)) return fail('That time overlaps another planned block.');
       return ok(update(d, 'blocks', b.id, { date: cmd.date, startMin: cmd.startMin, endMin: cmd.endMin }, ctx));
     }
 

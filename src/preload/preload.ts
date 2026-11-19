@@ -25,6 +25,7 @@ const api: ChronosApi = {
     overlayExpand: (on) => ipcRenderer.send(CHANNELS.overlayExpand, on),
     closeNotepad: (created) => ipcRenderer.send(CHANNELS.closeNotepad, created ?? null),
     closePalette: () => ipcRenderer.send(CHANNELS.closePalette),
+    notepadResize: (h) => ipcRenderer.send(CHANNELS.notepadResize, h),
     notify: (text, undoToken) => ipcRenderer.send(CHANNELS.notify, text, undoToken),
     onOpen: (cb) => subscribe<void>(CHANNELS.open, () => cb()),
     quit: () => ipcRenderer.send(CHANNELS.quit),

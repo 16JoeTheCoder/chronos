@@ -21,7 +21,7 @@ service cloud.firestore {
           && (!('fw' in d) || d.fw is map)
           && d.size() < 80;
       }
-      // Schema v3 fields (docs/SYNC.md). Absent fields pass (documents written by v2 devices);
+      // Schema v3/v4 fields (docs/SYNC.md; v4 = Phase 3.7 labels, P4 priority, task settings). Absent fields pass (documents written by v2 devices);
       // the app's own validators are the real gate, these keep a bad client from storing junk.
       function shape() {
         let d = request.resource.data;
@@ -29,6 +29,9 @@ service cloud.firestore {
             || ((!('durationMin' in d) || (d.durationMin is int && d.durationMin >= 1 && d.durationMin <= 1440))
               && (d.get('startMin', null) == null) == (d.get('endMin', null) == null)))
           && (collection != 'ideas' || d.get('projectId', null) == null || d.projectId is string)
+          && (collection != 'tasks'
+            || ((!('labels' in d) || (d.labels is list && d.labels.size() <= 20))
+              && (!('priority' in d) || d.priority in ['must', 'should', 'nice', 'none'])))
           && (collection != 'blocks' || !('auto' in d) || d.auto is bool)
           && (collection != 'settings'
             || ((!('themeSchedule' in d) || (d.themeSchedule is list && d.themeSchedule.size() <= 24))
@@ -37,6 +40,8 @@ service cloud.firestore {
               && (!('energy' in d) || d.energy is map)
               && (!('widgets' in d) || d.widgets is map)
               && (!('planning' in d) || d.planning is map)
+              && (!('tasks' in d) || (d.tasks is map && d.tasks.get('doneRetentionHours', 24) in [0, 24, 72, 168]))
+              && (!('pillShowsClass' in d) || d.pillShowsClass is bool)
               && (!('parserReports' in d) || (d.parserReports is list && d.parserReports.size() <= 200))));
       }
       allow read: if owner() && known();

@@ -79,6 +79,8 @@ function NoteCard({ note, data, label, projectName, q, flash, onHeight }: NotePr
   const lines = useMemo(() => (editing ? [] : splitLines(note.body)), [note.body, editing]);
   const hasTasks = lines.some((l, i) => links.has(i) || isTaskLine(l));
   const analysed = useMemo(() => (editing ? [] : analyzeBody(note.body, parseCtx(data), note.projectId)), [note.body, note.projectId, editing, data.settings, data.projects, data.tags]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Lines that look like tasks but were not marked: one quiet offer in the header (Phase 3.7), never inline in the text.
+  const offers = analysed.filter((info, i) => info && !links.has(i) && info.input && (info.kind === 'chip' || (info.kind === 'task' && info.explicit)));
 
   return (
     <div ref={wrap} className="log-row">
@@ -88,6 +90,11 @@ function NoteCard({ note, data, label, projectName, q, flash, onHeight }: NotePr
           {projectName && <span className="note-project">{projectName}</span>}
           {isEdited(note) && <span className="note-edited">edited</span>}
           <span className="note-spacer" />
+          {!editing && offers.length > 0 && (
+            <button className="log-btn log-btn-quiet chip-ask" onClick={() => void queueLines(note, offers, { toastText: (n) => (n === 1 ? 'Added to your tasks' : `Added ${n} tasks`) })} title={offers.map((o) => o.body).join('\n')}>
+              {offers.length === 1 ? 'Add as task?' : `Add ${offers.length} as tasks?`}
+            </button>
+          )}
           {editing ? (
             <button className="log-btn" onClick={stopEdit}>
               Done
@@ -157,18 +164,13 @@ function NoteCard({ note, data, label, projectName, q, flash, onHeight }: NotePr
                   <span className="note-text">
                     <Marked text={info?.explicit ? info.body : raw} q={q} />
                   </span>
-                  {offer && info && (
-                    <button className="chip-ask" onClick={() => void queueLines(note, [info], { toastText: () => 'Added to your queue' })}>
-                      Add as task?
-                    </button>
-                  )}
                 </div>
               );
             })}
           </div>
         )}
         {!editing && links.size > 0 && (
-          <p className="note-foot">{links.size} {links.size === 1 ? 'task' : 'tasks'} added to your queue</p>
+          <p className="note-foot">{links.size} {links.size === 1 ? 'task' : 'tasks'} added to Tasks</p>
         )}
       </article>
     </div>

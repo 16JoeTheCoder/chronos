@@ -1,12 +1,17 @@
-// Home (PHASE23 §1, §6): one task owns the screen. Now (title, signature timer, Start/Pause,
-// Hold Enter to finish), Next and time left. Everything else is one key away: P plan, F focus,
-// N new, Ctrl+K palette. One DOM, three compositions: CSS keyed on data-signature (Tactile
-// digits, Stark reactor, TARS slabs, Gargantua ring) reshapes it, never a different tree.
+// Home (PHASE23 §1, §6; Phase 3.7 §4): one task owns the screen. Now (title, signature timer,
+// Start/Pause, Hold Enter to finish), Next and time left, and the shelf of today's cards below.
+// Drag the task in focus down to the shelf (or press Pause) and it pauses: the timer stops, the
+// session closes, the time is kept, and the focus area becomes an empty drop target. Drop any card
+// there to start it. One DOM, many compositions: CSS keyed on data-signature reshapes it.
 
-import { useRef, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { clockOf, formatHM, formatHuman } from '../../core/format';
 import type { Data } from '../../core/model/types';
-import { activeTask, blockSpan, deriveQueue, ownsTimer, todayOf } from '../../core/tasks/tasks';
+import { blockSpan, deriveQueue, ownsTimer, todayOf } from '../../core/tasks/tasks';
+import { homeModel } from '../../core/tasks/screens';
+import { beginDrag, registerTarget, useDrag } from '../components/drag';
+import { DEFAULT_DUR } from '../runway/model';
+import { TodayShelf } from './TodayShelf';
 import { upcoming } from '../../core/time/schedule';
 import { Icon } from '../components/Icon';
 import { sizeFor, useWidth } from '../focus/FocusCore';
@@ -21,7 +26,23 @@ import { Widgets } from '../widgets/Widgets';
 
 export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSchedule }: { d: Data; m: DayModel; now: number; deviceId: string; onFocus: () => void; onPlan: () => void; onDone?: () => void; onSchedule?: () => void }) {
   const theme = useOptionalTheme();
-  const task = activeTask(d);
+  const home = homeModel(d, now);
+  const task = home.active;
+  const drag = useDrag();
+  const hero = useRef<HTMLElement>(null);
+  // The focus area takes a card (start it); the task in focus can be dragged out to the shelf (pause it).
+  useEffect(
+    () =>
+      registerTarget('focus-slot', {
+        el: () => hero.current,
+        accepts: (it) => it.kind === 'task' && it.taskId !== task?.id,
+        drop: (it) => {
+          if (it.kind !== 'task') return;
+          void run({ type: 'task.start', id: it.taskId, run: true }).then((r) => r.ok && toast(`Started ${it.title}.`));
+        },
+      }),
+    [task?.id],
+  );
   const t = useTimer(task);
   const root = useRef<HTMLDivElement>(null);
   useHolo(root);
@@ -36,6 +57,12 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSche
   const nextEv = events[0];
   const thenEv = events[1];
   const queue = deriveQueue(d, now).filter((x) => x.id !== task?.id);
+  const [pausing, setPausing] = useState(false);
+  const pause = () => {
+    if (!task || pausing) return;
+    setPausing(true);
+    void run({ type: 'task.pause', id: task.id }).finally(() => setPausing(false));
+  };
   const block = task ? m.blocks.find((b) => b.taskId === task.id) : undefined;
   const nextText = nextEv ? `${nextEv.event.title} at ${clockOf(nextEv.start, nextEv.event.tz)}` : queue[0] ? queue[0].title : 'Nothing fixed ahead';
   const over = t ? t.overtime : 0;
@@ -57,17 +84,20 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSche
         {onSchedule && <button className="btn btn-ghost btn-s" onClick={onSchedule}><Icon name="calendar" size={14} /> Schedule</button>}
       </div>
 
-      <section className="now-hero holo" aria-label="Current task">
+      <section ref={hero} className={`now-hero holo${drag?.target === 'focus-slot' ? ' drop-on' : ''}${!task ? ' is-empty' : ''}`} aria-label="Current task">
         {task ? (
           <>
-            <div className="now-head">
+            <div
+              className="now-head now-grab"
+              title="Drag to the shelf below to pause"
+              onPointerDown={(e) => (e.target as HTMLElement).closest('button') || beginDrag(e, { kind: 'task', taskId: task.id, title: task.title, dur: task.estimateMin ?? DEFAULT_DUR })}
+            >
               <h1 className="now-title">
                 {lead && <span className="light">{lead}: </span>}
                 <span className="strong">{rest.join(': ')}</span>
               </h1>
               {block && <span className="chip-time">{formatHM(block.startMin)} to {formatHM(block.endMin)}</span>}
             </div>
-            {task.finishCondition && <p className="now-fc">{task.finishCondition}</p>}
             <div className="now-timer">
               <div className="sig-slot">
                 <SignatureTimer progress={t?.progress ?? 0} remainingSec={main / 1000} elapsedSec={(t?.elapsed ?? 0) / 1000} estimateSec={task.estimateMin ? task.estimateMin * 60 : undefined} running={running} overrun={over > 0} size={size} onComplete={hold.pulse} />
@@ -75,7 +105,7 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSche
               <div className="now-actions">
                 {owner ? (
                   <>
-                    <button className="btn btn-accent btn-l" onClick={() => void run({ type: 'timer', action: running ? 'pause' : 'start' })}>
+                    <button className="btn btn-accent btn-l" disabled={pausing} onClick={() => (running ? pause() : void run({ type: 'timer', action: 'start' }))}>
                       <Icon name={running ? 'pause' : 'play'} /> {running ? 'Pause' : task.runtime.status === 'paused' ? 'Resume' : 'Start'}
                     </button>
                     <HoldButton hold={hold} reduce={!!theme?.motionOff} label="Hold Enter to finish" hintId="now-hint" className="btn-hold" />
@@ -90,9 +120,13 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSche
           </>
         ) : (
           <div className="now-empty">
-            <h1 className="now-title"><span className="strong">Nothing queued.</span></h1>
-            <p className="muted">Press N to add a task, or Ctrl K to type one in a sentence.</p>
-            <button className="btn btn-ghost" onClick={onPlan}>Plan the day <kbd>P</kbd></button>
+            <h1 className="now-title"><span className="strong">{home.shelf.length ? 'Drop a task here to start it' : 'Nothing for today yet'}</span></h1>
+            <p className="muted">{home.shelf.length ? 'Drag a card up from the shelf, or start the next one.' : 'Press Ctrl+K and type a task. It lands here for today.'}</p>
+            {queue[0] && (
+              <button className="btn btn-accent" onClick={() => void run({ type: 'task.start', id: queue[0]!.id, run: true })}>
+                <Icon name="play" /> Start {queue[0].title}
+              </button>
+            )}
           </div>
         )}
         <div className="now-next">
@@ -102,26 +136,11 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSche
         </div>
       </section>
 
-      <aside className="now-side" aria-label="Up next">
-        {queue.length > 0 && (
-          <section className="widget w-queue" aria-label="Up next">
-            <h2>Up next</h2>
-            <ul>
-              {queue.slice(0, 3).map((q) => {
-                const b = m.blocks.find((x) => x.taskId === q.id);
-                return (
-                  <li key={q.id}>
-                    <span className="q-dot" aria-hidden="true" />
-                    <span className="q-title">{q.title}</span>
-                    {b && <span className="mono muted">{formatHM(b.startMin)}</span>}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
+      <aside className="now-side" aria-label="Today">
         <Widgets d={d} m={m} now={now} task={task} />
       </aside>
+
+      <TodayShelf d={d} now={now} tasks={home.shelf} pausedIds={home.pausedIds} activeId={task?.id ?? null} />
     </div>
   );
 }

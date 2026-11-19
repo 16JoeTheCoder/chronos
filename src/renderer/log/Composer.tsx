@@ -1,5 +1,6 @@
 // The post box. Enter posts (one write, nothing is written while typing); Shift+Enter is a newline.
 // `/p` or `/project` (or Ctrl+Shift+P) opens the project list: arrows, Enter.
+import { bulletEnter } from '../../core/log/smartText';
 import { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { analyzeBody, autoLines, wordCount } from '../../core/log';
 import type { Data } from '../../core/model/types';
@@ -78,7 +79,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer({ da
           className="composer-input"
           rows={5}
           value={text}
-          placeholder="What are you working on? Start a line with - to queue a task."
+          placeholder="What are you working on? End a line with TASK to add it to Tasks."
           aria-label="Write a post"
           role="combobox"
           aria-haspopup="listbox"
@@ -107,6 +108,17 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer({ da
                 e.preventDefault();
                 e.stopPropagation();
                 close();
+                return;
+              }
+            }
+            // Shift+Enter in a "- " line continues the bullet list (an empty bullet ends it).
+            if (e.key === 'Enter' && e.shiftKey && !e.nativeEvent.isComposing) {
+              const ta = e.currentTarget;
+              const b = ta.selectionStart === ta.selectionEnd ? bulletEnter(text, ta.selectionStart) : null;
+              if (b) {
+                e.preventDefault();
+                setText(b.value);
+                setTimeout(() => ta.setSelectionRange(b.caret, b.caret));
                 return;
               }
             }

@@ -2,7 +2,7 @@
 
 **Own your time.** A Windows 11 app for Josef Yang: a day runway (schedule plus time-left maths), a task queue, a single-focus timer, a Log of notes, a project board, a quick-add palette, and four themes (Tactile instrument, Stark workshop, TARS day, Gargantua night). It replaces [Monolith](https://github.com/16JoeTheCoder/monolith).
 
-Planning is free; execution is strict. One task is in focus at a time, it needs a finish condition, and it ends only by **holding Enter for 2 seconds** (Space starts and pauses and never finishes). Everything is local-first; optional live sync between your PCs runs through Firebase, and Claude Desktop can read and change your data through a local MCP server.
+Planning is free; execution is strict. One task is in focus at a time (you start it; a title is all a task needs), and it ends only by **holding Enter for 2 seconds** (Space starts and pauses and never finishes). Everything is local-first; optional live sync between your PCs runs through Firebase, and Claude Desktop can read and change your data through a local MCP server.
 
 **Status, plainly:** built and tested on Linux. The "Live on the desktop" layer (Home behind your desktop icons) ships **OFF** with the normal window as the fallback, and is unverified on Windows, as are the overlay, notepad and palette windows. Do the Windows checklist before trusting them.
 

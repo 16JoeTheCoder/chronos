@@ -34,7 +34,7 @@
 .pal { width: min(720px, 100%); max-height: min(560px, 100%); display: flex; flex-direction: column; background: var(--c-panel); border: 1px solid var(--c-line-strong); border-radius: var(--r-lg); box-shadow: var(--depth-float); overflow: hidden; color: var(--c-text); }
 .in-app .pal { max-height: calc(100vh - min(140px, 14vh) - 40px); }
 .pal-head { display: flex; flex-direction: column; gap: 10px; padding: 18px 22px 14px; border-bottom: 1px solid var(--c-line); }
-.pal-eyebrow { margin: 0; font: 600 12px/1 var(--font-text); letter-spacing: .08em; text-transform: uppercase; color: var(--c-text-2); }
+.pal-eyebrow { margin: 0; font: 600 13px/1 var(--font-text); letter-spacing: 0; color: var(--c-text-2); }
 .pal-input { width: 100%; border: 0; background: transparent; padding: 0; font: 500 21px/1.4 var(--font-num); color: var(--c-text); caret-color: var(--c-accent); }
 .pal-input::placeholder { color: var(--c-text-3); }
 .pal-input:focus-visible { outline: none; }
@@ -45,7 +45,7 @@
 .pal-list { list-style: none; margin: 0; padding: 8px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--c-line-strong) transparent; }
 .pal-list li { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 14px; border-radius: var(--r-md); cursor: pointer; }
 .pal-list li[data-sel="true"] { background: color-mix(in srgb, var(--c-text) 7%, var(--c-panel)); box-shadow: inset 0 0 0 1px var(--c-line-strong); }
-.pal-list li.pal-group { min-height: 0; padding: 12px 14px 4px; cursor: default; font: 600 12px/1 var(--font-text); letter-spacing: .08em; text-transform: uppercase; color: var(--c-text-2); }
+.pal-list li.pal-group { min-height: 0; padding: 12px 14px 4px; cursor: default; font: 600 13px/1 var(--font-text); letter-spacing: 0; color: var(--c-text-2); }
 .pal-label { flex: 1; min-width: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pal-hint { font-size: 13px; color: var(--c-text-2); white-space: nowrap; }
 .pal-list .pal-empty { color: var(--c-text-2); cursor: default; }
@@ -97,3 +97,9 @@ p, .st-note, .w-sub { text-wrap: pretty; }
 /* Key hints inside filled buttons take the button's text colour. */
 .btn:not(.btn-ghost) kbd, .btn-accent kbd, .log-btn-primary kbd { color: inherit; border-color: color-mix(in srgb, currentColor 55%, transparent); background: transparent; }
 .now-title, .focus-title, .bd-head h2 { text-wrap: balance; }
+/* Phase 3.7: narrow windows keep the search as a 40 px icon button instead of a squeezed pill. */
+@media (max-width: 600px) {
+  html .topbar .tb-search { width: 40px; min-width: 40px; padding: 0; justify-content: center; justify-self: end; }
+  html .topbar .tb-search .tb-search-text { display: none; }
+  html .topbar .tb-task-title { max-width: 120px; }
+}
