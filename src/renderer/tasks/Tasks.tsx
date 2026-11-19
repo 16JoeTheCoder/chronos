@@ -11,6 +11,7 @@ import type { Data, Project, Task } from '../../core/model/types';
 import { live } from '../../core/repo/repo';
 import { all, byProject, done, inbox, today as todaySel, upcoming } from '../../core/tasks/selectors';
 import { todayOf } from '../../core/tasks/tasks';
+import { addDays } from '../../core/time/zone';
 import { boardCards, doingColumnId, doneColumnId } from '../../core/board';
 import { Icon } from '../components/Icon';
 import { recycleWithUndo } from '../components/actions';
@@ -75,7 +76,18 @@ export function Tasks({ d, now, view, onView, projectId, onProject, onEdit, onOp
       const rest = list.filter((t) => !late.includes(t));
       return [...(late.length ? [{ key: 'late', title: 'Overdue', late: true, tasks: late }] : []), { key: 'today', title: late.length ? 'Today' : null, tasks: rest, into: { dueDate: today } }];
     }
-    if (view === 'upcoming') return upcoming(d, now).map((g) => ({ key: g.overdue ? 'late' : g.date, title: g.overdue ? 'Overdue' : dueLabel(g.date, today), late: g.overdue, tasks: g.tasks, ...(g.overdue ? {} : { into: { dueDate: g.date } }) }));
+    if (view === 'upcoming') {
+      // Runs of empty days collapse into one "Nothing due" line (today and tomorrow always show).
+      const out: Group[] = [];
+      for (const g of upcoming(d, now)) {
+        if (g.overdue) { out.push({ key: 'late', title: 'Overdue', late: true, tasks: g.tasks }); continue; }
+        const last = out[out.length - 1];
+        const keep = g.tasks.length > 0 || g.date === today || g.date === addDays(today, 1);
+        if (!keep && last && last.tasks.length === 0 && last.key.startsWith('run:')) { last.title = `${(last.title ?? '').split(' to ')[0]} to ${dueLabel(g.date, today)}`; continue; }
+        out.push({ key: keep ? g.date : `run:${g.date}`, title: dueLabel(g.date, today), tasks: g.tasks, into: { dueDate: g.date } });
+      }
+      return out;
+    }
     return [{ key: 'all', title: null, tasks: all(d) }];
   }, [d, now, view, project, today]);
 

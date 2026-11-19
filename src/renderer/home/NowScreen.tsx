@@ -64,7 +64,7 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSche
     void run({ type: 'task.pause', id: task.id }).finally(() => setPausing(false));
   };
   const block = task ? m.blocks.find((b) => b.taskId === task.id) : undefined;
-  const nextText = nextEv ? `${nextEv.event.title} at ${clockOf(nextEv.start, nextEv.event.tz)}` : queue[0] ? queue[0].title : 'Nothing fixed ahead';
+  const nextText = nextEv ? `${nextEv.event.title}${nextEv.date !== today ? ' tomorrow' : ''} at ${clockOf(nextEv.start, nextEv.event.tz)}` : queue[0] ? queue[0].title : 'Nothing fixed ahead';
   const over = t ? t.overtime : 0;
   const main = t ? (t.remaining !== null ? (over > 0 ? over : t.remaining) : t.elapsed) : 0;
   const kind = theme?.theme.motion.signature.kind;
@@ -131,7 +131,7 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSche
         )}
         <div className="now-next">
           <span>Next: <b>{nextText}</b></span>
-          {thenEv && <span>Then: <b>{thenEv.event.title} at {clockOf(thenEv.start, thenEv.event.tz)}</b></span>}
+          {thenEv && <span>Then: <b>{thenEv.event.title}{thenEv.date !== today ? ' tomorrow' : ''} at {clockOf(thenEv.start, thenEv.event.tz)}</b></span>}
           {!nextEv && queue[1] && <span>Then: <b>{queue[1].title}</b></span>}
         </div>
       </section>

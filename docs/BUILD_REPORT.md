@@ -1,4 +1,36 @@
-# Build report: Chronos (Phase 3.5 fix pass)
+# Build report: Chronos (Phase 3.7: one task model, Tasks, polish)
+
+## Status (2026-11-19)
+
+`npm run typecheck` clean · `npm test` 957 passed (72 files) · `npm run audit` passed · smoke passed (Xvfb; adds Tasks quick add and complete, Home drag-to-pause / drag-to-start / Esc-cancel, Plan now-line, notepad push). Cross-screen test: `tests/core/crossScreen.test.ts`.
+
+**Deploy needed:** Firestore rules changed (schema v4). See `SETUP.md`. Both PCs must take the new build (an old build goes read-only on v4 records, by design).
+
+Windows-only behaviour is unverified: `docs/WINDOWS_CHECKLIST.md` 51-58.
+
+## Impeccable
+
+### Detector (Assessment B, isolated sub-agent)
+
+- Source scan of `src/renderer`: 0 (regex-only, HTML shells; low coverage).
+- Live app over CDP: Home, Tasks, Board, Plan, Focus, Log, Settings, overlay in Tactile; Home, Tasks, Log in Stark. Findings: 1 `repeating-stripes-gradient` on Plan (the hatch on fixed events and the buffer encodes meaning: false positive), 2 `ai-color-palette` on Stark's reactor plasma (theme identity, kept by decision since Phase 2+3). Nothing else.
+
+### Critique (Assessment A, isolated sub-agents, desktop single-window order: A, then B, then A again after fixes)
+
+| Run | Total /40 | Excl. heuristic 10 (/36) | Lowest |
+| --- | --- | --- | --- |
+| Phase 3.5 run 2 | 30/40 | 27/36 | H8 2 |
+| 3.7 run 1 | 28/40 | 26/36 | H4 2, H8 2, H10 2 |
+| 3.7 run 2 (after round-1 fixes) | 29/40 | 26/36 | H4 2, H9 2 |
+
+**Target (≥ 32/36, none below 3) is not met.** Run 2 lifted H8 to 3 and H10 to 3; Consistency (H4) stays at 2, and Error recovery (H9) scored 2 because the reviewer could not exercise error states without changing data. Fixed after run 1: the pill's clipped time, Plan spacing and the now label touching the hour labels, the Tasks page frame and flag column, repeated day labels, the time-left formula copy, a visible shortcut line on Tasks, Home's empty band in text-timer themes. Fixed after run 2 (not re-scored): the Desktop/Trash bar no longer sits over the Plan cards (moved into the Plan header), "Then: Physics at 10:00" now says "tomorrow", List/Board toggles share one order, empty Upcoming days collapse into one line, "2 s" spelled out.
+
+Open from run 2: shared page container and one segmented control for Tasks and Board (H4); Focus left column composition; a stray outline in Stark's "Focus this week" widget (not traced); Board embedded in Tasks still shows its own project switcher and tabs; the Home banner and side card state free time twice.
+
+
+---
+
+# Previous: Build report: Chronos (Phase 3.5 fix pass)
 
 ## Status (2026-11-15)
 

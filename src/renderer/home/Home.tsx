@@ -191,7 +191,6 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
   ];
   if (s.runwayPosition === 'bottom') planSections.reverse();
 
-  const full = top === 'schedule';
   const body = top === 'schedule' ? (
     <ScheduleEditor
       d={d}
@@ -237,6 +236,8 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
         <span className="plan-back-gap" />
         <button className="btn btn-ghost btn-s" onClick={() => open('drawer')}><Icon name="list" size={14} /> Done today</button>
         <button className="btn btn-ghost btn-s" onClick={() => open('schedule')}><Icon name="calendar" size={14} /> Schedule</button>
+        <button className="btn btn-ghost btn-s" onClick={() => open('shelf')} aria-expanded={top === 'shelf'}><Icon name="folder" size={14} /> Desktop</button>
+        <TrashButton onOpen={() => open('trash')} />
       </div>
       {planSections}
     </main>
@@ -255,14 +256,6 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
 
         <div className="screen">{body}</div>
 
-        {!full && screen === 'plan' && (
-          <footer className="foot">
-            <button className="btn btn-ghost btn-s" onClick={() => open('shelf')} aria-expanded={top === 'shelf'}>
-              <Icon name="chevronUp" size={14} /> Desktop
-            </button>
-            <TrashButton onOpen={() => open('trash')} />
-          </footer>
-        )}
       </div>
 
       {top === 'drawer' && <DoneDrawer d={d} now={now} onClose={() => close('drawer')} />}

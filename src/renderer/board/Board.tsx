@@ -253,7 +253,7 @@ function Header({ snap, project, view, onView, onOpenLog, defaultBlockMin, switc
           </button>
         )}
         <div className="bd-tabs" role="tablist" aria-label="View">
-          {(['board', 'list'] as const).map((v) => (
+          {(['list', 'board'] as const).map((v) => (
             <button key={v} type="button" role="tab" aria-selected={view === v} tabIndex={view === v ? 0 : -1} onClick={() => onView(v)}
               onKeyDown={(e) => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); onView(v === 'board' ? 'list' : 'board'); } }}>
               {v === 'board' ? 'Board' : 'List'}

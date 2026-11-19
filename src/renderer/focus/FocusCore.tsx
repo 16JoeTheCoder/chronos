@@ -194,7 +194,7 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
           </div>
         </div>
         <p id="hold-hint" className="muted hold-hint">
-          Hold Enter for 2 s to finish. Space starts or pauses.
+          Hold Enter for 2 seconds to finish. Space starts or pauses. Esc leaves Focus.
         </p>
       </div>
 
