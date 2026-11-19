@@ -1,5 +1,5 @@
 /* Tasks (Phase 3.7). Theme tokens only. Spacing scale 4/8/12/16/24/32; controls 32 (small) or 44 px. */
-.tk { width: 100%; max-width: 880px; margin: 0 auto; padding: 24px 32px 48px; display: flex; flex-direction: column; gap: 16px; color: var(--c-text); font: 400 15px/22px var(--font-text); }
+.tk { width: 100%; max-width: 1320px; margin: 0 auto; padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 16px; color: var(--c-text); font: 400 15px/22px var(--font-text); }
 .tk ul { list-style: none; margin: 0; padding: 0; }
 .tk h1, .tk h2 { margin: 0; }
 
@@ -16,7 +16,7 @@
 
 .tk-mode { display: inline-flex; padding: 2px; border: 1px solid var(--c-line-strong); border-radius: var(--r-md); }
 .tk-mode button { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px; border: 0; border-radius: calc(var(--r-md) - 2px); background: transparent; color: var(--c-text-2); font: 500 13px/18px var(--font-text); cursor: pointer; }
-.tk-mode button[aria-pressed="true"] { background: var(--surface-3); color: var(--c-text); }
+.tk-mode button[aria-pressed="true"] { background: var(--c-accent); color: var(--c-on-accent); }
 
 /* Project switch */
 .tk-switch { position: relative; }
@@ -49,7 +49,7 @@
 .tk-group.is-late .tk-group-title { color: var(--c-danger); }
 .tk-group-empty { padding: 12px 0; color: var(--c-text-3); font-size: 13px; }
 .tk-list { display: flex; flex-direction: column; }
-.tk-row { position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto auto auto; align-items: start; gap: 4px 12px; min-height: 48px; padding: 12px 8px; border-bottom: 1px solid var(--c-line); cursor: default; user-select: none; transition: background var(--dur-fast) var(--ease); }
+.tk-row { position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr) 20px 96px; align-items: start; gap: 4px 12px; min-height: 48px; padding: 12px 8px; border-bottom: 1px solid var(--c-line); cursor: default; user-select: none; transition: background var(--dur-fast) var(--ease); }
 .tk-row:hover, .tk-row:focus-within { background: var(--sunken); }
 .tk-row:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .tk-row.is-sel { background: color-mix(in srgb, var(--c-accent) 10%, transparent); }
@@ -66,8 +66,8 @@
 .tk-name { overflow-wrap: anywhere; cursor: text; }
 .tk-row.is-done .tk-name { color: var(--c-text-3); text-decoration: line-through; cursor: default; }
 .tk-edit { width: 100%; min-height: 28px; margin: -3px 0; padding: 0 8px; border: 1px solid var(--c-line-strong); border-radius: var(--r-sm); background: var(--c-ground); color: var(--c-text); font: inherit; }
-.tk-badge { align-self: center; padding: 2px 8px; border-radius: var(--r-pill); background: var(--surface-3); color: var(--c-text); font: 500 12px/18px var(--font-text); white-space: nowrap; }
-.tk-acts { display: flex; gap: 2px; opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+.tk-badge { align-self: flex-start; padding: 2px 8px; border-radius: var(--r-pill); background: var(--surface-3); color: var(--c-text); font: 500 12px/18px var(--font-text); white-space: nowrap; }
+.tk-acts { display: flex; justify-content: flex-end; gap: 2px; opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
 .tk-row:hover .tk-acts, .tk-row:focus-within .tk-acts { opacity: 1; }
 .tk-act { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--c-text-2); cursor: pointer; }
 .tk-act:hover { background: var(--surface-3); color: var(--c-text); }
@@ -109,9 +109,10 @@
 @media (max-width: 720px) {
   .tk { padding: 16px; }
   .tk-sboard { grid-template-columns: minmax(0, 1fr); }
-  .tk-row { grid-template-columns: 24px minmax(0, 1fr) auto; }
-  .tk-row .tk-badge { grid-column: 2; justify-self: start; }
+  .tk-row { grid-template-columns: 24px minmax(0, 1fr) 20px; }
   .tk-acts { display: none; }
   .tk-row:focus-within .tk-acts { display: flex; opacity: 1; grid-column: 2 / -1; }
   .tk-views { gap: 2px; }
 }
+.tk-keys { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--c-text-2); }
+.tk-keys kbd:not(:first-child) { margin-left: 6px; }

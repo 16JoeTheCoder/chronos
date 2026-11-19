@@ -66,7 +66,8 @@ export function Overlay({ snap }: { snap: Snapshot }) {
               onPointerUp={() => hold.current?.release()}
               onPointerCancel={() => hold.current?.release()}
             >
-              <SignatureTimer mini progress={t.progress ?? 0} remainingSec={ms / 1000} running={running} overrun={over} />
+              {/* Ticking digits do not fit a round icon: show a status dot here and the time on the right. */}
+              {kind === 'ticking-digits' ? <span className="ov-dot" data-running={running} aria-hidden="true" /> : <SignatureTimer mini progress={t.progress ?? 0} remainingSec={ms / 1000} running={running} overrun={over} />}
               <i className="ov-icon-fill" aria-hidden="true" />
             </button>
             <button type="button" className="ov-title" data-hover={hover} data-two={!!classNow} onClick={() => void api.command({ type: 'timer', action: running ? 'pause' : task.runtime.status === 'paused' ? 'resume' : 'start' })} aria-label={running ? 'Pause' : 'Resume'}>
@@ -74,7 +75,7 @@ export function Overlay({ snap }: { snap: Snapshot }) {
               {classNow && <span className="ov-t-class">In class: {classNow}</span>}
               <span className="ov-t-act" aria-hidden="true">{running ? 'Pause' : 'Resume'}</span>
             </button>
-            {kind !== 'ticking-digits' && <span className="ov-time" role="timer">{time}</span>}
+            <span className="ov-time" role="timer">{time}</span>
           </div>
         </>
       ) : (

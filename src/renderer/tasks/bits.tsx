@@ -30,10 +30,11 @@ export function dueLabel(date: string, today: string): string {
   return date < today ? `Overdue · ${s}` : s;
 }
 
-export function TaskMeta({ d, t, today, hideProject }: { d: Data; t: Task; today: string; hideProject?: boolean }) {
+export function TaskMeta({ d, t, today, hideProject, hideDue }: { d: Data; t: Task; today: string; hideProject?: boolean; /** The group heading already says the day. */ hideDue?: boolean }) {
   const project = !hideProject && t.projectId ? d.projects[t.projectId] : undefined;
   const parts: JSX.Element[] = [];
-  if (t.dueDate) parts.push(<span key="due" className={`tm-due${t.dueDate < today ? ' is-late' : ''}`}>{dueLabel(t.dueDate, today)}{t.dueTime !== null ? ` ${formatHM(t.dueTime)}` : ''}</span>);
+  if (t.dueDate && hideDue) { if (t.dueTime !== null) parts.push(<span key="due" className="tm-due">{formatHM(t.dueTime)}</span>); }
+  else if (t.dueDate) parts.push(<span key="due" className={`tm-due${t.dueDate < today ? ' is-late' : ''}`}>{dueLabel(t.dueDate, today)}{t.dueTime !== null ? ` ${formatHM(t.dueTime)}` : ''}</span>);
   if (t.recurrence) parts.push(<span key="rep" className="tm-rep">Repeats</span>);
   if (t.estimateMin) parts.push(<span key="est">{t.estimateMin}m</span>);
   for (const l of labelsOf(t)) parts.push(<span key={`l${l}`} className="tm-label">@{l}</span>);

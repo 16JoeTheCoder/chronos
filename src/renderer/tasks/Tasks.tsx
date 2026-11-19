@@ -126,6 +126,7 @@ export function Tasks({ d, now, view, onView, projectId, onProject, onEdit, onOp
         <>
           <QuickAdd d={d} now={now} defaults={defaults} placeholder={project ? `Add a task to ${project.name}` : view === 'inbox' ? 'Add a task to the Inbox' : 'Add a task, like "essay draft fri 4pm !1 @school"'} />
           <TaskList d={d} groups={groups} today={today} project={project ?? null} onEdit={onEdit} empty={emptyText(view, project)} />
+          <p className="tk-keys" aria-hidden="true"><kbd>E</kbd> edit <kbd>S</kbd> start <kbd>Ctrl Enter</kbd> complete <kbd>Del</kbd> delete <kbd>G</kbd> then <kbd>I</kbd> <kbd>T</kbd> <kbd>U</kbd> <kbd>A</kbd> views <kbd>?</kbd> all keys</p>
           {doneList.length > 0 && (
             <section className="tk-done" aria-label="Done">
               <button type="button" className="tk-done-toggle" aria-expanded={showDone} onClick={() => setShowDone((v) => !v)}>
@@ -350,7 +351,7 @@ function TaskList({ d, groups, today, project, onEdit, empty }: { d: Data; group
               const i = index++;
               const line = spot && spot.group === g.key && spot.index === i;
               return (
-                <Row key={t.id} d={d} t={t} today={today} project={project} selected={selected(t.id)} lineBefore={!!line} dragging={drag?.item.kind === 'task' && drag.item.taskId === t.id}
+                <Row key={t.id} d={d} t={t} today={today} project={project} groupDate={g.into?.dueDate} selected={selected(t.id)} lineBefore={!!line} dragging={drag?.item.kind === 'task' && drag.item.taskId === t.id}
                   onClick={click} onEdit={onEdit} onComplete={() => void complete(targets(t))} onDelete={() => void remove(targets(t))} onMove={(dir) => moveFocus(t.id, dir)} />
               );
             })}
@@ -391,8 +392,8 @@ function spotAt(root: HTMLElement | null, groups: Group[], y: number, dragId: st
   return best;
 }
 
-function Row({ d, t, today, project, selected, lineBefore, dragging, onClick, onEdit, onComplete, onDelete, onMove }: {
-  d: Data; t: Task; today: string; project: Project | null; selected: boolean; lineBefore: boolean; dragging: boolean;
+function Row({ d, t, today, project, groupDate, selected, lineBefore, dragging, onClick, onEdit, onComplete, onDelete, onMove }: {
+  d: Data; t: Task; today: string; project: Project | null; groupDate?: string | null; selected: boolean; lineBefore: boolean; dragging: boolean;
   onClick: (t: Task, e: React.MouseEvent) => boolean; onEdit: (t: Task) => void; onComplete: () => void; onDelete: () => void; onMove: (dir: 1 | -1) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -442,10 +443,10 @@ function Row({ d, t, today, project, selected, lineBefore, dragging, onClick, on
           ) : (
             <span className="tk-name" onClick={(e) => { if (!e.shiftKey && !e.ctrlKey && !e.metaKey) setEditing(true); }}>{t.title}</span>
           )}
-          <TaskMeta d={d} t={t} today={today} hideProject={!!project} />
+          <TaskMeta d={d} t={t} today={today} hideProject={!!project} hideDue={groupDate === t.dueDate} />
+          {active && <span className="tk-badge">In focus</span>}
         </div>
-        <PrioFlag p={t.priority} />
-        {active && <span className="tk-badge">In focus</span>}
+        <span className="tk-flag"><PrioFlag p={t.priority} /></span>
         <div className="tk-acts">
           {!active && <button type="button" className="tk-act" aria-label={`Start ${t.title}`} title="Start (S)" onClick={() => void run({ type: 'task.start', id: t.id, run: true })}><Icon name="play" size={14} /></button>}
           <button type="button" className="tk-act" aria-label={`Edit ${t.title}`} title="Edit (E)" onClick={() => onEdit(t)}><Icon name="log" size={14} /></button>

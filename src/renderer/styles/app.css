@@ -96,7 +96,7 @@ input[type="number"] { font-family: var(--font-mono); font-variant-numeric: tabu
 .wordmark { color: var(--text); font-weight: 500; letter-spacing: .4em; }
 .top-nav { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
 .top > .seg { justify-self: center; }
-.plan { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 32px; overflow: hidden auto; padding: 4px 4px 8px; }
+.plan { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 32px; padding: 4px 4px 48px; }
 .foot { display: flex; gap: 12px; align-items: center; }
 .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
 .empty { padding: 12px 0; }
@@ -110,15 +110,15 @@ input[type="number"] { font-family: var(--font-mono); font-variant-numeric: tabu
 /* ---- Runway ---- */
 .holiday { margin-bottom: 12px; color: var(--text-2); }
 .rw-wrap { display: grid; grid-template-columns: 56px minmax(0, 1fr); }
-.rw-labels { display: grid; grid-template-rows: 42px 56px 72px; padding-bottom: 12px; }
+.rw-labels { display: grid; grid-template-rows: 48px 56px 72px; padding-bottom: 12px; }
 .rw-labels span { align-self: center; font: 500 12px/16px var(--font-sans); color: var(--text-2); }
 .rw-l-axis { border-bottom: 1px solid var(--line-strong); align-self: stretch !important; }
 .rw-scroll { overflow-x: auto; overflow-y: hidden; padding-bottom: 12px; scrollbar-width: thin; scrollbar-color: var(--c-line-strong) transparent; }
 .rw { position: relative; min-width: calc(100% - 48px); margin: 0 24px; }
-.rw-grid { position: absolute; inset: 42px 0 0 0; pointer-events: none; }
+.rw-grid { position: absolute; inset: 48px 0 0 0; pointer-events: none; }
 .rw-grid i { position: absolute; top: 0; bottom: 0; width: 1px; background: color-mix(in srgb, var(--c-line) 55%, transparent); }
 .rw-grid i.major { background: var(--c-line); }
-.rw-axis { position: relative; height: 42px; border-bottom: 1px solid var(--line-strong); transform-origin: left; }
+.rw-axis { position: relative; height: 48px; border-bottom: 1px solid var(--line-strong); transform-origin: left; }
 .rw-axis span { position: absolute; bottom: 4px; transform: translateX(-50%); font: 400 12px/16px var(--font-mono); color: var(--text-2); font-variant-numeric: tabular-nums; }
 .rw-lane { position: relative; height: 56px; border-bottom: 1px solid var(--line); }
 .rw-plan { height: 72px; }
@@ -141,7 +141,7 @@ input[type="number"] { font-family: var(--font-mono); font-variant-numeric: tabu
 .ghost { position: absolute; top: 6px; bottom: 6px; border-radius: 6px; display: flex; align-items: center; padding: 0 8px; font: 500 12px/16px var(--font-mono); pointer-events: none; z-index: 2; }
 .ghost.ok { border: 2px solid var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
 .ghost.bad { border: 2px solid var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
-.now { position: absolute; top: 24px; bottom: 0; z-index: 4; width: 2px; margin-left: -1px; background: var(--now); pointer-events: none; z-index: 3; }
+.now { position: absolute; top: 22px; bottom: 0; z-index: 4; width: 2px; margin-left: -1px; background: var(--now); pointer-events: none; z-index: 3; }
 .now::before { content: ""; position: absolute; top: -4px; left: -3px; width: 8px; height: 8px; background: var(--now); }
 /* The exact local time, always visible: ink on fire (dark) or paper on dark fire (light), never fire text on paper. */
 .now-label { position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%); padding: 0 6px; border-radius: 4px; background: var(--now); color: var(--c-ground); font: 500 12px/18px var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }

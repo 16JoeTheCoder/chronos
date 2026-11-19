@@ -50,9 +50,9 @@ export function TimeLeft({ tl }: { tl: TL }) {
         </div>
       </div>
       <p className="tl-eq">
-        {formatHuman(tl.dayLeftMs)} day left − {formatHuman(tl.fixedMs)} fixed − {formatHuman(tl.bufferMs)} buffer · committed {formatHuman(tl.committedMs)} · open {formatHuman(tl.unassignedMs)}
+        {formatHuman(tl.dayLeftMs)} left in the day, minus {formatHuman(tl.fixedMs)} fixed and a {formatHuman(tl.bufferMs)} buffer. Planned {formatHuman(tl.committedMs)}, open {formatHuman(tl.unassignedMs)}.
       </p>
-      <p className="tl-sprint">{sprint > 0 ? `${formatHuman(sprint)} sprint-able: a good sprint window.` : tl.workableMs > 0 ? 'No 90-minute window left today. Short tasks fit.' : 'Day is done. Plan tomorrow or rest.'}</p>
+      <p className="tl-sprint">{sprint > 0 ? `Longest free stretch: ${formatHuman(sprint)}, room for a long sprint.` : tl.workableMs > 0 ? 'No 90-minute window left today. Short tasks fit.' : 'Day is done. Plan tomorrow or rest.'}</p>
     </section>
   );
 }

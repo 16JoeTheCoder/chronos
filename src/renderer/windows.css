@@ -52,3 +52,7 @@ kbd { font-family: var(--font-num); font-size: 11px; color: var(--c-text-3); bor
 .np-recent span { font-size: 12px; line-height: 16px; color: var(--c-text-2); }
 .np-foot .btn { margin-left: auto; }
 .np-state { color: var(--c-text-2); }
+
+.ov-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; }
+.ov-dot[data-running="true"] { background: currentColor; }
+.ov-time { padding-right: 4px; }
