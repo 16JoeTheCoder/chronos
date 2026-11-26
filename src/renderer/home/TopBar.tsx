@@ -9,12 +9,25 @@ import { activeTask, todayOf } from '../../core/tasks/tasks';
 import { localParts } from '../../core/time/zone';
 import { Icon } from '../components/Icon';
 import { TimerDigits } from '../focus/TimerDigits';
+import { useViewport } from '../shell/viewport';
 
-export function TopBar({ d, now, onPalette, onFocus, onHelp, sync }: { d: Data; now: number; onPalette: () => void; onFocus: () => void; onHelp?: () => void; sync?: ReactNode }) {
+export function TopBar({ d, now, onPalette, onFocus, onHelp, sync, title }: { d: Data; now: number; onPalette: () => void; onFocus: () => void; onHelp?: () => void; sync?: ReactNode; title?: string }) {
+  const phone = useViewport() === 'phone';
   const s = settingsOf(d);
   const task = activeTask(d);
   const lp = localParts(now, s.timezone);
   const state = task?.runtime.status;
+  if (phone) {
+    // One row, 52 px: the screen's name and the one action. Clock, task and chips live elsewhere.
+    return (
+      <header className="topbar topbar-phone">
+        <p className="tb-title">{title ?? 'Chronos'}</p>
+        <button type="button" className="tb-icon" onClick={onPalette} aria-haspopup="dialog" aria-label="Search or add">
+          <Icon name="search" size={22} />
+        </button>
+      </header>
+    );
+  }
   return (
     <header className="topbar">
       <p className="tb-clock">

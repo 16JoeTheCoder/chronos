@@ -34,6 +34,12 @@ import { Help } from './Help';
 import { measureBlurOnce } from '../palette/blurCheck';
 import { BeforeClass, HeadsUp } from './Strips';
 import { SyncDot } from './SyncDot';
+import '../styles/responsive.css';
+import { RunningPill } from '../shell/RunningPill';
+import { TabBar } from '../shell/TabBar';
+import { screenTitle } from '../shell/items';
+import { PullIndicator, usePullToRefresh } from '../shell/usePullToRefresh';
+import { useViewport } from '../shell/viewport';
 import { Tasks, type TaskView } from '../tasks/Tasks';
 
 // Screens built by other parts of the app are mounted by glob so a missing file is a placeholder, not a build break.
@@ -73,6 +79,10 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
   const [taskView, setTaskView] = useState<TaskView>('today');
   const [taskProject, setTaskProject] = useState<string | null>(null);
   const gPending = useRef(0);
+  const viewport = useViewport();
+  const phone = viewport === 'phone';
+  const screenRef = useRef<HTMLDivElement>(null);
+  const pull = usePullToRefresh(screenRef, phone && !!api.web);
   const m = dayModel(d, now, range);
   /** Every navigation (rail, top bar, keys, palette commands) goes through here: it closes the open layer first. */
   const go = (to: Screen, opts: { logProject?: string | null; projectId?: string } = {}) => {
@@ -241,11 +251,11 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
   ) : screen === 'plan' ? (
     <main className="plan">
       <div className="plan-back">
-        <button className="link" onClick={() => go('home')}>Back to Home <kbd>P</kbd></button>
+        <button className="link plan-home" onClick={() => go('home')}>Back to Home <kbd>P</kbd></button>
         <span className="plan-back-gap" />
         <button className="btn btn-ghost btn-s" onClick={() => open('drawer')}><Icon name="list" size={14} /> Done today</button>
         <button className="btn btn-ghost btn-s" onClick={() => open('schedule')}><Icon name="calendar" size={14} /> Schedule</button>
-        <button className="btn btn-ghost btn-s" onClick={() => open('shelf')} aria-expanded={top === 'shelf'}><Icon name="folder" size={14} /> Desktop</button>
+        {api.can.fileShelf && <button className="btn btn-ghost btn-s" onClick={() => open('shelf')} aria-expanded={top === 'shelf'}><Icon name="folder" size={14} /> Desktop</button>}
         <TrashButton onOpen={() => open('trash')} />
       </div>
       {planSections}
@@ -258,14 +268,26 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
   );
 
   return (
-    <div className={`home${revealed ? ' revealed' : ''}`} data-screen={screen}>
-      {screen !== 'focus' && <Rail screen={screen} onGo={(x) => go(x)} />}
+    <div className={`home${revealed ? ' revealed' : ''}`} data-screen={screen} data-viewport={viewport}>
+      {screen !== 'focus' && !phone && <Rail screen={screen} onGo={(x) => go(x)} />}
       <div className="home-main">
-        {screen !== 'focus' && <TopBar d={d} now={now} onPalette={() => open('palette')} onFocus={() => go('focus')} onHelp={() => open('help')} sync={<SyncDot sync={snap.sync} />} />}
+        {screen !== 'focus' && <TopBar d={d} now={now} onPalette={() => open('palette')} onFocus={() => go('focus')} onHelp={() => open('help')} sync={<SyncDot sync={snap.sync} />} title={screenTitle(screen)} />}
 
-        <div className="screen">{body}</div>
+        {phone && screen === 'focus' && (
+          <button type="button" className="focus-exit" onClick={() => go('home')} aria-label="Leave Focus">
+            <Icon name="x" size={22} />
+          </button>
+        )}
+        {phone && <PullIndicator phase={pull.phase} offset={pull.offset} />}
+        <div className="screen" ref={screenRef}>{body}</div>
 
       </div>
+      {phone && screen !== 'focus' && (
+        <div className="dock">
+          <RunningPill d={d} onFocus={() => go('focus')} />
+          <TabBar screen={screen} onGo={(x) => go(x)} />
+        </div>
+      )}
 
       {top === 'drawer' && <DoneDrawer d={d} now={now} onClose={() => close('drawer')} />}
       {top === 'shelf' && <ShelfPanel onClose={() => close('shelf')} />}
