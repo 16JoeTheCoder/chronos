@@ -4,5 +4,6 @@
   "projectId": "chronos-jy",
   "appId": "",
   "googleClientId": "",
-  "googleClientSecret": ""
+  "googleClientSecret": "",
+  "filesUrl": ""
 }

@@ -10,7 +10,7 @@ service cloud.firestore {
         return request.auth != null && request.auth.uid == uid;
       }
       function known() {
-        return collection in ['tasks', 'events', 'eventExceptions', 'closures', 'blocks', 'sessions', 'tags', 'ideas', 'activity', 'timer', 'settings', 'projects', 'reviews'];
+        return collection in ['tasks', 'events', 'eventExceptions', 'closures', 'blocks', 'sessions', 'tags', 'ideas', 'activity', 'timer', 'settings', 'projects', 'reviews', 'cache'];
       }
       function valid() {
         let d = request.resource.data;

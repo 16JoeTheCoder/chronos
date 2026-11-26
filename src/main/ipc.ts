@@ -6,10 +6,11 @@
 import { ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import { RECYCLABLE, type ClosureInput, type Command, type EventInput, type OccurrencePatch, type Result, type SettingsPatch, type TaskInput, type TagInput } from '../core/commands';
 import { isId } from '../core/model/ids';
-import { COLLS, TAG_COLORS, type Coll, type DeviceSettings, type ShelfItem, type Snapshot, type TimerConfig } from '../core/model/types';
+import { COLLS, TAG_COLORS, type Attachment, type Coll, type DeviceSettings, type ShelfItem, type Snapshot, type TimerConfig } from '../core/model/types';
 import { CHANNELS, type NotepadCreated } from '../preload/api';
 import type { ParserRule } from '../core/parser/types';
-import { isObj } from '../core/validation';
+import { attachmentsValid, isObj } from '../core/validation';
+import { FILE_ID_RE, isFileArea, type FileArea, type FileGet } from './files';
 import { TOKEN_RE } from './undoTokens';
 
 type Obj = Record<string, unknown>;
@@ -273,8 +274,18 @@ export function parseCommand(raw: unknown): Command | null {
       if (raw.type === 'tag.create') return { type: 'tag.create', input };
       return rid ? { type: 'tag.update', id: rid, input } : null;
     }
-    case 'idea.add':
-      return { type: 'idea.add', text: str(raw.text, 20_000), taskId: nullableId(raw.taskId), projectId: nullableId(raw.projectId) };
+    case 'idea.add': {
+      if (raw.files !== undefined && !attachmentsValid(raw.files)) return null;
+      return { type: 'idea.add', text: str(raw.text, 20_000), taskId: nullableId(raw.taskId), projectId: nullableId(raw.projectId), ...(raw.files ? { files: raw.files as Attachment[] } : {}) };
+    }
+    case 'cache.add': {
+      if (raw.files !== undefined && !attachmentsValid(raw.files)) return null;
+      return { type: 'cache.add', body: str(raw.body, 20_000), ...(raw.files ? { files: raw.files as Attachment[] } : {}) };
+    }
+    case 'cache.remove':
+      return rid ? { type: 'cache.remove', id: rid } : null;
+    case 'cache.clear':
+      return { type: 'cache.clear' };
     case 'event.place':
       return rid ? { type: 'event.place', id: rid, startMin: num(raw.startMin) } : null;
     case 'plan.auto':
@@ -369,6 +380,9 @@ export interface IpcDeps {
   stackList(): Promise<ShelfItem[]>;
   stackOpen(path: string): Promise<Result>;
   stackTrash(path: string): Promise<Result>;
+  filesPut(area: FileArea, id: string, name: string, mime: string, bytes: Uint8Array): Promise<Result>;
+  filesGet(area: FileArea, id: string): Promise<FileGet>;
+  filesRemove(area: FileArea, id: string): Promise<Result>;
 }
 
 export function registerIpc(deps: IpcDeps): void {
@@ -411,6 +425,15 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.on(CHANNELS.mark, guard<[unknown, unknown], void>(undefined, (name, ms) => {
     if (typeof name === 'string' && /^[\w.-]{1,40}$/.test(name) && Number.isFinite(ms)) deps.mark(name, ms as number);
   }));
+  const noFile: FileGet = { ok: false, error: 'Forbidden' };
+  ipcMain.handle(CHANNELS.filesPut, guard<[unknown], Promise<Result>>(Promise.resolve(forbidden), (v) => {
+    if (!isObj(v) || !isFileArea(v.area) || typeof v.id !== 'string' || !FILE_ID_RE.test(v.id) || !(v.bytes instanceof Uint8Array)) return Promise.resolve({ ok: false, error: 'Invalid file.' });
+    return deps.filesPut(v.area, v.id, str(v.name, 200) || 'file', str(v.mime, 100), v.bytes);
+  }));
+  ipcMain.handle(CHANNELS.filesGet, guard<[unknown], Promise<FileGet>>(Promise.resolve(noFile), (v) =>
+    isObj(v) && isFileArea(v.area) && typeof v.id === 'string' && FILE_ID_RE.test(v.id) ? deps.filesGet(v.area, v.id) : Promise.resolve({ ok: false, error: 'Invalid file.' })));
+  ipcMain.handle(CHANNELS.filesRemove, guard<[unknown], Promise<Result>>(Promise.resolve(forbidden), (v) =>
+    isObj(v) && isFileArea(v.area) && typeof v.id === 'string' && FILE_ID_RE.test(v.id) ? deps.filesRemove(v.area, v.id) : Promise.resolve({ ok: false, error: 'Invalid file.' })));
   ipcMain.handle(CHANNELS.stackList, guard(Promise.resolve([] as ShelfItem[]), () => deps.stackList()));
   ipcMain.handle(CHANNELS.stackOpen, guard<[unknown], Promise<Result>>(Promise.resolve(forbidden), (p) => deps.stackOpen(str(p, 2000))));
   ipcMain.handle(CHANNELS.stackTrash, guard<[unknown], Promise<Result>>(Promise.resolve(forbidden), (p) => deps.stackTrash(str(p, 2000))));

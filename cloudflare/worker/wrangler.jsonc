@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "chronos-files",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-01",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "chronos-files" }],
+  "vars": {
+    "FIREBASE_PROJECT_ID": "chronos-jy",
+    "ALLOWED_UID": "",
+    "ALLOWED_ORIGINS": ""
+  }
+}

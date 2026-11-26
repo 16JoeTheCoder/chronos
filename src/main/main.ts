@@ -7,7 +7,7 @@ import path from 'node:path';
 import { app, clipboard, dialog, net, powerMonitor, safeStorage, session, shell, type WebContents } from 'electron';
 import fs from 'node:fs';
 import { Mcp } from '../core/mcp/handlers';
-import type { Diagnostics, Snapshot, SyncView } from '../core/model/types';
+import { ATTACH_MAX_BYTES, type Diagnostics, type Snapshot, type SyncView } from '../core/model/types';
 import { activeTask } from '../core/tasks/tasks';
 import { CHANNELS, type Notice } from '../preload/api';
 import { readFirebaseConfig } from './config';
@@ -18,7 +18,9 @@ import { registerIpc } from './ipc';
 import { describeError, initLog, log, readLog } from './log';
 import { McpServer, newToken } from './mcp/server';
 import { SyncManager } from './sync/manager';
+import { createFilesService } from './files';
 import { notify } from './notify';
+import { startAutoUpdate } from './updater';
 import { mark, perfMarks } from './perf';
 import { Shelf } from './shelf';
 import { registerShortcuts, unregisterShortcuts } from './shortcuts';
@@ -67,7 +69,7 @@ function boot(): void {
   // Sync (Firestore, Google sign-in) runs in the main process with Node networking, not here (D-116).
   const devUrl = process.env.CHRONOS_DEV_URL;
   session.defaultSession.webRequest.onBeforeRequest((details, cb) => {
-    const allowed = details.url.startsWith('file:') || details.url.startsWith('data:') || details.url.startsWith('devtools:') || (!!devUrl && details.url.startsWith(devUrl.replace(/\/$/, '')));
+    const allowed = details.url.startsWith('file:') || details.url.startsWith('data:') || details.url.startsWith('blob:') || details.url.startsWith('devtools:') || (!!devUrl && details.url.startsWith(devUrl.replace(/\/$/, '')));
     if (!allowed) log(`blocked request ${details.url}`);
     cb({ cancel: !allowed });
   });
@@ -98,6 +100,8 @@ function boot(): void {
     log,
     () => broadcast(),
   );
+
+  const files = createFilesService({ url: () => sync.filesUrl, token: () => sync.idToken(), maxBytes: ATTACH_MAX_BYTES });
 
   // Claude (MCP): the handlers run against the live controller, like any UI edit.
   const mcp = new Mcp({
@@ -211,6 +215,7 @@ function boot(): void {
       lastSyncAt: controller.device.sync.lastSyncAt,
       email: sync.signedIn ? controller.device.auth.email : null,
       configured: sync.configured,
+      files: !!sync.filesUrl && sync.signedIn,
     };
   }
 
@@ -369,10 +374,14 @@ function boot(): void {
     stackList: () => shelf.list(),
     stackOpen: (p) => shelf.open(p),
     stackTrash: (p) => shelf.trash(p),
+    filesPut: (area, id, name, mime, bytes) => files.put(area, id, name, mime, bytes),
+    filesGet: (area, id) => files.get(area, id),
+    filesRemove: (area, id) => files.remove(area, id),
   });
 
   applyDevice(controller.device);
   broadcast();
+  startAutoUpdate({ notify: (text) => notice({ text }) });
   void applyMcp();
   void sync.resume();
   let online = net.isOnline();

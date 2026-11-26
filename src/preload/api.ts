@@ -47,6 +47,12 @@ export interface ChronosApi {
     /** Copy `text` to the clipboard and open Claude Desktop (D-146). */
     askClaude(text: string): Promise<Result>;
   };
+  /** Cloud file storage (main talks to the Cloudflare Worker with the signed-in user's token). */
+  files: {
+    put(file: { area: 'log' | 'cache'; id: string; name: string; mime: string; bytes: Uint8Array }): Promise<Result>;
+    get(area: 'log' | 'cache', id: string): Promise<{ ok: true; bytes: Uint8Array; mime: string } | { ok: false; error: string }>;
+    remove(area: 'log' | 'cache', id: string): Promise<Result>;
+  };
   shelf: {
     list(): Promise<ShelfItem[]>;
     open(path: string): Promise<Result>;
@@ -92,4 +98,7 @@ export const CHANNELS = {
   stackOpen: 'stack.open',
   stackTrash: 'stack.trash',
   stackChanged: 'stack.changed',
+  filesPut: 'files.put',
+  filesGet: 'files.get',
+  filesRemove: 'files.remove',
 } as const;

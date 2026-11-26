@@ -1,0 +1,25 @@
+/* Attachments (Log and Cache). Theme tokens only. */
+.att-list, .att-pending { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; margin-top: 10px; }
+.att-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; min-height: 32px; padding: 0 12px; border: 1px solid var(--c-line-strong); border-radius: var(--r-pill); background: var(--c-panel); color: var(--c-text); font: 500 13px/1 var(--font-text); cursor: pointer; }
+.att-pending .att-chip { cursor: default; }
+button.att-chip:hover { border-color: var(--c-accent); }
+.att-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.att-size { color: var(--c-text-2); font: 400 12px/1 var(--font-num); font-variant-numeric: var(--num-variant, tabular-nums); }
+.att-x { display: grid; place-items: center; width: 22px; height: 22px; margin-right: -6px; border: 0; border-radius: 50%; background: transparent; color: var(--c-text-2); cursor: pointer; }
+.att-x:hover { color: var(--c-text); background: var(--c-panel-hero); }
+.att-note { align-self: center; color: var(--c-text-2); font-size: 13px; }
+.att-err { color: var(--c-danger, var(--c-text)); }
+.att-gone { color: var(--c-text-2); cursor: default; border-style: dashed; }
+.att-img { margin: 0; display: flex; flex-direction: column; gap: 6px; max-width: 100%; }
+.att-img-btn { padding: 0; border: 1px solid var(--c-line-strong); border-radius: var(--r-md); background: var(--c-panel); cursor: zoom-in; overflow: hidden; }
+.att-img-btn img { display: block; max-width: 280px; max-height: 180px; object-fit: contain; }
+.att-img.is-big .att-img-btn { cursor: zoom-out; }
+.att-img.is-big .att-img-btn img { max-width: min(100%, 720px); max-height: 70vh; }
+.att-img-wait { width: 160px; height: 100px; border: 1px dashed var(--c-line-strong); border-radius: var(--r-md); }
+.att-img figcaption { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--c-text-2); }
+.att-img figcaption .att-name { max-width: 160px; }
+.att-act { padding: 0; border: 0; background: transparent; color: var(--c-text-2); font: 500 12px/1 var(--font-text); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.att-act:hover { color: var(--c-text); }
+.att-pick { cursor: pointer; }
+.att-chip:focus-visible, .att-act:focus-visible, .att-x:focus-visible, .att-img-btn:focus-visible, .att-pick:focus-within { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+.drop-over { outline: 2px dashed var(--c-accent); outline-offset: 4px; }

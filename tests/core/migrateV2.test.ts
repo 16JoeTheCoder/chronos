@@ -44,7 +44,7 @@ describe('migrate v1 -> current (Josef fixture)', () => {
     const special: Partial<Record<Coll, string[]>> = { tasks: ['deadline', 'status'], eventExceptions: ['kind'], ideas: [] };
     for (const c of COLLS) {
       if (c === 'projects' || c === 'reviews') continue;
-      const before = v1[c] as Obj;
+      const before = (v1[c] ?? {}) as Obj;
       const after = d[c] as Record<string, Obj>;
       expect(Object.keys(after).sort(), c).toEqual(Object.keys(before).sort());
       for (const [id, rec] of Object.entries(before)) {

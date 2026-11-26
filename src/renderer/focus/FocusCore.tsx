@@ -1,7 +1,7 @@
 // Focus Core (§9.4): one stage. Tag, title, the huge timer,
 // Start/Pause (the one accent button), Skip phase in Pomodoro, mode switchable
-// only before the first start, Finish (hold Enter for 2 s) and a quiet Drop (typed
-// reason). The right column is the thinking space (Phase 3.7 §8): an input at the top that
+// only before the first start, Finish (hold Enter for 2 s) and Drop (hold Backspace for 2 s,
+// no reason asked). The right column is the thinking space (Phase 3.7 §8): an input at the top that
 // grows with the text, then this task's notes, newest first, with times. A line with TASK at
 // its start or end becomes a task instead of a note.
 
@@ -26,7 +26,7 @@ import { HoldButton, useHold } from './HoldButton';
 import { keyAction, targetOf } from './keys';
 import { useTimer } from './TimerDigits';
 
-type Ritual = { kind: 'drop' } | { kind: 'kill' } | null;
+type Ritual = { kind: 'kill' } | null;
 
 export function FocusCore({ d, m, now, deviceId, onPlan }: { d: Data; m: DayModel; now: number; deviceId: string; onPlan: () => void }) {
   const task = activeTask(d);
@@ -89,7 +89,12 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
     const done = Object.values(d.tasks).filter((x) => x.status === 'done' && x.outcome !== 'killed' && (x.completedAt ?? 0) >= m.from).length + 1;
     toast(`Done. ${done} finished today.`);
   }
+  async function drop() {
+    const r = await run({ type: 'task.drop', id: task.id });
+    if (r.ok) toast('Dropped to the back of the queue. Time kept.');
+  }
   const finishHold = useHold(() => void finish());
+  const dropHold = useHold(() => void drop(), 'Backspace');
   const shipHold = useHold(() => void finish());
 
   // Window-level keys: Space and hold-Enter work as soon as Focus is up, with no click first.
@@ -104,10 +109,12 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
       if (act === 'toggle') toggleRef.current();
       else if (act === 'press') finishHold.press('enter');
       else if (act === 'release') finishHold.release();
+      else if (act === 'dropPress') dropHold.press('backspace');
+      else if (act === 'dropRelease') dropHold.release();
     };
     const down = handle('down');
     const up = handle('up');
-    const blur = () => finishHold.release();
+    const blur = () => { finishHold.release(); dropHold.release(); };
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
     window.addEventListener('blur', blur);
@@ -116,18 +123,15 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
       window.removeEventListener('keyup', up);
       window.removeEventListener('blur', blur);
     };
-  }, [owner, finishHold]);
+  }, [owner, finishHold, dropHold]);
 
   async function submitRitual() {
     if (!ritual) return;
-    const r =
-      ritual.kind === 'drop'
-        ? await run({ type: 'task.drop', id: task.id, reason: text })
-        : await run({ type: 'sprint.checkpoint', id: task.id, choice: 'kill', reason: text });
+    const r = await run({ type: 'sprint.checkpoint', id: task.id, choice: 'kill', reason: text });
     if (!r.ok) return;
     setRitual(null);
     setText('');
-    toast(ritual.kind === 'drop' ? 'Dropped to the back of the queue. Time kept.' : 'Sprint killed. Reason logged.');
+    toast('Sprint killed. Reason logged.');
   }
 
   const ritualOk = isDropReason(text);
@@ -183,7 +187,8 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
                 <button className="btn btn-accent btn-l" onClick={toggle} aria-keyshortcuts="Space">
                   <Icon name={running ? 'pause' : 'play'} /> {running ? 'Pause' : task.runtime.status === 'paused' ? 'Resume' : 'Start'}
                 </button>
-                <HoldButton hold={finishHold} reduce={reduce} label="Hold Enter to finish" hintId="hold-hint" className="btn-hold" />
+                <HoldButton hold={finishHold} reduce={reduce} label="Finish" title="Hold Enter for 2 seconds" hintId="hold-hint" className="btn-hold" />
+                <HoldButton hold={dropHold} reduce={reduce} label="Drop" title="Hold Backspace for 2 seconds" hintId="hold-hint" icon="x" className="btn-hold btn-drop" />
                 {task.timer.mode === 'pomodoro' && (
                   <button className="btn btn-ghost" onClick={() => void run({ type: 'timer', action: 'skipPhase' })}>
                     <Icon name="skip" /> Skip phase
@@ -193,8 +198,8 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
             )}
           </div>
         </div>
-        <p id="hold-hint" className="muted hold-hint">
-          Hold Enter for 2 seconds to finish. Space starts or pauses. Esc leaves Focus.
+        <p id="hold-hint" className="sr-only">
+          Hold Enter for 2 seconds to finish, or Backspace for 2 seconds to drop. Space starts or pauses. Esc leaves Focus.
         </p>
       </div>
 
@@ -229,11 +234,6 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
       <div className="focus-more">
         <div className="stage-more">
           {!isLocked(task) && <ModePicker task={task} />}
-          {owner && (
-            <button className="link" onClick={() => setRitual({ kind: 'drop' })}>
-              Drop this task
-            </button>
-          )}
         </div>
 
         {due && (
@@ -262,7 +262,7 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
             }}
           >
             <label className="field">
-              <span className="eyebrow">{ritual.kind === 'drop' ? 'Why drop it? (at least 3 characters)' : 'Why kill it? (at least 3 characters)'}</span>
+              <span className="eyebrow">Why kill it? (at least 3 characters)</span>
               <input autoFocus value={text} onChange={(e) => setText(e.target.value)} aria-label="Reason" />
             </label>
             <div className="row gap">
@@ -270,7 +270,7 @@ function Stage({ d, m, now, task, deviceId }: { d: Data; m: DayModel; now: numbe
                 Cancel
               </button>
               <button type="submit" className="btn" disabled={!ritualOk}>
-                {ritual.kind === 'drop' ? 'Drop task' : 'Kill sprint'}
+                Kill sprint
               </button>
             </div>
           </form>

@@ -75,33 +75,21 @@ describe('persistence', () => {
 });
 
 describe('restart with a running timer', () => {
-  it('pauses at the last heartbeat; discard keeps only observed time', () => {
+  it('pauses at the last heartbeat and never asks: the unobserved time is discarded', () => {
     runningTask();
     new Store(dir).writeHeartbeat(T0 + MIN);
     const c = boot(T0 + 30 * MIN);
-    expect(c.pendingGap).toEqual({ from: T0 + MIN, to: T0 + 30 * MIN, reason: 'off' });
-    expect(c.command({ type: 'timer', action: 'start' }, T0 + 30 * MIN).ok).toBe(false);
-    expect(c.command({ type: 'gap.answer', count: false }, T0 + 30 * MIN).ok).toBe(true);
+    expect(c.pendingGap).toBeNull();
     const t = activeTask(c.data)!;
     expect(t.workMs).toBe(MIN);
     expect(t.runtime.status).toBe('paused');
     expect(live(c.data, 'sessions')).toHaveLength(1);
-  });
-
-  it('count credits the gap and stays paused', () => {
-    runningTask();
-    new Store(dir).writeHeartbeat(T0 + MIN);
-    const c = boot(T0 + 30 * MIN);
-    c.command({ type: 'gap.answer', count: true }, T0 + 31 * MIN);
-    const t = activeTask(c.data)!;
-    expect(t.workMs).toBe(30 * MIN);
-    expect(t.runtime.status).toBe('paused');
-    expect(c.pendingGap).toBeNull();
+    expect(c.command({ type: 'timer', action: 'start' }, T0 + 30 * MIN).ok).toBe(true);
   });
 });
 
 describe('runtime ticks and power events', () => {
-  it('a long pause between ticks raises a gap; a backwards clock never goes negative', () => {
+  it('a long pause between ticks pauses at the last tick; a backwards clock never goes negative', () => {
     const c = runningTask();
     c.tick(T0 + 250);
     c.tick(T0 - 5 * MIN); // clock jumped back
@@ -111,7 +99,7 @@ describe('runtime ticks and power events', () => {
     c.tick(T0 - 5 * MIN + SEC);
     c.tick(T0 + 20 * MIN); // far more than 10 s later
     t = activeTask(c.data)!;
-    expect(c.pendingGap?.from).toBe(T0 - 5 * MIN + SEC);
+    expect(c.pendingGap).toBeNull();
     expect(t.runtime.status).toBe('paused');
     expect(t.workMs).toBe(250 + SEC);
   });
@@ -126,13 +114,14 @@ describe('runtime ticks and power events', () => {
     expect(activeTask(c.data)?.runtime.status).toBe('running');
   });
 
-  it('suspend pauses at that moment; resume raises a gap', () => {
+  it('suspend pauses at that moment; resume stays paused without asking', () => {
     const c = runningTask();
     c.suspend(T0 + 10 * MIN);
     expect(activeTask(c.data)?.runtime.status).toBe('paused');
     c.resume(T0 + 70 * MIN);
-    expect(c.pendingGap).toEqual({ from: T0 + 10 * MIN, to: T0 + 70 * MIN, reason: 'sleep' });
-    expect(c.toggleStartPause(T0 + 70 * MIN).ok).toBe(false);
+    expect(c.pendingGap).toBeNull();
+    expect(activeTask(c.data)?.workMs).toBe(10 * MIN);
+    expect(activeTask(c.data)?.runtime.status).toBe('paused');
   });
 
   it('notifies once per sprint checkpoint', () => {

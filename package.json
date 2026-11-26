@@ -45,7 +45,14 @@
     },
     "portable": {
       "artifactName": "Chronos-Portable-${version}.exe"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "16JoeTheCoder",
+        "repo": "chronos"
+      }
+    ]
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
@@ -79,6 +86,7 @@
     "@fontsource/red-hat-text": "^5.3.0",
     "@fontsource/sora": "^5.3.0",
     "@fontsource/titillium-web": "^5.3.0",
+    "electron-updater": "^6.8.11",
     "koffi": "3.3.8"
   }
 }

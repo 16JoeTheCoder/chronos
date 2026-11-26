@@ -7,6 +7,9 @@ import type { Data } from '../../core/model/types';
 import { run } from '../store';
 import { queueLines } from './actions';
 import { liveProjects, parseCtx } from './ctx';
+import { AttachButton, AttachPending } from '../files/Attachments';
+import { filesOf, useAttachments } from '../files/attach';
+import { useSnap } from '../store';
 
 export interface ComposerHandle {
   focus(): void;
@@ -27,6 +30,9 @@ const SLASH = /(?:^|\n)\/(p|project)(?:\s+([^\n]*))?$/i;
 export const Composer = forwardRef<ComposerHandle, Props>(function Composer({ data, projectId, locked, onProject, onPosted }, ref) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const [over, setOver] = useState(false);
+  const cloud = useSnap()?.sync.files ?? false;
+  const att = useAttachments('log', cloud);
   const [pick, setPick] = useState(false);
   const [active, setActive] = useState(0);
   const area = useRef<HTMLTextAreaElement>(null);
@@ -59,12 +65,13 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer({ da
 
   const post = async () => {
     const body = text.trim();
-    if (!body || busy) return;
+    if ((!body && !att.files.length) || busy || att.busy) return;
     setBusy(true);
-    const r = await run({ type: 'idea.add', text: body, taskId: null, projectId });
+    const r = await run({ type: 'idea.add', text: body, taskId: null, projectId, ...(att.files.length ? { files: att.files } : {}) });
     setBusy(false);
     if (!r.ok || !r.id) return;
     setText('');
+    att.clear();
     onPosted(r.id);
     const auto = autoLines(analyzeBody(body, parseCtx(data), projectId));
     if (auto.length) await queueLines({ id: r.id, parsedTaskIds: [] }, auto);
@@ -73,7 +80,12 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer({ da
 
   return (
     <div className="composer">
-      <div className="composer-box">
+      <div
+        className={`composer-box${over ? ' drop-over' : ''}`}
+        onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => { e.preventDefault(); setOver(false); void att.add(filesOf(e.dataTransfer)); }}
+      >
         <textarea
           ref={area}
           className="composer-input"
@@ -87,6 +99,13 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer({ da
           aria-controls={open ? listId : undefined}
           aria-activedescendant={open ? `${listId}-${active}` : undefined}
           onChange={(e) => setText(e.target.value)}
+          onPaste={(e) => {
+            const fs = filesOf(e.clipboardData);
+            if (fs.length) {
+              e.preventDefault();
+              void att.add(fs);
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === 'P' && e.ctrlKey && e.shiftKey && !locked) {
               e.preventDefault();
@@ -140,6 +159,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer({ da
           </ul>
         )}
       </div>
+      <AttachPending files={att.files} busy={att.busy} error={att.error} onRemove={att.remove} />
       <div className="composer-bar">
         {locked ? (
           <span className="composer-proj">{current?.name ?? 'Project'}</span>
@@ -148,9 +168,10 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer({ da
             <span className="composer-proj-label">Project</span> {current ? current.name : 'None'} <kbd>/p</kbd>
           </button>
         )}
+        <AttachButton onPick={(f) => void att.add(f)} />
         <span className="composer-count" aria-live="off">{wordCount(text)} {wordCount(text) === 1 ? 'word' : 'words'}</span>
         <span className="composer-hint">Enter to post · Shift+Enter for a new line</span>
-        <button type="button" className="log-btn log-btn-primary" onClick={() => void post()} disabled={!text.trim() || busy} title={!text.trim() ? 'Write something first' : undefined}>
+        <button type="button" className="log-btn log-btn-primary" onClick={() => void post()} disabled={(!text.trim() && !att.files.length) || busy || att.busy} title={!text.trim() && !att.files.length ? 'Write something first' : undefined}>
           Post
         </button>
       </div>

@@ -358,3 +358,6 @@ html[data-reactive-data="on"]:not([data-motion="off"]) .w-momentum.ignited .w-su
 
 /* Phase 3.7: themes whose hero sizes to its content keep the shelf right under it (no empty band). */
 :is([data-signature="ticking-digits"], [data-signature="mission-clock"], [data-signature="lap-timer"], [data-signature="slab-monolith"]) .nowscreen { grid-template-rows: auto auto auto; align-content: start; }
+/* Drop sits next to Finish: same hold, quieter (no fill tint until held, dashed edge keeps it distinct from Finish by shape, not colour). */
+.btn-drop { border-style: dashed; }
+.btn-drop .hold-bar { background: var(--c-text-2, currentColor); opacity: .16; }

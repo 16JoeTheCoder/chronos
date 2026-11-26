@@ -10,7 +10,7 @@ const csp: Plugin = {
   transformIndexHtml(html, ctx) {
     const policy = ctx.server
       ? ''
-      : `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'" />`;
+      : `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'" />`;
     return html.replace('<!--CSP-->', policy);
   },
 };

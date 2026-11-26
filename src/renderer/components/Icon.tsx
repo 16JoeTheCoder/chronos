@@ -30,6 +30,7 @@ const P: Record<string, ReactElement> = {
   inbox: <path d="M3 13l3-8h12l3 8v6H3zM3 13h5l1 3h6l1-3h5" />,
   sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5" /></>,
   layers: <path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5" />,
+  cache: <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4V2.5h6V4M9 11h6M9 15h4" /></>,
   pin: <path d="M9 3h6l-1 6 4 3v2H6v-2l4-3zM12 14v7" />,
 };
 

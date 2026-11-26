@@ -92,6 +92,7 @@ export function emptyData(): Data {
     settings: { main: defaultSettings() },
     projects: {},
     reviews: {},
+    cache: {},
     tombs: {},
   };
 }

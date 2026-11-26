@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon';
 import { run } from '../store';
 import { queueLines } from './actions';
 import { parseCtx } from './ctx';
+import { AttachList } from '../files/Attachments';
 
 const SAVE_AFTER_MS = 700;
 const isTaskLine = (l: string) => stripPrefix(l).explicit;
@@ -169,6 +170,7 @@ function NoteCard({ note, data, label, projectName, q, flash, onHeight }: NotePr
             })}
           </div>
         )}
+        {!editing && <AttachList files={note.files} area="log" />}
         {!editing && links.size > 0 && (
           <p className="note-foot">{links.size} {links.size === 1 ? 'task' : 'tasks'} added to Tasks</p>
         )}
