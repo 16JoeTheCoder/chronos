@@ -442,3 +442,6 @@ The prompt asked for a tag-triggered release and a daily update check. The repo 
 
 ### D-189 parseCommand is platform-neutral
 The payload rebuilders and `parseCommand` moved from `src/main/ipc.ts` to `src/main/parseCommand.ts` (no Electron, no Node). `ipc.ts` re-exports them. The web bridge runs every command through the same parser before the controller, so a command the desktop refuses is refused on the web too.
+
+### D-190 A hidden web tab keeps the timer running
+The web bridge stops its fast tick while the tab is hidden (no work in the background). Coming back, the gap would have looked like a sleep and paused the task at the last tick, so locking the phone mid-focus would lose the time. `Controller.tick(now, alive)` lets the web count a stretch in which the page stayed alive (stopwatch behaviour). A tab that was closed or killed still pauses at its last heartbeat on the next start, like the desktop.

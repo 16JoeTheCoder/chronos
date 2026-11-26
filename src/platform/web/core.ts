@@ -182,7 +182,7 @@ export class LeaderCore {
     this.refreshTicks();
   }
 
-  /** Fast tick only while a timer runs and the page is visible; coming back from hidden runs one tick (gap logic). */
+  /** Fast tick only while a timer runs and the page is visible; coming back from hidden counts the hidden stretch (D-190). */
   refreshTicks(): void {
     if (this.d.timers === false) return;
     const want = this.controller.running && this.d.visible();
@@ -194,7 +194,7 @@ export class LeaderCore {
   }
 
   becameVisible(): void {
-    this.controller.tick(this.now());
+    this.controller.tick(this.now(), true);
     this.refreshTicks();
   }
 

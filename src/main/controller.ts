@@ -336,8 +336,12 @@ export class Controller {
     return activeTask(this.data)?.runtime.status === 'running';
   }
 
-  /** Fast tick (main runs it every 250 ms only while a timer runs). Detects jumps, processes boundaries, heartbeats. */
-  tick(now: number): void {
+  /**
+   * Fast tick (main runs it every 250 ms only while a timer runs). Detects jumps, processes boundaries, heartbeats.
+   * `alive`: the caller knows the app ran through the silence (a web tab coming back from hidden, D-190), so a
+   * forward gap counts like a stopwatch instead of pausing at the last tick.
+   */
+  tick(now: number, alive = false): void {
     const prev = this.lastTick;
     this.lastTick = now;
     const task = activeTask(this.data);
@@ -349,7 +353,7 @@ export class Controller {
       this.changed(true);
       return;
     }
-    if (now - prev > TICK_GAP_MS) {
+    if (now - prev > TICK_GAP_MS && !alive) {
       // We were not scheduled for a while (sleep, suspension, forward jump).
       this.pauseUnobserved(task, prev, now);
       this.changed(true);
