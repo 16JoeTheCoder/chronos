@@ -12,7 +12,12 @@ import { Dialog } from '../components/ui';
 import { api } from '../api';
 import { run, toast } from '../store';
 
+/** The Desktop shelf. Web has no Desktop folder (can.fileShelf false): render nothing. */
 export function ShelfPanel({ onClose }: { onClose: () => void }) {
+  return api.can.fileShelf ? <ShelfBody onClose={onClose} /> : null;
+}
+
+function ShelfBody({ onClose }: { onClose: () => void }) {
   const [items, setItems] = useState<ShelfItem[] | null>(null);
   useEffect(() => {
     const load = () => void api.shelf.list().then(setItems);

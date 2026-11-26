@@ -3,6 +3,7 @@
 import type { Command } from '../../core/commands';
 import type { Snapshot } from '../../core/model/types';
 import { settingsOf } from '../../core/repo/repo';
+import { api } from '../api';
 import { run } from '../store';
 import { Group, NumField, Row, Seg, TextField, Toggle, saveSettings } from './rows';
 
@@ -13,6 +14,7 @@ export function FocusSection({ snap }: { snap: Snapshot }) {
   const s = settingsOf(snap.data);
   const dev = snap.device;
   const t = s.timerDefaults;
+  const can = api.can;
   const min = (ms: number) => Math.round(ms / 60_000);
   const setT = (patch: Partial<typeof t>) => saveSettings({ timerDefaults: { ...t, ...patch } });
   return (
@@ -24,11 +26,11 @@ export function FocusSection({ snap }: { snap: Snapshot }) {
         </div>
       </Group>
 
-      <Group title="Overlay" note="The timer pill sits in the Windows taskbar, so it never covers your desktop or apps. Hover it and click to pause or resume; hold its timer icon for 2 seconds to finish. It hides while Chronos is in front.">
+      {can.overlay && <Group title="Overlay" note="The timer pill sits in the Windows taskbar, so it never covers your desktop or apps. Hover it and click to pause or resume; hold its timer icon for 2 seconds to finish. It hides while Chronos is in front.">
         <Seg label="Where" value={dev.widgetDock} options={[['taskbar-left', 'Taskbar, left'], ['taskbar-right', 'Taskbar, right'], ['free', 'Free position']]} onChange={(widgetDock) => void D({ widgetDock, ...(widgetDock === 'free' && !dev.widgetPos ? { widgetPos: { x: 24, y: 24 } } : {}) })} />
         <Toggle label="Hide the overlay in full-screen apps" hint="Games, video and presentations stay clean. Needs Windows to report a full-screen app (see the Windows checklist)." checked={dev.overlayHideInFullscreen} onChange={(overlayHideInFullscreen) => D({ overlayHideInFullscreen })} />
         <Toggle label="Notifications" hint="Upcoming fixed events and the end-of-day review." checked={dev.notifications} onChange={(notifications) => D({ notifications })} />
-      </Group>
+      </Group>}
 
       <Group title="When a block ends">
         <Row label="At the end of a block">
@@ -50,11 +52,11 @@ export function FocusSection({ snap }: { snap: Snapshot }) {
         <Toggle label="Start work automatically" checked={t.pomodoro.autoStartWork} onChange={(autoStartWork) => setT({ pomodoro: { ...t.pomodoro, autoStartWork } })} />
       </Group>
 
-      <Group title="Shortcuts" note={snap.shortcutError ?? 'Global shortcuts work from any app. Format: Ctrl+Alt+Space. The notepad hotkey is under Tasks and notepad.'}>
+      {can.globalShortcuts && <Group title="Shortcuts" note={snap.shortcutError ?? 'Global shortcuts work from any app. Format: Ctrl+Alt+Space. The notepad hotkey is under Tasks and notepad.'}>
         {(['toggle', 'startPause'] as const).map((k) => (
           <TextField key={k} label={k === 'toggle' ? 'Show or hide Chronos' : 'Start or pause'} value={dev.shortcuts[k]} wide mono onCommit={(v) => D({ shortcuts: { ...dev.shortcuts, [k]: v.trim() } }).then((r) => r.ok)} />
         ))}
-      </Group>
+      </Group>}
     </>
   );
 }

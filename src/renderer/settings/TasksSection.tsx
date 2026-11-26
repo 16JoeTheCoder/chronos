@@ -7,6 +7,7 @@ import type { Command } from '../../core/commands';
 import type { DeviceSettings, Snapshot } from '../../core/model/types';
 import { taskPrefs } from '../../core/model/defaults';
 import { settingsOf } from '../../core/repo/repo';
+import { api } from '../api';
 import { run } from '../store';
 import { Group, Row, Seg, Toggle, saveSettings } from './rows';
 
@@ -64,11 +65,11 @@ export function TasksSection({ snap }: { snap: Snapshot }) {
         </Row>
       </Group>
 
-      <Group title="Overlay pill">
+      {api.can.overlay && <Group title="Overlay pill">
         <Toggle label="Show the current class in the pill" hint="A second, smaller line under the task names the class that is on now, so you remember where you are meant to be." checked={p.pillShowsClass} onChange={(pillShowsClass) => saveSettings({ pillShowsClass })} />
-      </Group>
+      </Group>}
 
-      <Group title="Notepad" note="These apply to this PC only.">
+      {api.can.notepadHotkey && <Group title="Notepad" note="These apply to this PC only.">
         <KeyField label="Notepad hotkey" hint={snap.shortcutError ?? 'Opens the notepad from any app. Insert works on its own.'} value={dev.shortcuts.capture} onSave={(capture) => D({ shortcuts: { ...dev.shortcuts, capture } }).then((r) => r.ok)} />
         <Row label="Where it opens">
           <Seg label="Where it opens" value={np.position} options={[['top-right', 'Top right'], ['top-left', 'Top left'], ['centre', 'Centre'], ['cursor', 'At the pointer']]} onChange={(position) => void setNp({ position })} />
@@ -76,7 +77,7 @@ export function TasksSection({ snap }: { snap: Snapshot }) {
         <Row label="Recent notes above the editor">
           <Seg label="Recent notes above the editor" value={String(np.recent) as '0'} options={[['0', 'None'], ['1', '1'], ['2', '2'], ['3', '3']]} onChange={(v) => void setNp({ recent: Number(v) })} />
         </Row>
-      </Group>
+      </Group>}
     </>
   );
 }

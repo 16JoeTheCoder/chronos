@@ -28,7 +28,7 @@ const SCREENS: { to: Screen; label: string; hint: string }[] = [
 ];
 
 /** Commands matching `needle` (the text after ">"), in display order. */
-export function paletteCommands(d: Data, needle: string, themes: { id: string; name: string }[]): PalCommand[] {
+export function paletteCommands(d: Data, needle: string, themes: { id: string; name: string }[], canAsk = true): PalCommand[] {
   const n = needle.trim().toLowerCase();
   const running = activeTask(d)?.runtime.status === 'running';
   const all: PalCommand[] = [
@@ -40,7 +40,7 @@ export function paletteCommands(d: Data, needle: string, themes: { id: string; n
     ...themes.map((t) => ({ key: `theme:${t.id}`, label: `Switch theme: ${t.name}`, action: { kind: 'theme', id: t.id } as PalAction })),
     { key: 'misparse', label: 'Report misparse', hint: 'the last thing you added', action: { kind: 'misparse' } },
   ];
-  if (n.startsWith('ask')) return [{ key: 'ask', label: `Ask Claude: "${needle.trim().slice(3).trim().slice(0, 60)}"`, hint: 'Enter', action: { kind: 'ask', text: needle.trim().slice(3).trim() } }];
+  if (canAsk && n.startsWith('ask')) return [{ key: 'ask', label: `Ask Claude: "${needle.trim().slice(3).trim().slice(0, 60)}"`, hint: 'Enter', action: { kind: 'ask', text: needle.trim().slice(3).trim() } }];
   if (!n) return all;
   const words = n.split(/\s+/);
   return all.filter((c) => { const l = c.label.toLowerCase(); return words.every((w) => l.includes(w)); });
