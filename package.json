@@ -15,7 +15,10 @@
     "audit": "node scripts/audit.mjs",
     "smoke": "node scripts/smoke.mjs",
     "icon": "node scripts/make-icon.mjs",
-    "package:win": "npm run build && electron-builder --win --publish never"
+    "package:win": "npm run build && electron-builder --win --publish never",
+    "build:web": "node scripts/build-web.mjs",
+    "dev:web": "vite --config vite.web.config.ts",
+    "preview:web": "wrangler dev"
   },
   "build": {
     "appId": "com.builtbyjosef.chronos",
