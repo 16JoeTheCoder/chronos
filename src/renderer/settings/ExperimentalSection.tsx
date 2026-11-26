@@ -1,10 +1,11 @@
 // Experimental: the Phase 1 diagnostics, laid out like the rest of Settings. Everything here is for
 // finding out why something is wrong; none of it is needed day to day.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { formatHuman } from '../../core/format';
 import type { Snapshot } from '../../core/model/types';
 import { settingsOf } from '../../core/repo/repo';
+import { api } from '../api';
 import { ask } from '../components/ask';
 import { run, toast } from '../store';
 import { when } from './AccountSection';
@@ -28,10 +29,12 @@ export function ExperimentalSection({ snap }: { snap: Snapshot }) {
     <>
       <Group title="Diagnostics" note="Things for finding out why something went wrong. Safe to leave off.">
         <Toggle label="Show diagnostics" hint="Sync internals, snapshots, conflicts and the Claude token. Per PC." checked={dev.experimental} onChange={(experimental) => run({ type: 'device.update', patch: { experimental } })} />
-        <Row label="Desktop layer" hint="The result of the last attempt to put Chronos behind the desktop icons (Live on the desktop, Look). Every step is in the app log (Account → Export log).">
+        {api.can.desktopLayer && <Row label="Desktop layer" hint="The result of the last attempt to put Chronos behind the desktop icons (Live on the desktop, Look). Every step is in the app log (Account → Export log).">
           <span className="st-value" data-testid="desktop-layer">{snap.desktopLayer ? `Desktop layer: ${snap.desktopLayer}` : dev.liveOnDesktop ? 'Desktop layer: not tried yet (press Esc on Home)' : 'Desktop layer: off'}</span>
-        </Row>
+        </Row>}
       </Group>
+
+      <UsageMeter />
 
       {dev.experimental && (
         <>
@@ -64,7 +67,7 @@ export function ExperimentalSection({ snap }: { snap: Snapshot }) {
                 </div>
               </Group>
 
-              <Group title="Snapshots" note="Chronos snapshots before risky steps. Restoring snapshots the current data first.">
+              {api.can.localFiles && <Group title="Snapshots" note="Chronos snapshots before risky steps. Restoring snapshots the current data first.">
                 {diag.snapshots.length === 0 && <p className="st-empty">No snapshots yet.</p>}
                 <div className="st-list">
                   {diag.snapshots.map((name) => (
@@ -78,7 +81,7 @@ export function ExperimentalSection({ snap }: { snap: Snapshot }) {
                     </div>
                   ))}
                 </div>
-              </Group>
+              </Group>}
 
               <Group title={`Conflicts (${diag.conflicts.length})`} note="The same field edited on two PCs. The edit waiting on this PC won; this is what it overwrote.">
                 {diag.conflicts.length === 0 && <p className="st-empty">None.</p>}
@@ -112,7 +115,7 @@ export function ExperimentalSection({ snap }: { snap: Snapshot }) {
                 {diag.quarantine.length > 0 && <div className="st-actions"><Btn done="Cleared" onClick={() => run({ type: 'diag.clear', what: 'quarantine' }).then((r) => r.ok)}>Clear quarantine</Btn></div>}
               </Group>
 
-              <Group title="Claude (MCP)">
+              {api.can.localMcp && <Group title="Claude (MCP)">
                 <dl className="st-kv">
                   <dt>Status</dt><dd>{diag.mcp.error ? `Error: ${diag.mcp.error}` : diag.mcp.running ? 'Running' : diag.mcp.enabled ? 'Starting' : 'Off'}</dd>
                   <dt>Port</dt><dd>{diag.mcp.port}</dd>
@@ -123,12 +126,41 @@ export function ExperimentalSection({ snap }: { snap: Snapshot }) {
                   <Btn done="New token" onClick={() => run({ type: 'mcp.regenerateToken' }).then((r) => r.ok)}>Regenerate token</Btn>
                   <Btn done="Exported" onClick={() => run({ type: 'diag.exportLog' }).then((r) => { if (r.ok) toast('Log exported.'); return r.ok; })}>Export log</Btn>
                 </div>
-              </Group>
+              </Group>}
             </>
           )}
         </>
       )}
     </>
+  );
+}
+
+/** Web only: Firestore reads and writes this session, listeners, and whether this tab runs sync. Refreshes every 5 s while visible. */
+function UsageMeter() {
+  const w = api.web;
+  const [u, setU] = useState(() => (w ? { ...w.usage(), role: w.role() } : null));
+  useEffect(() => {
+    if (!w) return undefined;
+    let t = 0;
+    const tick = () => {
+      if (!document.hidden) setU({ ...w.usage(), role: w.role() });
+      t = window.setTimeout(tick, 5000);
+    };
+    const onVis = () => { if (!document.hidden) { window.clearTimeout(t); tick(); } };
+    document.addEventListener('visibilitychange', onVis);
+    tick();
+    return () => { window.clearTimeout(t); document.removeEventListener('visibilitychange', onVis); };
+  }, [w]);
+  if (!w || !u) return null;
+  return (
+    <Group title="Usage this session" note="Firestore documents this browser tab has read and written since it opened. The free plan allows 50,000 reads and 20,000 writes a day.">
+      <dl className="st-kv" data-testid="usage-meter">
+        <dt>Reads</dt><dd>{u.reads}</dd>
+        <dt>Writes</dt><dd>{u.writes}</dd>
+        <dt>Listeners</dt><dd>{u.listeners}</dd>
+        <dt>This tab</dt><dd>{u.role === 'leader' ? 'Runs sync (leader)' : 'Follows another tab'}</dd>
+      </dl>
+    </Group>
   );
 }
 

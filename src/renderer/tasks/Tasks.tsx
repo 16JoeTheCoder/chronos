@@ -5,6 +5,7 @@
 // Rows: click the title to rename, E opens the editor, Del deletes (Undo), Ctrl+Enter completes
 // (Undo), S starts it, Up/Down move, Shift-click selects a range, Ctrl-click adds one. Drag a row
 // to reorder: rows never move while dragging, a line shows where it lands (task.sort).
+// Touch: swipe a row right to complete it, left to set its date; press and hold to drag it.
 
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ComponentType } from 'react';
 import type { Data, Project, Task } from '../../core/model/types';
@@ -15,11 +16,13 @@ import { addDays } from '../../core/time/zone';
 import { boardCards, doingColumnId, doneColumnId } from '../../core/board';
 import { Icon } from '../components/Icon';
 import { recycleWithUndo } from '../components/actions';
-import { beginDrag, registerTarget, useDrag } from '../components/drag';
+import { beginPress, registerTarget, useDrag } from '../components/drag';
 import { commandFromParse, chipsOf, parseLine } from '../palette/fromParse';
 import { describeError, run, toast } from '../store';
 import { DEFAULT_DUR } from '../runway/model';
 import { dueLabel, PrioFlag, TaskMeta } from './bits';
+import { DateSheet } from './DateSheet';
+import { useSwipeRow } from './swipe';
 import './tasks.css';
 
 export type TaskView = 'inbox' | 'today' | 'upcoming' | 'all';
@@ -138,6 +141,7 @@ export function Tasks({ d, now, view, onView, projectId, onProject, onEdit, onOp
         <>
           <QuickAdd d={d} now={now} defaults={defaults} placeholder={project ? `Add a task to ${project.name}` : view === 'inbox' ? 'Add a task to the Inbox' : 'Add a task, like "essay draft fri 4pm !1 @school"'} />
           <TaskList d={d} groups={groups} today={today} project={project ?? null} onEdit={onEdit} empty={emptyText(view, project)} />
+          <p className="tk-hint">Swipe a task right to complete it, left to set a date. Press and hold to reorder.</p>
           <p className="tk-keys" aria-hidden="true"><kbd>E</kbd> edit <kbd>S</kbd> start <kbd>Ctrl Enter</kbd> complete <kbd>Del</kbd> delete <kbd>G</kbd> then <kbd>I</kbd> <kbd>T</kbd> <kbd>U</kbd> <kbd>A</kbd> views <kbd>?</kbd> all keys</p>
           {doneList.length > 0 && (
             <section className="tk-done" aria-label="Done">
@@ -266,6 +270,7 @@ interface Spot { group: string; afterId: string | null; beforeId: string | null;
 function TaskList({ d, groups, today, project, onEdit, empty }: { d: Data; groups: Group[]; today: string; project: Project | null; onEdit: (t: Task) => void; empty: { title: string; body: string } }) {
   const box = useRef<HTMLDivElement>(null);
   const [sel, setSel] = useState<Set<string>>(new Set());
+  const [dateFor, setDateFor] = useState<Task | null>(null);
   const anchor = useRef<string | null>(null);
   const flat = groups.flatMap((g) => g.tasks);
   const drag = useDrag();
@@ -364,7 +369,7 @@ function TaskList({ d, groups, today, project, onEdit, empty }: { d: Data; group
               const line = spot && spot.group === g.key && spot.index === i;
               return (
                 <Row key={t.id} d={d} t={t} today={today} project={project} groupDate={g.into?.dueDate} selected={selected(t.id)} lineBefore={!!line} dragging={drag?.item.kind === 'task' && drag.item.taskId === t.id}
-                  onClick={click} onEdit={onEdit} onComplete={() => void complete(targets(t))} onDelete={() => void remove(targets(t))} onMove={(dir) => moveFocus(t.id, dir)} />
+                  onClick={click} onEdit={onEdit} onDate={() => setDateFor(t)} onComplete={() => void complete(targets(t))} onDelete={() => void remove(targets(t))} onMove={(dir) => moveFocus(t.id, dir)} />
               );
             })}
             {spot && spot.group === g.key && spot.index === index && <li className="tk-line" aria-hidden="true" />}
@@ -372,6 +377,7 @@ function TaskList({ d, groups, today, project, onEdit, empty }: { d: Data; group
           </ul>
         </section>
       ))}
+      {dateFor && <DateSheet task={dateFor} today={today} onClose={() => setDateFor(null)} onEdit={onEdit} />}
     </div>
   );
 }
@@ -404,10 +410,11 @@ function spotAt(root: HTMLElement | null, groups: Group[], y: number, dragId: st
   return best;
 }
 
-function Row({ d, t, today, project, groupDate, selected, lineBefore, dragging, onClick, onEdit, onComplete, onDelete, onMove }: {
+function Row({ d, t, today, project, groupDate, selected, lineBefore, dragging, onClick, onEdit, onDate, onComplete, onDelete, onMove }: {
   d: Data; t: Task; today: string; project: Project | null; groupDate?: string | null; selected: boolean; lineBefore: boolean; dragging: boolean;
-  onClick: (t: Task, e: React.MouseEvent) => boolean; onEdit: (t: Task) => void; onComplete: () => void; onDelete: () => void; onMove: (dir: 1 | -1) => void;
+  onClick: (t: Task, e: React.MouseEvent) => boolean; onEdit: (t: Task) => void; onDate: () => void; onComplete: () => void; onDelete: () => void; onMove: (dir: 1 | -1) => void;
 }) {
+  const swipe = useSwipeRow((dir) => (dir === 'right' ? onComplete() : onDate()));
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(t.title);
   useEffect(() => { if (!editing) setTitle(t.title); }, [t.title, editing]);
@@ -432,6 +439,9 @@ function Row({ d, t, today, project, groupDate, selected, lineBefore, dragging, 
       <li
         className={`tk-row${selected ? ' is-sel' : ''}${active ? ' is-active' : ''}${dragging ? ' is-drag' : ''}`}
         data-task={t.id}
+        data-swipe={swipe.progress >= 0.7 ? 'right' : swipe.progress <= -0.7 ? 'left' : undefined}
+        data-side={swipe.progress ? (swipe.progress > 0 ? 'right' : 'left') : undefined}
+        style={swipe.progress ? ({ '--sw': Math.abs(swipe.progress) } as CSSProperties) : undefined}
         tabIndex={0}
         aria-selected={selected}
         aria-label={`${t.title}${active ? ', in focus' : ''}. Enter renames, E edits, S starts, Ctrl Enter completes, Delete deletes.`}
@@ -439,8 +449,12 @@ function Row({ d, t, today, project, groupDate, selected, lineBefore, dragging, 
         onPointerDown={(e) => {
           if (editing || (e.target as HTMLElement).closest('button, input')) return;
           if (e.shiftKey || e.ctrlKey || e.metaKey) return;
-          beginDrag(e, { kind: 'task', taskId: t.id, title: t.title, dur: t.estimateMin ?? DEFAULT_DUR });
+          swipe.down(e);
+          beginPress(e, { kind: 'task', taskId: t.id, title: t.title, dur: t.estimateMin ?? DEFAULT_DUR });
         }}
+        onPointerMove={swipe.move}
+        onPointerUp={swipe.up}
+        onPointerCancel={swipe.cancel}
         onClick={(e) => { if (!(e.target as HTMLElement).closest('button, input')) onClick(t, e); }}
       >
         <button type="button" className={`tk-check prio-${t.priority}`} aria-label={`Complete ${t.title}`} onClick={onComplete}>

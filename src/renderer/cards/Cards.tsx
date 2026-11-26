@@ -9,7 +9,7 @@ import { deriveQueue, todayOf } from '../../core/tasks/tasks';
 import { PrioFlag, TaskMeta } from '../tasks/bits';
 import { Icon } from '../components/Icon';
 import { recycleWithUndo } from '../components/actions';
-import { beginDrag, registerTarget, useDrag } from '../components/drag';
+import { beginPress, registerTarget, useDrag } from '../components/drag';
 import { intentFor, laneAccepts } from '../runway/dnd';
 import { perform } from '../runway/dropActions';
 import { Dialog } from '../components/ui';
@@ -84,7 +84,7 @@ function TaskCard({ d, t, index, rest, onEdit, onSchedule }: { d: Data; t: Task;
       tabIndex={0}
       aria-label={`${t.title}${t.status === 'doing' ? ', in focus' : ''}. S schedules, Enter edits, Delete removes, Alt and arrows reorder.`}
       onKeyDown={keys}
-      onPointerDown={(e) => (e.target as HTMLElement).closest('button') || beginDrag(e, { kind: 'task', taskId: t.id, title: t.title, dur }, () => onEdit(t))}
+      onPointerDown={(e) => (e.target as HTMLElement).closest('button') || beginPress(e, { kind: 'task', taskId: t.id, title: t.title, dur }, () => onEdit(t))}
     >
       <div className="card-top">
         {tag && <span className="chip-tag">{tag.name}</span>}

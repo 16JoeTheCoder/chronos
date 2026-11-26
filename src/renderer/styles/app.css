@@ -342,3 +342,9 @@ input[type="number"] { font-family: var(--font-mono); font-variant-numeric: tabu
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; font-size: 13px; }
 .kv dt { color: var(--text-2); }
 .kv dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* Touch: a press-and-hold button says so (hold-to-finish works with a finger, same 2 s ring). */
+@media (pointer: coarse) {
+  .hold { -webkit-touch-callout: none; }
+  .hold .hold-label::after { content: " (hold)"; opacity: .7; font-weight: 400; }
+}

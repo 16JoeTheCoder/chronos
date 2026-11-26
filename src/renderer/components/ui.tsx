@@ -1,60 +1,11 @@
 // Small shared controls: dialog, field, switch, segmented control, toasts.
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { dismissToast, useToasts } from '../store';
 import { Icon } from './Icon';
+import { Sheet } from './Sheet';
 
-/** Modal dialog. Esc or a click outside closes it, unless it is `required` (an answer is needed). */
-export function Dialog({ title, onClose, children, wide, required }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; required?: boolean }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const prev = document.activeElement as HTMLElement | null;
-    ref.current?.querySelector<HTMLElement>('[data-autofocus], input, textarea, select, button:not(.dlg-x)')?.focus();
-    return () => prev?.focus?.();
-  }, []);
-  return (
-    <div className="scrim" onPointerDown={(e) => !required && e.target === e.currentTarget && onClose()}>
-      <div
-        ref={ref}
-        className={`dlg${wide ? ' dlg-wide' : ''}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onKeyDown={(e) => {
-          if (e.key === 'Tab') trapFocus(e, ref.current);
-          if (e.key !== 'Escape') return;
-          e.preventDefault();
-          e.stopPropagation();
-          if (!required) onClose();
-        }}
-      >
-        <header className="dlg-head">
-          <h2>{title}</h2>
-          {!required && (
-            <button className="icon-btn dlg-x" onClick={onClose} aria-label="Close">
-              <Icon name="x" />
-            </button>
-          )}
-        </header>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-/** Keep Tab inside an open dialog. */
-function trapFocus(e: KeyboardEvent<HTMLElement>, root: HTMLElement | null): void {
-  const items = [...(root?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select, textarea, [tabindex="0"]') ?? [])];
-  const first = items[0];
-  const last = items.at(-1);
-  if (!first || !last) return;
-  if (e.shiftKey && document.activeElement === first) {
-    e.preventDefault();
-    last.focus();
-  } else if (!e.shiftKey && document.activeElement === last) {
-    e.preventDefault();
-    first.focus();
-  }
-}
+/** Modal dialog: a bottom sheet on phones (components/Sheet.tsx). Esc or a click outside closes it, unless it is `required`. */
+export const Dialog = Sheet;
 
 export function Field({ label, error, help, children }: { label: string; error?: string; help?: string; children: ReactNode }) {
   return (

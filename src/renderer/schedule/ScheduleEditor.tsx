@@ -13,7 +13,10 @@ import { expandEvents } from '../../core/time/schedule';
 import { addDays, isValidZone, mondayOf } from '../../core/time/zone';
 import { Icon } from '../components/Icon';
 import { recycleWithUndo } from '../components/actions';
+import { Sheet } from '../components/Sheet';
 import { Field, Segmented, Switch } from '../components/ui';
+import { useViewport } from '../viewport';
+import './schedule.css';
 import { Holidays } from './Holidays';
 import { run } from '../store';
 
@@ -48,6 +51,8 @@ export function ScheduleEditor({ d, now, guided, editEventId, onClose }: { d: Da
     notes: '',
   });
   const edit = (ev: CalEvent) => setDraft(draftOf(ev));
+  const phone = useViewport().cls === 'phone';
+  const touchTap = useRef(false);
   const minuteAt = (y: number, el: HTMLElement) => {
     const r = el.getBoundingClientRect();
     return Math.max(s.dayStartMin, Math.min(s.dayEndMin, s.dayStartMin + Math.round(((y - r.top) / r.height) * span / SNAP) * SNAP));
@@ -90,6 +95,9 @@ export function ScheduleEditor({ d, now, guided, editEventId, onClose }: { d: Da
                 className="week-cells"
                 onPointerDown={(e) => {
                   if (e.target !== e.currentTarget) return;
+                  // Touch: the grid scrolls under the finger, so a tap adds an event (onClick) and a drag never starts.
+                  touchTap.current = e.pointerType === 'touch';
+                  if (touchTap.current) return;
                   const el = e.currentTarget;
                   const a = minuteAt(e.clientY, el);
                   setDrag({ day: i, a, b: a + 60 });
@@ -103,6 +111,12 @@ export function ScheduleEditor({ d, now, guided, editEventId, onClose }: { d: Da
                   };
                   window.addEventListener('pointermove', move);
                   window.addEventListener('pointerup', up);
+                }}
+                onClick={(e) => {
+                  if (!touchTap.current || e.target !== e.currentTarget) return;
+                  touchTap.current = false;
+                  const a = minuteAt(e.clientY, e.currentTarget);
+                  setDraft(blank(i + 1, a, a + 60));
                 }}
               >
                 {expandEvents(d, date).map((inst) => {
@@ -127,7 +141,14 @@ export function ScheduleEditor({ d, now, guided, editEventId, onClose }: { d: Da
             </div>
           ))}
         </div>
-        {draft ? <EventPanel key={draft.id ?? `new${draft.startMin}${draft.recur?.weekdays.join()}`} d={d} draft={draft} today={todayOf(d, now)} onDone={() => setDraft(null)} /> : <p className="muted sched-hint">Select an event to edit it, or drag on the grid to add one.</p>}
+        {draft ? (
+          (() => {
+            const panel = <EventPanel key={draft.id ?? `new${draft.startMin}${draft.recur?.weekdays.join()}`} d={d} draft={draft} today={todayOf(d, now)} onDone={() => setDraft(null)} />;
+            return phone ? <Sheet title={draft.id ? 'Edit event' : 'New event'} onClose={() => setDraft(null)}>{panel}</Sheet> : panel;
+          })()
+        ) : (
+          !phone && <p className="muted sched-hint">Select an event to edit it, or drag on the grid to add one.</p>
+        )}
       </div>
       {holidays && <Holidays d={d} today={todayOf(d, now)} onClose={() => setHolidays(false)} />}
     </section>

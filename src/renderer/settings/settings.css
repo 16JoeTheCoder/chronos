@@ -162,3 +162,28 @@
 .st-tip p { margin: 0; font-size: 14px; color: var(--c-text); }
 .st-key { cursor: pointer; text-align: left; min-width: 180px; }
 .st-key.is-rec { border-color: var(--c-accent); color: var(--c-text); }
+
+/* ---- Phone ---- */
+@media (max-width: 639px) {
+  .st-shell { font-size: 16px; line-height: 24px; }
+  .st-nav { padding: 8px 12px; }
+  .st-nav-item { font-size: 16px; }
+  .st-nav-item.st-nav-quiet { font-size: 16px; }
+  .st-body { padding: 16px 16px calc(48px + env(safe-area-inset-bottom)); }
+  .st-body-inner { gap: 32px; }
+  .st-label { font-size: 16px; line-height: 24px; }
+  .st-hint, .st-group > .st-note { font-size: 14px; line-height: 20px; }
+  .st-row { gap: 8px 12px; padding: 12px 0; }
+  .st-row-ctl { width: 100%; }
+  .st-row:has(> .st-tog) .st-row-ctl { width: auto; }
+  .st-input, .st-select, .st-area { font-size: 16px; }
+  .st-input { width: 100%; }
+  .st-key { min-width: 0; }
+  .st-seg { max-width: 100%; flex-wrap: wrap; }
+  .st-seg button { min-height: 44px; padding: 0 14px; font-size: 16px; }
+  .st-btn { font-size: 16px; }
+  .st-actions { gap: 8px; }
+  .st-themes { grid-template-columns: minmax(0, 1fr); }
+  .st-shell input[type="range"] { width: 100%; }
+  .st-kv { font-size: 16px; }
+}
