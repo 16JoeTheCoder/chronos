@@ -94,3 +94,23 @@ A local MCP server: Claude Desktop runs the bridge, which forwards to a loopback
 ## Desktop layer
 
 `main/desktopLayer.ts` is Windows-only and untested on Windows. It ships OFF and the fallback (a normal window) is the active path. See D-144 and `docs/WINDOWS_CHECKLIST.md` items 24-26 and 33-34.
+
+## Platforms (Phase 4)
+
+```
+                 renderer (React, src/renderer)  ── api = getBridge() ──┐
+                                                                         │ ChronosBridge (src/platform/types.ts)
+        ┌────────────────────────────────────────────┬───────────────────┘
+  Electron adapter (platform/electron.ts)      Web bridge (platform/web.ts, platform/web/**)
+  window.chronos → IPC → main                  in the page:
+  main: Controller + SyncEngine                Controller + SyncEngine (same classes, D-186)
+        JSON files (store.ts)                  IndexedDB-hydrated memory store
+        Firestore (memory cache)               Firestore (persistent cache), leader tab only;
+                                               followers over BroadcastChannel
+```
+
+- `getBridge()` defaults to the Electron adapter; `src/web/entry.ts` installs the web bridge first, then imports the renderer. The desktop bundle never contains the web code.
+- `bridge.can.*` hides desktop-only UI (overlay, notepad hotkey, global shortcuts, desktop layer, local MCP, file shelf, zoom, window controls, local files, Windows settings). Desktop-only calls on the web return `UNSUPPORTED`.
+- Commands are parsed by `main/parseCommand.ts` on both platforms (D-189), then run by the same `Controller` and core.
+- Web hosting: Cloudflare Worker `chronos-web` with static assets (`dist-web/`, SPA fallback). Static requests never run Worker code; only `/api/*` does (health now, Phase 4.5 stubs that verify Firebase ID tokens). A service worker caches the app shell (cache-first hashed assets, network-first `index.html`). See `SETUP.md`.
+- The files Worker `chronos-files` (R2, `cloudflare/worker`) is separate and serves both platforms.

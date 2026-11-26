@@ -439,3 +439,6 @@ Write view autosaves a draft as an `ideas` record with `draft: true`; Publish se
 
 ### D-188 Electron release and updater: keep what Josef shipped
 The prompt asked for a tag-triggered release and a daily update check. The repo already releases on every push to `main` (`v1.0.<run>`) and checks 30 s after start and every 4 h (`src/main/updater.ts`), installing on quit. Kept (the repo is the truth and 4 h ⊃ daily); the workflow also runs on `v*` tags. Unsigned: SmartScreen "More info → Run anyway" on first install; signing costs money and needs a certificate Josef does not have.
+
+### D-189 parseCommand is platform-neutral
+The payload rebuilders and `parseCommand` moved from `src/main/ipc.ts` to `src/main/parseCommand.ts` (no Electron, no Node). `ipc.ts` re-exports them. The web bridge runs every command through the same parser before the controller, so a command the desktop refuses is refused on the web too.
