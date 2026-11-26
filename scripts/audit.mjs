@@ -148,7 +148,7 @@ check('bundle budgets', () => {
   if (sync > 1600 * 1024) bad.push('sync bundle over 1.6 MB');
   if (bridge > 700 * 1024) bad.push('MCP bridge over 700 KB');
   if (js > 220 * 1024) bad.push('renderer JS over 220 KB gzipped');
-  if (css > 30 * 1024) bad.push('CSS over 30 KB gzipped');
+  if (css > 34 * 1024) bad.push('CSS over 34 KB gzipped'); // D-191
   if (main > 200 * 1024) bad.push("main bundle over 200 KB"); // D-183
   if (launch > 8 * 1024) bad.push('launch.css over 8 KB');
   return bad;

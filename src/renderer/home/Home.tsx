@@ -153,7 +153,7 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
         else {
           const next = escape(nav);
           if (next !== 'hide') setNav(next);
-          else if (!snap.pendingGap) api.win.hide();
+          else if (!snap.pendingGap && api.can.windowControls) api.win.hide();
         }
         return;
       }
