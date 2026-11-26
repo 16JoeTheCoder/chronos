@@ -3,7 +3,7 @@
 // a numeric countdown replaces it under reduced motion. Space never completes.
 // Timing lives in hold.ts; this file only wires keys, pointer and the visuals.
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent, type RefObject } from 'react';
 import { Icon, type IconName } from '../components/Icon';
 import { createHold, HOLD_MS } from './hold';
 
@@ -22,6 +22,7 @@ export interface HoldControl {
     onPointerDown: (e: PointerEvent) => void;
     onPointerUp: () => void;
     onPointerCancel: () => void;
+    onContextMenu: (e: MouseEvent<HTMLElement>) => void;
   };
 }
 
@@ -94,6 +95,8 @@ export function useHold(onComplete: () => void, key: 'Enter' | 'Backspace' = 'En
       },
       onPointerUp: release,
       onPointerCancel: release,
+      // A long press on a phone opens the context menu / selection: not while holding to finish.
+      onContextMenu: (e) => e.preventDefault(),
     },
   };
 }

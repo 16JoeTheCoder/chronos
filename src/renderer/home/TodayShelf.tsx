@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Data, Task } from '../../core/model/types';
 import { todayOf } from '../../core/tasks/tasks';
 import { Icon } from '../components/Icon';
-import { beginDrag, registerTarget, useDrag } from '../components/drag';
+import { beginPress, registerTarget, useDrag } from '../components/drag';
 import { DEFAULT_DUR } from '../runway/model';
 import { run, toast } from '../store';
 import { PrioFlag, TaskMeta } from '../tasks/bits';
@@ -67,7 +67,7 @@ export function TodayShelf({ d, now, tasks, pausedIds, activeId }: { d: Data; no
                 tabIndex={0}
                 aria-label={`${t.title}${isPaused ? ', paused' : ''}. Enter starts it.`}
                 onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === 's' || e.key === 'S')) { e.preventDefault(); start(t); } }}
-                onPointerDown={(e) => (e.target as HTMLElement).closest('button') || beginDrag(e, { kind: 'task', taskId: t.id, title: t.title, dur: t.estimateMin ?? DEFAULT_DUR })}
+                onPointerDown={(e) => (e.target as HTMLElement).closest('button') || beginPress(e, { kind: 'task', taskId: t.id, title: t.title, dur: t.estimateMin ?? DEFAULT_DUR })}
               >
                 <div className="tcard-top">
                   <span className="tcard-title">{t.title}</span>

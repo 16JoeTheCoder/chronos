@@ -43,3 +43,15 @@
   .cache-bar { flex-wrap: wrap; }
   .cache-hint { flex-basis: 100%; order: 3; }
 }
+
+@media (max-width: 639px) {
+  .cache { font-size: 16px; padding-bottom: env(safe-area-inset-bottom); }
+  .cache .log-btn { min-height: 44px; min-width: 44px; padding: 0 16px; font-size: 16px; }
+  .cache .att-pick { min-height: 44px; }
+  .cache-input { font-size: 16px; min-height: 96px; }
+  .cache-hint, .cache-sub { font-size: 14px; line-height: 20px; }
+  .cache-left { font-size: 14px; }
+  .cache-x { min-width: 44px; }
+  .cache-body { font-size: 16px; }
+  .cache-side { gap: 8px; }
+}

@@ -15,6 +15,8 @@ import { useOptionalTheme } from '../theme/ThemeProvider';
 import { paletteCommands, type PalAction } from './commands';
 import { chipsOf, commandFromParse, describeParse, explicitKind, parseLine } from './fromParse';
 import { todayOf } from '../../core/tasks/tasks';
+import { useKeyboardInset } from '../components/Sheet';
+import './palette.css';
 
 export interface PaletteProps {
   open: boolean;
@@ -38,6 +40,7 @@ export function Palette({ open, onClose, standalone, onNavigate }: PaletteProps)
   const input = useRef<HTMLInputElement>(null);
   const index = useRef(new SearchIndex());
   const returnTo = useRef<HTMLElement | null>(null);
+  const kb = useKeyboardInset();
   const mission = useOptionalTheme()?.theme.motion.signature.kind === 'mission-clock';
 
   const reset = () => { setQ(''); setSel(0); setReport(null); setTimeout(() => input.current?.focus(), 0); };
@@ -146,9 +149,10 @@ export function Palette({ open, onClose, standalone, onNavigate }: PaletteProps)
   };
 
   return (
-    <div className={`pal-scrim${standalone ? '' : ' in-app'}`} onMouseDown={(e) => e.target === e.currentTarget && finish()}>
+    <div className={`pal-scrim${standalone ? '' : ' in-app'}`} style={kb ? { bottom: kb } : undefined} onMouseDown={(e) => e.target === e.currentTarget && finish()}>
       <div className="pal" role="dialog" aria-modal="true" aria-labelledby="pal-label">
         <div className="pal-head">
+          <button type="button" className="pal-close" onMouseDown={(e) => e.preventDefault()} onClick={finish}>Close</button>
           <label id="pal-label" htmlFor="pal-input" className="pal-eyebrow">{report !== null ? 'Report misparse' : cmdMode ? 'Command' : mission ? 'Call Mission Control' : 'Add or search'}</label>
           <input
             id="pal-input"
@@ -157,6 +161,8 @@ export function Palette({ open, onClose, standalone, onNavigate }: PaletteProps)
             value={report !== null ? report : q}
             maxLength={300}
             autoComplete="off"
+            enterKeyHint="go"
+            autoCapitalize="sentences"
             spellCheck={false}
             role="combobox"
             aria-expanded={rows.length > 0}

@@ -17,7 +17,7 @@ export interface SheetProps {
 }
 
 /** Pixels the on-screen keyboard covers. 0 where visualViewport is missing (older WebViews) or the keyboard is closed. */
-function useKeyboardInset(): number {
+export function useKeyboardInset(): number {
   const [inset, setInset] = useState(0);
   useEffect(() => {
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
