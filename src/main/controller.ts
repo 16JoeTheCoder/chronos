@@ -18,7 +18,7 @@ import { clearSyncMeta, diffData, enqueue, replay } from '../core/sync/outbox';
 import type { OutboxEntry, SyncProvider } from '../core/sync/provider';
 import { dateOf } from '../core/time/zone';
 import { purge } from '../core/repo/recycle';
-import { recycle, settingsOf, update, type Ctx } from '../core/repo/repo';
+import { live, recycle, settingsOf, update, type Ctx } from '../core/repo/repo';
 import { expiredDone } from '../core/tasks/selectors';
 import { checkpointDue } from '../core/tasks/sprints';
 import { activeTask, blockSpan, blocksOn, normalize, ownsTimer, recordSlices, todayOf } from '../core/tasks/tasks';
@@ -284,7 +284,7 @@ export class Controller {
         // Clock is behind what we recorded: keep what we had, restart from now.
         this.restartAt(task, lastAlive, now);
       } else if (now - lastAlive > STARTUP_GAP_MS) {
-        this.pauseWithGap(task, lastAlive, { from: lastAlive, to: now, reason: 'off' }, now);
+        this.pauseUnobserved(task, lastAlive, now);
       }
       // Smaller gaps: keep running seamlessly; the slice simply covers the restart.
     }
@@ -302,6 +302,8 @@ export class Controller {
     }
     // Done tasks leave after the retention window (Phase 3.7): soft delete, restorable from Trash.
     for (const t of expiredDone(d, now, taskPrefs(settingsOf(d)).doneRetentionHours)) d = recycle(d, 'tasks', t.id, ctx);
+    // Cache items expire on their own (the file objects follow via the bucket's lifecycle rule).
+    for (const it of live(d, 'cache')) if (it.expiresAt <= now) d = recycle(d, 'cache', it.id, ctx);
     d = normalize(d, ctx);
     if (d !== this.data) {
       this.commit(d, now);
@@ -337,9 +339,8 @@ export class Controller {
     }
     if (now - prev > TICK_GAP_MS) {
       // We were not scheduled for a while (sleep, suspension, forward jump).
-      this.pauseWithGap(task, prev, { from: prev, to: now, reason: 'sleep' }, now);
+      this.pauseUnobserved(task, prev, now);
       this.changed(true);
-      this.hooks.onGap();
       return;
     }
     const s = advance(task, now);
@@ -389,10 +390,10 @@ export class Controller {
   resume(now: number): void {
     this.lastTick = now;
     if (this.suspendedAt === null) return;
-    this.pendingGap = { from: this.suspendedAt, to: now, reason: 'sleep' };
+    // Time asleep is never counted and never asked about: stay paused at the last recorded time.
     this.suspendedAt = null;
+    this.gapTaskId = null;
     this.hooks.onChange();
-    this.hooks.onGap();
   }
 
   shutdown(now: number): void {
@@ -493,13 +494,11 @@ export class Controller {
     return { ok: true };
   }
 
-  private pauseWithGap(task: Task, at: number, gap: Gap, now: number): void {
+  private pauseUnobserved(task: Task, at: number, now: number): void {
     const s = pauseAt(task, at);
     this.replace(s.task, s.slices, now);
-    if (s.task.runtime.status === 'paused') {
-      this.pendingGap = gap;
-      this.gapTaskId = task.id;
-    }
+    // The unobserved stretch (PC off, crash, clock jump) is discarded without a prompt: the task stays paused at `at`.
+    this.gapTaskId = null;
   }
 
   /** Bank the slice up to closeAt, then keep running from now. */

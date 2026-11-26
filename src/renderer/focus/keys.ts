@@ -4,7 +4,7 @@
 // their own keys.
 
 export type Target = 'body' | 'hold' | 'text' | 'control';
-export type KeyAction = 'toggle' | 'press' | 'release' | 'swallow' | null;
+export type KeyAction = 'toggle' | 'press' | 'release' | 'dropPress' | 'dropRelease' | 'swallow' | null;
 
 export interface KeyInput {
   type: 'down' | 'up';
@@ -16,13 +16,14 @@ export interface KeyInput {
 }
 
 /**
- * Space = start or pause (never finishes). Enter held = the finish hold. Everything else is
+ * Space = start or pause (never finishes). Enter held = the finish hold. Backspace held = the drop hold. Everything else is
  * not ours. `swallow` means: prevent the browser default (a Space scroll, an Enter click) and do nothing.
  */
 export function keyAction(k: KeyInput): KeyAction {
   if (k.modifier || k.dialogOpen || k.target === 'text' || k.target === 'control') return null;
   if (k.key === ' ') return k.type === 'down' ? (k.repeat ? 'swallow' : 'toggle') : 'swallow';
   if (k.key === 'Enter') return k.type === 'down' ? 'press' : 'release';
+  if (k.key === 'Backspace') return k.type === 'down' ? 'dropPress' : 'dropRelease';
   return null;
 }
 

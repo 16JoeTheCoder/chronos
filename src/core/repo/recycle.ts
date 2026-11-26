@@ -12,7 +12,7 @@ const DAY = 86_400_000;
 /** Items in the recycle bin, newest first. */
 export function recycled(d: Data): { coll: Coll; rec: Rec }[] {
   const out: { coll: Coll; rec: Rec }[] = [];
-  for (const coll of COLLS) for (const rec of Object.values(d[coll] as Record<string, Rec>)) if (rec.deletedAt !== null) out.push({ coll, rec });
+  for (const coll of COLLS) if (coll !== 'cache') for (const rec of Object.values(d[coll] as Record<string, Rec>)) if (rec.deletedAt !== null) out.push({ coll, rec });
   return out.sort((a, b) => (b.rec.deletedAt ?? 0) - (a.rec.deletedAt ?? 0));
 }
 

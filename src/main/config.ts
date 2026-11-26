@@ -14,6 +14,8 @@ export interface FirebaseConfig {
   /** Google Cloud OAuth client of type "Desktop app" (its secret is not confidential for installed apps). */
   googleClientId: string;
   googleClientSecret: string;
+  /** Cloudflare Worker that stores Cache and Log files in R2 (cloudflare/SETUP.md). Optional. */
+  filesUrl?: string;
 }
 
 const KEYS = ['apiKey', 'authDomain', 'projectId', 'appId', 'googleClientId', 'googleClientSecret'] as const;
@@ -29,5 +31,7 @@ export function readFirebaseConfig(dirs: string | string[], env: NodeJS.ProcessE
     }
   }
   const cfg = Object.fromEntries(KEYS.map((k) => [k, env[`CHRONOS_FIREBASE_${k.replace(/[A-Z]/g, (c) => `_${c}`).toUpperCase()}`] ?? file[k]]));
-  return KEYS.every((k) => typeof cfg[k] === 'string' && cfg[k]) ? (cfg as unknown as FirebaseConfig) : null;
+  if (!KEYS.every((k) => typeof cfg[k] === 'string' && cfg[k])) return null;
+  const files = env.CHRONOS_FILES_URL ?? file.filesUrl;
+  return { ...(cfg as unknown as FirebaseConfig), ...(typeof files === 'string' && /^https:\/\/[^\s]+$/.test(files) ? { filesUrl: files } : {}) };
 }

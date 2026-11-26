@@ -40,7 +40,7 @@ describe('migrate v2 -> v3 (Josef fixture)', () => {
   it('is lossless: every v2 value is still there, including sync metadata', () => {
     const d = mig();
     for (const c of COLLS) {
-      const before = v2[c] as Obj;
+      const before = (v2[c] ?? {}) as Obj;
       const after = d[c] as Record<string, Obj>;
       expect(Object.keys(after).sort(), c).toEqual(Object.keys(before).sort());
       for (const [id, rec] of Object.entries(before)) {

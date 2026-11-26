@@ -6,7 +6,7 @@ import { isValidZone } from './time/zone';
 import { isSortKey } from './model/sortKey';
 import { isId } from './model/ids';
 import { RETENTION_OPTIONS, SNAP_OPTIONS } from './model/defaults';
-import { COLLS, PARSER_REPORTS_MAX, PRIORITIES, SCHEMA_V, SCOPES, TAG_COLORS, TASK_SOURCES, TASK_STATUSES, type Coll, type DeviceSettings, type Settings } from './model/types';
+import { ATTACH_INLINE_MAX_CHARS, ATTACH_MAX_FILES, COLLS, PARSER_REPORTS_MAX, PRIORITIES, SCHEMA_V, SCOPES, TAG_COLORS, TASK_SOURCES, TASK_STATUSES, type Coll, type DeviceSettings, type Settings } from './model/types';
 
 const SEC = 1000;
 const MIN = 60 * SEC;
@@ -240,6 +240,12 @@ const runtime: Check = (v) =>
   isObj(v) && ['idle', 'running', 'paused', 'completed'].includes(v.status as string) && ['work', 'shortBreak', 'longBreak'].includes(v.phase as string) && isNum(v.phaseElapsedMs) && (v.sliceStartedAt === null || isNum(v.sliceStartedAt)) && isNum(v.cycleSessions) && isBool(v.expiredNotified);
 const recur: Check = (v) =>
   isObj(v) && Array.isArray(v.weekdays) && v.weekdays.every((w) => Number.isInteger(w) && w >= 1 && w <= 7) && [1, 2, 3, 4].includes(v.everyNWeeks as number) && isDate(v.anchorDate) && (v.from === null || isDate(v.from)) && (v.until === null || isDate(v.until));
+const attachment: Check = (a) =>
+  isObj(a) && isId(a.id) && isStr(a.name) && a.name.length > 0 && a.name.length <= 200 && isStr(a.mime) && a.mime.length <= 100 && int(0, 1e9)(a.size) && isBool(a.cloud) &&
+  (a.cloud ? a.data === null : isStr(a.data) && a.data.startsWith('data:') && a.data.length <= ATTACH_INLINE_MAX_CHARS);
+const attachments: Check = (v) => v === undefined || (arrOf(attachment, ATTACH_MAX_FILES)(v) && (v as { data: string | null }[]).reduce((n, a) => n + (a.data?.length ?? 0), 0) <= ATTACH_INLINE_MAX_CHARS);
+/** Attachments on a post or cache item: shape, count, and the inline-size budget. */
+export const attachmentsValid = (v: unknown): boolean => attachments(v);
 const columns: Check = arrOf((c) => isObj(c) && isStr(c.id) && c.id.length > 0 && c.id.length <= 60 && isStr(c.name) && c.name.length <= 60, 30);
 
 const SHAPES: Record<Coll, Record<string, Check>> = {
@@ -257,11 +263,12 @@ const SHAPES: Record<Coll, Record<string, Check>> = {
   blocks: { taskId: idRef, tagId: idRef, title: str(500), date: DATE, startMin: minute, endMin: minute, tz: isValidZone, kind: oneOf(['work', 'sprint', 'break']), auto: isBool },
   sessions: { taskId: isId, blockId: idRef, startedAt: anyNum, endedAt: anyNum, phase: oneOf(['work', 'break']), overrunMs: anyNum },
   tags: { name: str(200), color: oneOf(TAG_COLORS), kind: oneOf(['class', 'project', 'general']) },
-  ideas: { text: str(5000), body: str(100_000), taskId: idRef, projectId: idRef, reviewed: isBool, parsedTaskIds: arrOf(isId, 500) },
+  ideas: { text: str(5000), body: str(100_000), taskId: idRef, projectId: idRef, reviewed: isBool, parsedTaskIds: arrOf(isId, 500), files: attachments },
   activity: { type: oneOf(['started', 'finished', 'dropped', 'killed', 'claude']), taskId: (v) => v === '' || isId(v), at: anyNum, reason: str(5000) },
   timer: { taskId: idRef, ownerDeviceId: str(200), ownerName: str(200), takeoverAt: nullable(anyNum) },
   settings: {},
   projects: { name: str(200), color: oneOf(TAG_COLORS), columns, archived: isBool, sortKey: isSortKey },
+  cache: { body: str(20_000), files: attachments, expiresAt: anyNum },
   reviews: { date: DATE, outcomes: arrOf((o) => isObj(o) && isId(o.taskId) && ['tomorrow', 'unscheduled', 'dropped', 'done'].includes(o.action as string), 1000) },
 };
 

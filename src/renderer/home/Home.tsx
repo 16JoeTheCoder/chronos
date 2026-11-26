@@ -19,7 +19,6 @@ import { NowScreen } from './NowScreen';
 import { TaskEditor } from '../cards/TaskEditor';
 import { Unscheduled } from '../cards/Cards';
 import { FocusCore } from '../focus/FocusCore';
-import { GapPrompt } from '../focus/GapPrompt';
 import { Onboarding } from '../onboarding/Onboarding';
 import { dayModel } from '../runway/model';
 import { Runway } from '../runway/Runway';
@@ -44,6 +43,8 @@ const logs = import.meta.glob('../log/Log.tsx');
 type BoardP = { projectId?: string | null; onOpenLog?: (projectId: string) => void; onEnterFocus?: (taskId: string) => void };
 const LazyBoard = lazy(() => (boards['../board/Board.tsx'] ? (boards['../board/Board.tsx']() as Promise<{ Board: ComponentType<BoardP> }>).then((m) => ({ default: m.Board })) : Promise.resolve({ default: (_p: BoardP) => <Placeholder name="Board" /> })));
 const LazyLog = lazy(() => (logs['../log/Log.tsx'] ? (logs['../log/Log.tsx']() as Promise<{ Log: ComponentType<{ projectId?: string | null }> }>).then((m) => ({ default: m.Log })) : Promise.resolve({ default: (_p: { projectId?: string | null }) => <Placeholder name="Log" /> })));
+const caches = import.meta.glob('../cache/Cache.tsx');
+const LazyCache = lazy(() => (caches['../cache/Cache.tsx']!() as Promise<{ Cache: ComponentType }>).then((m) => ({ default: m.Cache })));
 type PalP = { open: boolean; onClose: () => void; onNavigate?: (to: Screen, opts?: { projectId?: string; logProject?: string | null }) => void };
 const LazyPalette = lazy(() => (palettes['../palette/Palette.tsx'] ? (palettes['../palette/Palette.tsx']() as Promise<{ Palette: ComponentType<PalP> }>).then((m) => ({ default: m.Palette })) : Promise.resolve({ default: (_p: PalP) => null })));
 
@@ -120,7 +121,13 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
         setNav((x) => toggleLayer(x, 'palette'));
         return;
       }
-      if (e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'l') {
+      if (e.ctrlKey && e.shiftKey && !e.altKey && e.key.toLowerCase() === 'c' && !typing) {
+        e.preventDefault();
+        if (nav.layer === 'editor') return;
+        go('cache');
+        return;
+      }
+      if (e.ctrlKey && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'l') {
         e.preventDefault();
         if (nav.layer === 'editor') return; // never drop a task being edited
         go('log');
@@ -227,6 +234,8 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
     </Suspense>
   ) : screen === 'log' ? (
     <Suspense fallback={null}><LazyLog projectId={logProject} /></Suspense>
+  ) : screen === 'cache' ? (
+    <Suspense fallback={null}><LazyCache /></Suspense>
   ) : screen === 'focus' ? (
     <FocusCore d={d} m={m} now={now} deviceId={snap.device.deviceId} onPlan={() => go('plan')} />
   ) : screen === 'plan' ? (
@@ -278,7 +287,6 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
       )}
       {revealed && s.onboarded && <ReviewHost d={d} now={now} />}
       {revealed && s.onboarded && <BreakCard d={d} now={now} />}
-      {snap.pendingGap && <GapPrompt gap={snap.pendingGap} tz={s.timezone} />}
       <Moments snap={snap} inFocus={screen === 'focus'} />
       <DragChip />
       <AskHost />

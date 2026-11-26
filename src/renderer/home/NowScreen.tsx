@@ -48,6 +48,10 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSche
   useHolo(root);
   const running = task?.runtime.status === 'running';
   const owner = ownsTimer(d, deviceId);
+  const dropHold = useHold(() => {
+    if (!task) return;
+    void run({ type: 'task.drop', id: task.id }).then((r) => r.ok && toast('Dropped to the back of the queue. Time kept.'));
+  }, 'Backspace');
   const hold = useHold(() => {
     if (!task) return;
     void run({ type: 'task.finish', id: task.id }).then((r) => r.ok && toast('Done.'));
@@ -108,7 +112,8 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSche
                     <button className="btn btn-accent btn-l" disabled={pausing} onClick={() => (running ? pause() : void run({ type: 'timer', action: 'start' }))}>
                       <Icon name={running ? 'pause' : 'play'} /> {running ? 'Pause' : task.runtime.status === 'paused' ? 'Resume' : 'Start'}
                     </button>
-                    <HoldButton hold={hold} reduce={!!theme?.motionOff} label="Hold Enter to finish" hintId="now-hint" className="btn-hold" />
+                    <HoldButton hold={hold} reduce={!!theme?.motionOff} label="Finish" title="Hold Enter for 2 seconds" hintId="now-hint" className="btn-hold" />
+                    <HoldButton hold={dropHold} reduce={!!theme?.motionOff} label="Drop" title="Hold for 2 seconds (Backspace in Focus)" hintId="now-hint" icon="x" className="btn-hold btn-drop" />
                   </>
                 ) : (
                   <button className="btn btn-ghost" onClick={() => void run({ type: 'timer.takeover' })}>Take over timer</button>
@@ -116,7 +121,7 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSche
                 <button className="link" onClick={onFocus}>Focus view <kbd>F</kbd></button>
               </div>
             </div>
-            <p id="now-hint" className="sr-only">Hold Enter for 2 seconds to finish.</p>
+            <p id="now-hint" className="sr-only">Hold Finish for 2 seconds to finish, or Drop to drop.</p>
           </>
         ) : (
           <div className="now-empty">

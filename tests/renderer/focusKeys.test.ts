@@ -26,6 +26,15 @@ describe('Focus window keys', () => {
   });
 });
 
+describe('Backspace drop hold', () => {
+  it('presses and releases the drop hold, and leaves text fields alone', () => {
+    expect(keyAction(k({ key: 'Backspace' }))).toBe('dropPress');
+    expect(keyAction(k({ key: 'Backspace', type: 'up' }))).toBe('dropRelease');
+    expect(keyAction(k({ key: 'Backspace', target: 'text' }))).toBeNull();
+    expect(keyAction(k({ key: 'Backspace', dialogOpen: true }))).toBeNull();
+  });
+});
+
 describe('hold-Enter 2 s on the window path', () => {
   function clock() {
     let t = 0;

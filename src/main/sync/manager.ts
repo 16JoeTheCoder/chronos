@@ -38,6 +38,21 @@ export class SyncManager {
     return this.cfg !== null;
   }
 
+  /** Base URL of the file Worker, when set in firebase.config.json. */
+  get filesUrl(): string | null {
+    return this.cfg?.filesUrl ?? null;
+  }
+
+  /** Firebase ID token of the signed-in user (null when signed out). */
+  async idToken(): Promise<string | null> {
+    if (!this.signedIn || !this.remote) return null;
+    try {
+      return await this.remote.idToken();
+    } catch {
+      return null;
+    }
+  }
+
   private ensureRemote(): Remote | null {
     if (!this.cfg) return null;
     if (!this.remote) {

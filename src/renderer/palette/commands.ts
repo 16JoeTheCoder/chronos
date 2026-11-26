@@ -23,6 +23,7 @@ const SCREENS: { to: Screen; label: string; hint: string }[] = [
   { to: 'tasks', label: 'Go to Tasks', hint: 'G T' },
   { to: 'board', label: 'Go to Board', hint: '' },
   { to: 'log', label: 'Go to Log', hint: 'Ctrl L' },
+  { to: 'cache', label: 'Go to Cache', hint: 'Ctrl Shift C' },
   { to: 'settings', label: 'Go to Settings', hint: '' },
 ];
 

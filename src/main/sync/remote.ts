@@ -16,6 +16,8 @@ export interface Remote {
   silent(refreshToken: string): Promise<SignedIn>;
   signOut(): Promise<void>;
   provider(uid: string, deviceId: string): SyncProvider;
+  /** The signed-in user's Firebase ID token (for the file Worker), or null. */
+  idToken(): Promise<string | null>;
 }
 
 export function createRemote(cfg: FirebaseConfig): Remote {
@@ -29,5 +31,6 @@ export function createRemote(cfg: FirebaseConfig): Remote {
     silent: (rt) => signInSilently(auth, client, rt),
     signOut: () => signOutFirebase(auth),
     provider: (uid, deviceId) => firestoreProvider(db, uid, deviceId),
+    idToken: async () => (auth.currentUser ? auth.currentUser.getIdToken() : null),
   };
 }

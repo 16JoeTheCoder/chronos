@@ -7,7 +7,7 @@
 // back to 0 and completes nothing. A full hold completes exactly once, and not
 // again until it has been released.
 
-export type HoldSource = 'enter' | 'pointer' | 'space';
+export type HoldSource = 'enter' | 'backspace' | 'pointer' | 'space';
 export type HoldState = 'idle' | 'holding' | 'draining' | 'done';
 
 export interface HoldSchedule {

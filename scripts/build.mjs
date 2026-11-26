@@ -14,7 +14,7 @@ export const nodeBundles = [
   { entryPoints: ['src/main/sync/remote.ts'], outfile: 'dist/sync.js' },
   { entryPoints: ['src/core/parser/index.ts'], outfile: 'dist/parser.js' },
   { entryPoints: ['src/bridge/chronos-mcp.ts'], outfile: 'dist/chronos-mcp.js' },
-].map((b) => ({ ...b, bundle: true, platform: 'node', format: 'cjs', target: 'node20', external: ['electron', 'koffi'], sourcemap: false, logLevel: 'warning' }));
+].map((b) => ({ ...b, bundle: true, platform: 'node', format: 'cjs', target: 'node20', external: ['electron', 'koffi', 'electron-updater'], sourcemap: false, logLevel: 'warning' }));
 
 // Run only when invoked directly (dev.mjs imports nodeBundles from here).
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

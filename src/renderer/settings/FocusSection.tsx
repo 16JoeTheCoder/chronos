@@ -19,8 +19,8 @@ export function FocusSection({ snap }: { snap: Snapshot }) {
     <>
       <Group title="Finishing a task" note="One task owns the screen, and finishing it is deliberate.">
         <div className="st-msg" data-kind="ok">
-          <b>Hold Enter for 2 seconds to finish.</b>
-          <span>A ring fills while you hold. Let go early and it drains back, nothing is lost. Space starts and pauses, and never finishes.</span>
+          <b>Hold Enter for 2 seconds to finish, Backspace to drop.</b>
+          <span>The Finish and Drop buttons work the same by holding them. A ring fills while you hold. Let go early and it drains back, nothing is lost. Space starts and pauses, and never finishes.</span>
         </div>
       </Group>
 

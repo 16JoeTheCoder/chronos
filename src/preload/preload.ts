@@ -33,6 +33,11 @@ const api: ChronosApi = {
     mark: (name, ms) => ipcRenderer.send(CHANNELS.mark, name, ms),
   },
   palette: { askClaude: (text) => ipcRenderer.invoke(CHANNELS.askClaude, text) },
+  files: {
+    put: (file) => ipcRenderer.invoke(CHANNELS.filesPut, file),
+    get: (area, id) => ipcRenderer.invoke(CHANNELS.filesGet, { area, id }),
+    remove: (area, id) => ipcRenderer.invoke(CHANNELS.filesRemove, { area, id }),
+  },
   shelf: {
     list: () => ipcRenderer.invoke(CHANNELS.stackList),
     open: (path) => ipcRenderer.invoke(CHANNELS.stackOpen, path),

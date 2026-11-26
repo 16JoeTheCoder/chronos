@@ -72,11 +72,11 @@ describe('finish, drop, reopen', () => {
     expect(live(d, 'activity').map((a) => a.type)).toEqual(['started', 'finished']);
   });
 
-  it('drop needs a reason, keeps time, parks the task at the back and clears its blocks', () => {
+  it('drop needs no reason, keeps time, parks the task at the back and clears its blocks', () => {
     let d = addTask(fresh(), 'Other', { priority: 'nice' }).d;
     const r = addTask(d, 'Hard', { priority: 'must' });
     d = run(r.d, { type: 'block.create', taskId: r.id, date: '2026-10-26', startMin: 540, endMin: 600 }, { type: 'task.start', id: r.id }, { type: 'timer', action: 'start' }).d;
-    expect(apply(d, { type: 'task.drop', id: r.id, reason: 'no' }, ctx(T0 + MIN)).ok).toBe(false);
+    expect(apply(d, { type: 'task.drop', id: r.id }, ctx(T0 + MIN)).ok).toBe(true); // no reason needed
     d = run(d, [{ type: 'task.drop', id: r.id, reason: 'Blocked on data' }, T0 + 10 * MIN]).d;
     const t = d.tasks[r.id]!;
     expect(t.status).toBe('inbox');

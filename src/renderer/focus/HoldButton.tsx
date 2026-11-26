@@ -4,7 +4,7 @@
 // Timing lives in hold.ts; this file only wires keys, pointer and the visuals.
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
-import { Icon } from '../components/Icon';
+import { Icon, type IconName } from '../components/Icon';
 import { createHold, HOLD_MS } from './hold';
 
 export interface HoldControl {
@@ -13,7 +13,7 @@ export interface HoldControl {
   pulse: boolean;
   secs: number;
   /** Programmatic hold, for the Focus window-level key listener. */
-  press: (src: 'enter' | 'pointer') => void;
+  press: (src: 'enter' | 'backspace' | 'pointer') => void;
   release: () => void;
   handlers: {
     onKeyDown: (e: KeyboardEvent) => void;
@@ -27,7 +27,8 @@ export interface HoldControl {
 
 const WHOLE = Math.ceil(HOLD_MS / 1000);
 
-export function useHold(onComplete: () => void): HoldControl {
+/** `key` is the key that holds this button (Enter finishes, Backspace drops). */
+export function useHold(onComplete: () => void, key: 'Enter' | 'Backspace' = 'Enter'): HoldControl {
   const ring = useRef<HTMLSpanElement>(null);
   const [holding, setHolding] = useState(false);
   const [pulse, setPulse] = useState(false);
@@ -55,7 +56,7 @@ export function useHold(onComplete: () => void): HoldControl {
   );
   useEffect(() => () => hold.cancel(), [hold]);
 
-  const press = (src: 'enter' | 'pointer') => {
+  const press = (src: 'enter' | 'backspace' | 'pointer') => {
     if (hold.press(src)) setHolding(true);
   };
   const release = () => {
@@ -72,14 +73,14 @@ export function useHold(onComplete: () => void): HoldControl {
     release,
     handlers: {
       onKeyDown: (e) => {
-        if (e.key === 'Enter') {
+        if (e.key === key) {
           e.preventDefault(); // no native click, so Enter cannot complete instantly
-          if (!e.repeat) press('enter');
+          if (!e.repeat) press(key === 'Enter' ? 'enter' : 'backspace');
         } else if (e.key === ' ') e.preventDefault(); // Space never completes
       },
       onKeyUp: (e) => {
-        if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
-        if (e.key === 'Enter') release();
+        if (e.key === key || e.key === ' ') e.preventDefault();
+        if (e.key === key) release();
       },
       onBlur: release,
       onPointerDown: (e) => {
@@ -97,9 +98,9 @@ export function useHold(onComplete: () => void): HoldControl {
   };
 }
 
-export function HoldButton({ hold, reduce, label, hintId, className = '' }: { hold: HoldControl; reduce: boolean; label: string; hintId: string; className?: string }) {
+export function HoldButton({ hold, reduce, label, hintId, title, icon = 'check', className = '' }: { hold: HoldControl; reduce: boolean; label: string; hintId: string; title?: string; icon?: IconName; className?: string }) {
   return (
-    <button type="button" data-hold className={`btn hold${hold.holding ? ' holding' : ''} ${className}`} aria-describedby={hintId} {...hold.handlers}>
+    <button type="button" data-hold className={`btn hold${hold.holding ? ' holding' : ''} ${className}`} aria-describedby={hintId} title={title} {...hold.handlers}>
       <i className="hold-bar" aria-hidden="true" />
       <span ref={hold.ring} className={`hold-ring${hold.holding ? ' on' : ''}${hold.pulse ? ' pulse' : ''}`} aria-hidden="true">
         <i className="hold-track" />
@@ -113,7 +114,7 @@ export function HoldButton({ hold, reduce, label, hintId, className = '' }: { ho
             </span>
           </>
         )}
-        {reduce && hold.holding ? <b className="hold-num">{hold.secs}</b> : <Icon name="check" size={14} />}
+        {reduce && hold.holding ? <b className="hold-num">{hold.secs}</b> : <Icon name={icon} size={14} />}
       </span>
       <span className="hold-label">{label}</span>
     </button>

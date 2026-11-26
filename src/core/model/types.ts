@@ -231,6 +231,22 @@ export interface Session extends Base {
   overrunMs: number;
 }
 
+/** A file or image attached to a Log post or a Cache item. Small ones may travel inline (`data`, a data: URL); the rest live in cloud storage under `<area>/<id>` (cloudflare/SETUP.md). */
+export interface Attachment {
+  id: string;
+  name: string;
+  mime: string;
+  size: number;
+  /** In cloud storage (R2). False = inline in `data`. */
+  cloud: boolean;
+  data: string | null;
+}
+export const ATTACH_MAX_FILES = 8;
+/** Largest file the cloud accepts (the Worker enforces the same limit). */
+export const ATTACH_MAX_BYTES = 25 * 1024 * 1024;
+/** Inline files must fit the 1 MiB Firestore document with room to spare: total data-URL characters per record. */
+export const ATTACH_INLINE_MAX_CHARS = 700_000;
+
 /** A note (the collection keeps its v1 name, D-109). `body` is the content; `text` is its first 1000 characters for v1 views. */
 export interface Idea extends Base {
   text: string;
@@ -241,7 +257,17 @@ export interface Idea extends Base {
   reviewed: boolean;
   /** Tasks the Phase 2 parser made from this note. */
   parsedTaskIds: string[];
+  /** Files and images (absent on posts made before attachments). */
+  files?: Attachment[];
 }
+
+/** Cache: short-lived things to carry between devices (a command, a path, a screenshot). Expires on its own. */
+export interface CacheItem extends Base {
+  body: string;
+  files?: Attachment[];
+  expiresAt: number;
+}
+export const CACHE_TTL_MS = 3 * 86_400_000;
 
 export interface ProjectColumn {
   id: string;
@@ -421,9 +447,10 @@ export interface Collections {
   settings: Settings;
   projects: Project;
   reviews: Review;
+  cache: CacheItem;
 }
 export type Coll = keyof Collections;
-export const COLLS: Coll[] = ['tasks', 'events', 'eventExceptions', 'closures', 'blocks', 'sessions', 'tags', 'ideas', 'activity', 'timer', 'settings', 'projects', 'reviews'];
+export const COLLS: Coll[] = ['tasks', 'events', 'eventExceptions', 'closures', 'blocks', 'sessions', 'tags', 'ideas', 'activity', 'timer', 'settings', 'projects', 'reviews', 'cache'];
 export type Rec<C extends Coll = Coll> = Collections[C];
 
 /** All synced state. timer and settings each hold exactly one doc ('current', 'main'). */
@@ -479,6 +506,8 @@ export interface SyncView {
   email: string | null;
   /** firebase.config.json present and complete. */
   configured: boolean;
+  /** Cloud file storage (the Worker) is set up and we are signed in. */
+  files: boolean;
 }
 
 /** Same field edited on two devices: the local pending edit won, this is what it overwrote. */

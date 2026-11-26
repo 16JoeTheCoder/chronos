@@ -3,12 +3,12 @@
 // that touch the machine (gap answer, device settings, takeover, import/export)
 // and routes everything else through apply(), then persists and broadcasts.
 
-import type { Block, CalEvent, Closure, Coll, Data, Priority, ProjectColumn, ReviewAction, Scope, Settings, Tag, TagColor, Task, TaskRecurrence, TaskSource, TimerConfig, TimerEvent } from './model/types';
-import { PARSER_REPORTS_MAX, TAG_COLORS } from './model/types';
+import type { Attachment, Block, CalEvent, Closure, Coll, Data, Priority, ProjectColumn, ReviewAction, Scope, Settings, Tag, TagColor, Task, TaskRecurrence, TaskSource, TimerConfig, TimerEvent } from './model/types';
+import { CACHE_TTL_MS, PARSER_REPORTS_MAX, TAG_COLORS } from './model/types';
 import { defaultColumns } from './model/defaults';
 import { exceptionId, isId, newId, reviewId } from './model/ids';
 import { keyBetween } from './model/sortKey';
-import { REPORT_MAX } from './validation';
+import { attachmentsValid, REPORT_MAX } from './validation';
 import { autoPlan, byPlanOrder, placeTasks, replan } from './planning/plan';
 import { isReviewed } from './planning/review';
 import { revertOpsBetween } from './undo';
@@ -76,7 +76,7 @@ export type Command =
   /** Complete a task (held 2 s in the app). The focused task stops its timer; recurring tasks spawn the next one. */
   | { type: 'task.finish'; id: string }
   /** Park the focused task at the back of the queue (v1 Drop). */
-  | { type: 'task.drop'; id: string; reason: string }
+  | { type: 'task.drop'; id: string; reason?: string }
   /** Close any open task as dropped (not finished). */
   | { type: 'task.close'; id: string; reason: string }
   | { type: 'task.reopen'; id: string }
@@ -102,7 +102,11 @@ export type Command =
   | { type: 'closure.update'; id: string; input: ClosureInput }
   | { type: 'tag.create'; input: TagInput }
   | { type: 'tag.update'; id: string; input: TagInput }
-  | { type: 'idea.add'; text: string; taskId: string | null; projectId?: string | null }
+  | { type: 'idea.add'; text: string; taskId: string | null; projectId?: string | null; files?: Attachment[] }
+  /** Cache: add an item (text and/or files) that expires on its own; remove one; clear them all. */
+  | { type: 'cache.add'; body: string; files?: Attachment[] }
+  | { type: 'cache.remove'; id: string }
+  | { type: 'cache.clear' }
   /** Fill the free gaps of `date` (default today) with unplanned tasks as auto blocks. Undoable as one action: the result carries `undo`. `id` = number of blocks placed. */
   | { type: 'plan.auto'; date?: string }
   /** Move today's missed, unstarted auto blocks forward into the remaining gaps. Result carries `undo`; `id` = number moved. */
@@ -144,6 +148,7 @@ export type Command =
 export type Result = { ok: true; id?: string; undo?: RevertOp[]; undoToken?: string } | { ok: false; error: string; fields?: Errors };
 export type Mutation = { ok: true; d: Data; events: TimerEvent[]; id?: string; undo?: RevertOp[] } | { ok: false; error: string; fields?: Errors };
 
+const filesOk = (f: unknown): boolean => Array.isArray(f) && f.length > 0 && attachmentsValid(f);
 const ok = (d: Data, events: TimerEvent[] = [], id?: string): Mutation => ({ ok: true, d, events, id });
 const fail = (error: string, fields?: Errors): Mutation => ({ ok: false, error, fields });
 const checked = (fields: Errors, then: () => Mutation): Mutation => (Object.keys(fields).length ? fail('Please fix the highlighted fields.', fields) : then());
@@ -396,7 +401,8 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
         return checkpointDue(t, ctx.now) ? ok(update(d, 'tasks', t.id, { nextCheckpointMs: nextCheckpoint(t, ctx.now) }, ctx)) : ok(d);
       }
       const reason = cmd.reason ?? '';
-      if (!isDropReason(reason)) return fail('Give a reason (at least 3 characters).');
+      // Dropping needs no reason (the hold is the confirmation); killing a sprint still does.
+      if (cmd.type === 'sprint.checkpoint' && !isDropReason(reason)) return fail('Give a reason (at least 3 characters).');
       if (!ownsTimer(d, ctx.deviceId)) return fail('Take over the timer on this device first.');
       const kill = cmd.type === 'sprint.checkpoint';
       if (kill && t.kind !== 'sprint') return fail('Only sprints have checkpoints.');
@@ -584,10 +590,27 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
 
     case 'idea.add': {
       const text = cmd.text.trim();
-      if (!text || text.length > 20_000) return fail('Type a thought first (up to 20,000 characters).');
+      const files = cmd.files ?? [];
+      if ((!text && !files.length) || text.length > 20_000) return fail('Type a thought first (up to 20,000 characters).');
+      if (files.length && !filesOk(files)) return fail('Those files cannot be attached.');
       if (cmd.projectId && !liveProject(d, cmd.projectId)) return fail('Unknown project.', { projectId: 'Unknown project.' });
-      const r = create(d, 'ideas', { text: text.slice(0, 1000), body: text, taskId: cmd.taskId && get(d, 'tasks', cmd.taskId) ? cmd.taskId : null, projectId: cmd.projectId ?? null, reviewed: false, parsedTaskIds: [] }, ctx);
+      const r = create(d, 'ideas', { text: text.slice(0, 1000), body: text, taskId: cmd.taskId && get(d, 'tasks', cmd.taskId) ? cmd.taskId : null, projectId: cmd.projectId ?? null, reviewed: false, parsedTaskIds: [], ...(files.length ? { files } : {}) }, ctx);
       return ok(r.d, [], r.rec.id);
+    }
+    case 'cache.add': {
+      const body = cmd.body.trim();
+      const files = cmd.files ?? [];
+      if ((!body && !files.length) || body.length > 20_000) return fail('Paste or type something first (up to 20,000 characters).');
+      if (files.length && !filesOk(files)) return fail('Those files cannot be attached.');
+      const r = create(d, 'cache', { body, expiresAt: ctx.now + CACHE_TTL_MS, ...(files.length ? { files } : {}) }, ctx);
+      return ok(r.d, [], r.rec.id);
+    }
+    case 'cache.remove':
+      return get(d, 'cache', cmd.id) ? ok(recycle(d, 'cache', cmd.id, ctx)) : fail('Not found.');
+    case 'cache.clear': {
+      let out = d;
+      for (const it of live(d, 'cache')) out = recycle(out, 'cache', it.id, ctx);
+      return ok(out);
     }
     case 'idea.edit': {
       const n = get(d, 'ideas', cmd.id);
