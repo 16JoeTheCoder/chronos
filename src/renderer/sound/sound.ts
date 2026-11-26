@@ -1,10 +1,28 @@
 /** Synthesised UI cues via Web Audio. No audio files. Safe no-op where audio is unavailable. */
+import { api } from '../api';
+
 export type CueName = 'blockStart' | 'blockFinish';
 
 let ctx: AudioContext | null = null;
 
+// Electron plays audio at any time; browsers need a gesture first.
+let unlocked = api.platform !== 'web';
+
+// Browsers only allow audio after a user gesture: create the context on the first press or key.
+if (typeof window !== 'undefined' && !unlocked) {
+  const unlock = () => {
+    unlocked = true;
+    window.removeEventListener('pointerdown', unlock, true);
+    window.removeEventListener('keydown', unlock, true);
+    getCtx();
+  };
+  window.addEventListener('pointerdown', unlock, true);
+  window.addEventListener('keydown', unlock, true);
+}
+
 function getCtx(): AudioContext | null {
   if (ctx) return ctx;
+  if (!unlocked) return null;
   const AC = typeof window !== 'undefined' ? (window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext) : undefined;
   if (!AC) return null;
   try { ctx = new AC(); } catch { ctx = null; }

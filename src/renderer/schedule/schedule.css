@@ -1,0 +1,15 @@
+/* Schedule editor on small screens. The week grid scrolls sideways inside its own box; the event panel is a Sheet. */
+@media (max-width: 639px) {
+  .schedule .sched-bar { gap: 8px; }
+  .schedule .sched-bar h2 { flex: 1 0 100%; }
+  .schedule .sched-bar .btn-s { min-height: 44px; }
+  .schedule .switch { min-height: 44px; }
+  .schedule .sched-body { display: block; min-height: 0; overflow: hidden; }
+  .schedule .week { height: 100%; grid-template-columns: 44px repeat(7, minmax(104px, 1fr)); overflow: auto; overscroll-behavior: contain; padding-bottom: 24px; -webkit-overflow-scrolling: touch; }
+  .schedule .week-hours { position: sticky; left: 0; z-index: 1; background: var(--c-ground); }
+  .schedule .week-cells { cursor: pointer; }
+  .schedule .wk-ev { font-size: 14px; line-height: 18px; }
+  .schedule .wk-ev span { font-size: 12px; }
+  .schedule .week-day { font-size: 14px; position: sticky; top: 0; background: var(--c-ground); }
+  .schedule .guide { font-size: 16px; }
+}

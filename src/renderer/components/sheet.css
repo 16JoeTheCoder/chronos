@@ -1,0 +1,30 @@
+/* Sheet: the dialog everywhere (components/Sheet.tsx). Tablet and desktop keep the centred dialog from app.css;
+   under 640 px it is a bottom sheet. Theme tokens only. */
+.sheet-top { display: contents; }
+.sheet-grab { display: none; }
+
+@media (max-width: 639px) {
+  .scrim.sheet-scrim { place-items: end stretch; padding: 0; overscroll-behavior: contain; }
+  .scrim.sheet-scrim .dlg.sheet,
+  .scrim.sheet-scrim .dlg.sheet.dlg-wide {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 16px);
+    padding: 8px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    gap: 14px;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    border-bottom: 0;
+    overscroll-behavior: contain;
+    animation: sheet-up var(--dur-base) var(--ease-snap, var(--ease)) both;
+    transition: transform var(--dur-fast) var(--ease);
+  }
+  .sheet-top { display: flex; flex-direction: column; gap: 6px; touch-action: none; margin: 0 -16px; padding: 0 16px; }
+  .sheet-grab { display: block; align-self: center; width: 40px; height: 4px; margin-top: 4px; border-radius: var(--r-pill); background: var(--c-line-strong); }
+  .sheet .dlg-head h2 { font-size: 20px; line-height: 28px; }
+  .sheet input, .sheet select, .sheet textarea { font-size: 16px; }
+  .sheet .btn { min-height: 44px; }
+}
+
+@keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+:root[data-motion="off"] .sheet { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .sheet { animation: none !important; } }

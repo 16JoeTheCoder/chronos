@@ -8,6 +8,7 @@ import './styles/screens.css';
 import './styles/shell.css';
 import { api } from './api';
 import { Home } from './home/Home';
+import { SignIn, needsSignIn } from './signin/SignIn';
 import { settingsOf } from '../core/repo/repo';
 import { themeToCssVars } from '../core/theme';
 import { useCustomThemes } from './settings/customThemes';
@@ -22,6 +23,7 @@ function App() {
   const snap = useSnap();
   const custom = useCustomThemes();
   const [revealed, setRevealed] = useState(false);
+  const [, setLocalChosen] = useState(0); // continueLocal() flips api.web.isLocal(); this re-renders past the gate
   reveal = () => {
     setRevealed(true);
     document.documentElement.classList.add('drawin');
@@ -32,7 +34,7 @@ function App() {
   return (
     <ThemeProvider themeId={s.themeId} themeSchedule={s.themeSchedule} customThemes={custom} energy={s.energy}>
       <ThemeBoot />
-      <Home snap={snap} revealed={revealed} />
+      {needsSignIn(api.web, snap.sync.state) ? <SignIn onLocal={() => setLocalChosen((n) => n + 1)} /> : <Home snap={snap} revealed={revealed} />}
     </ThemeProvider>
   );
 }
