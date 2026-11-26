@@ -32,6 +32,12 @@ export function lockAxis(dx: number, dy: number, slop = 8): 'x' | 'y' | null {
   return ax > ay * 1.2 ? 'x' : 'y';
 }
 
+/** Which snapped column is showing in a horizontal scroller of equal columns? */
+export function activeColumn(scrollLeft: number, colWidth: number, gap: number, n: number): number {
+  if (n <= 0 || colWidth <= 0) return 0;
+  return Math.max(0, Math.min(n - 1, Math.round(scrollLeft / (colWidth + gap))));
+}
+
 /** Press-and-hold time before a touch press becomes a drag (rows, cards). */
 export const LONG_PRESS_MS = 420;
 /** A finger that moves further than this before the hold ends is scrolling, not holding. */
