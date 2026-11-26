@@ -1,6 +1,6 @@
 // Mini calendar and feed helpers. Pure; dates are YYYY-MM-DD in the user's zone.
 
-import type { Idea } from '../model/types';
+import { isDraft, postedAt, type Idea } from '../model/types';
 import { addDays, dateOf, dateStr, weekdayOf } from '../time/zone';
 
 export interface DayCell {
@@ -29,8 +29,8 @@ export interface DayMark {
 export function dayMarks(notes: readonly Idea[], tz: string, projectId: string | null): Map<string, DayMark> {
   const m = new Map<string, DayMark>();
   for (const n of notes) {
-    if (n.deletedAt !== null) continue;
-    const date = dateOf(n.createdAt, tz);
+    if (n.deletedAt !== null || isDraft(n)) continue;
+    const date = dateOf(postedAt(n), tz);
     const cur = m.get(date) ?? { count: 0, inProject: false };
     cur.count++;
     if (projectId !== null && n.projectId === projectId) cur.inProject = true;
@@ -47,8 +47,8 @@ export const shiftMonth = (year: number, month: number, by: number): { year: num
 /** Live notes, newest first; a project filter keeps only that project's posts. */
 export function feedOf(ideas: Record<string, Idea>, projectId: string | null = null): Idea[] {
   return Object.values(ideas)
-    .filter((n) => n.deletedAt === null && (projectId === null || n.projectId === projectId))
-    .sort((a, b) => b.createdAt - a.createdAt || (a.id < b.id ? 1 : -1));
+    .filter((n) => n.deletedAt === null && !isDraft(n) && (projectId === null || n.projectId === projectId))
+    .sort((a, b) => postedAt(b) - postedAt(a) || (a.id < b.id ? 1 : -1));
 }
 
 /** Index in a newest-first feed of the first post on `date`, or the newest post before it. -1 = nothing that old. */
@@ -58,7 +58,7 @@ export function indexForDay(feed: readonly Idea[], date: string, tz: string): nu
   let hi = feed.length;
   while (lo < hi) {
     const mid = (lo + hi) >> 1;
-    if (dateOf(feed[mid]!.createdAt, tz) > date) lo = mid + 1;
+    if (dateOf(postedAt(feed[mid]!), tz) > date) lo = mid + 1;
     else hi = mid;
   }
   return lo < feed.length ? lo : -1;
@@ -66,7 +66,7 @@ export function indexForDay(feed: readonly Idea[], date: string, tz: string): nu
 
 /** A post is "edited" when it was last saved well after it was posted. */
 export const EDITED_AFTER_MS = 60_000;
-export const isEdited = (n: Pick<Idea, 'createdAt' | 'updatedAt'>): boolean => n.updatedAt - n.createdAt > EDITED_AFTER_MS;
+export const isEdited = (n: Pick<Idea, 'createdAt' | 'updatedAt' | 'publishedAt'>): boolean => n.updatedAt - postedAt(n) > EDITED_AFTER_MS;
 
 /** Windowing: first/last item to render for a scroll position, from item heights. */
 export function visibleRange(heights: readonly number[], scrollTop: number, viewport: number, overscan = 600): { start: number; end: number; top: number; total: number } {
@@ -120,8 +120,8 @@ export function monthStats(notes: readonly Idea[], tz: string, year: number, mon
   let words = 0;
   let tasks = 0;
   for (const n of notes) {
-    if (n.deletedAt !== null) continue;
-    const date = dateOf(n.createdAt, tz);
+    if (n.deletedAt !== null || isDraft(n)) continue;
+    const date = dateOf(postedAt(n), tz);
     all.add(date);
     if (!date.startsWith(prefix)) continue;
     posts++;
@@ -141,7 +141,7 @@ export function monthStats(notes: readonly Idea[], tz: string, year: number, mon
 /** Projects that have at least one live post, for the Log's filter chips. */
 export function projectsWithPosts(notes: readonly Idea[]): Set<string> {
   const s = new Set<string>();
-  for (const n of notes) if (n.deletedAt === null && n.projectId) s.add(n.projectId);
+  for (const n of notes) if (n.deletedAt === null && !isDraft(n) && n.projectId) s.add(n.projectId);
   return s;
 }
 

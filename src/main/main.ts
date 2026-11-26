@@ -83,7 +83,7 @@ function boot(): void {
       onDeviceChanged: (prev, next) => applyDevice(next, prev),
       log: (m) => log(m),
     },
-    { deviceName: os.hostname(), monolithFile: path.join(app.getPath('appData'), 'Monolith', 'monolith-data.json') },
+    { deviceName: os.hostname(), readMonolith: () => JSON.parse(fs.readFileSync(path.join(app.getPath('appData'), 'Monolith', 'monolith-data.json'), 'utf8')) },
   );
   controller.init(Date.now());
 

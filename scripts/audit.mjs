@@ -66,12 +66,16 @@ check('core/parser is free of Electron and Node imports', () =>
   }),
 );
 
+check('renderer reaches the platform only through getBridge() (no window.chronos)', () =>
+  files('src/renderer').filter((f) => /window\.chronos\b/.test(readFileSync(f, 'utf8'))).map((f) => `${f}: references window.chronos`),
+);
+
 check('renderer never imports main', () =>
   files('src/renderer').flatMap((f) => imports(readFileSync(f, 'utf8')).filter((i) => i.includes('/main/')).map((i) => `${f}: imports ${i}`)),
 );
 
 check('dependency allowlist', () => {
-  const allow = new Set(['electron', 'react', 'react-dom', 'typescript', 'vite', '@vitejs/plugin-react', 'esbuild', 'electron-builder', 'vitest', 'playwright-core', '@types/node', '@types/react', '@types/react-dom', 'firebase', 'minisearch', '@modelcontextprotocol/sdk', 'chrono-node', 'koffi', 'electron-updater']);
+  const allow = new Set(['electron', 'react', 'react-dom', 'typescript', 'vite', '@vitejs/plugin-react', 'esbuild', 'electron-builder', 'vitest', 'playwright-core', '@types/node', '@types/react', '@types/react-dom', 'firebase', 'minisearch', '@modelcontextprotocol/sdk', 'chrono-node', 'koffi', 'electron-updater', 'idb-keyval', 'wrangler', '@cloudflare/workers-types']);
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
   return Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter((d) => !allow.has(d) && !d.startsWith('@fontsource/')).map((d) => `not allowed: ${d}`);
 });
@@ -80,15 +84,19 @@ check('dependency allowlist', () => {
 // loopback MCP endpoint and the stdio bridge. Firebase only in src/main/sync.
 const NETWORK_FILES = new Set(['src/main/sync/firestore.ts', 'src/main/sync/auth.ts', 'src/main/sync/remote.ts', 'src/main/mcp/server.ts', 'src/bridge/client.ts', 'src/bridge/chronos-mcp.ts', 'src/main/askClaude.ts', 'src/main/files.ts']);
 const FIREBASE_FILES = new Set(['src/main/sync/firestore.ts', 'src/main/sync/auth.ts', 'src/main/sync/remote.ts']);
+// Phase 4: the web bridge is the browser's "main" (Firestore, Google sign-in, the files Worker); the
+// Electron adapter holds the desktop release link; the service worker fetches the app shell.
+const WEB_PLATFORM = (f) => f === 'src/platform/web.ts' || f.startsWith('src/platform/web/') || f === 'src/sw.ts' || f === 'src/web/entry.ts';
+const URL_ONLY = new Set(['src/platform/electron.ts']);
 check('network code only in the sync, MCP endpoint and bridge modules', () => {
   const bad = [];
   for (const f of files('src')) {
     const src = readFileSync(f, 'utf8');
-    const allowed = NETWORK_FILES.has(f);
+    const allowed = NETWORK_FILES.has(f) || WEB_PLATFORM(f);
     if (!allowed && /\bfetch\(|new WebSocket|XMLHttpRequest|EventSource\(/.test(src)) bad.push(`${f}: network API`);
-    if (!allowed && /https?:\/\//.test(src)) bad.push(`${f}: URL literal`);
+    if (!allowed && !URL_ONLY.has(f) && /https?:\/\//.test(src)) bad.push(`${f}: URL literal`);
     for (const i of imports(src)) {
-      if (/firebase/.test(i) && !FIREBASE_FILES.has(f)) bad.push(`${f}: imports ${i} (Firebase belongs in src/main/sync)`);
+      if (/firebase/.test(i) && !FIREBASE_FILES.has(f) && !WEB_PLATFORM(f)) bad.push(`${f}: imports ${i} (Firebase belongs in src/main/sync)`);
       else if (/^(node:)?(http|https|net|tls|dgram)$/.test(i) && !allowed) bad.push(`${f}: imports ${i}`);
     }
   }

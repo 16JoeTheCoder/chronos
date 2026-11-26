@@ -422,3 +422,20 @@ Quick add from the palette and the Tasks box treats a line the parser reads as a
 
 ### D-183 Main bundle budget 200 KB
 The one task model (transition, selectors, screen models) and the new commands live in core and are bundled into main as well as the renderer; `dist/main.js` went from ~172 KB to ~185 KB (minified). Main loads once from local disk, so the audit limit moves from 180 KB to 200 KB rather than splitting core into another lazy chunk.
+
+## Phase 4 (web app)
+
+### D-184 Log drafts without a schema bump
+Write view autosaves a draft as an `ideas` record with `draft: true`; Publish sets `draft: false` and `publishedAt` (the feed's time, so a draft started at 10:00 and published at 10:20 shows at 10:20 and is not "edited"). Both fields are optional: absent = published, so no migration rewrites user data and `SCHEMA_V` stays 4 (a bump would put every v4 desktop into read-only until it updates). Trade-off: a desktop still on the Phase 3.7 build shows other devices' drafts in its feed until it auto-updates. `feedOf`, `dayMarks`, `monthStats`, `projectsWithPosts`, `indexForDay` and Log search skip drafts and sort by `postedAt()`. A published post cannot become a draft again. Rules: `draft` bool, `publishedAt` number when present.
+
+### D-185 Rambles reserved, not synced
+`Ramble` type, `RAMBLE_STATUSES`, `rambleProblem()` and Firestore rules for `users/{uid}/rambles/{id}` exist for Phase 4.5. Not in `COLLS`: the desktop and web sync engines ignore the collection until the phone and the processing Worker exist, so no device downloads them yet.
+
+### D-186 One controller, two stores
+`Controller` (`src/main/controller.ts`) had no Electron imports but used `fs` for Monolith import and the `Store` class. It now takes a `ControllerStore` interface and an injected `readMonolith`, so the web bridge runs the same state machine (commands, gap handling, housekeeping, outbox, sync engine) in the page over an IndexedDB-hydrated memory store. One code path for both platforms is worth more than a "web" rewrite.
+
+### D-187 Platform bridge
+`src/platform/types.ts` (frozen) = the preload's `ChronosApi` + `platform`, `can` (capability flags; the UI hides what is false), `web` (session: sign-in with "public computer", local-only mode, catch-up, install prompt, usage meter, leader/follower role) and `links`. `getBridge()` defaults to the Electron adapter; `src/web/entry.ts` installs the web bridge before importing the renderer, so the desktop bundle never contains Firebase-in-the-page or IndexedDB code. Audit: no renderer file may mention `window.chronos`; Firebase and network calls are allowed in `src/platform/web*`, `src/web/entry.ts` and `src/sw.ts`.
+
+### D-188 Electron release and updater: keep what Josef shipped
+The prompt asked for a tag-triggered release and a daily update check. The repo already releases on every push to `main` (`v1.0.<run>`) and checks 30 s after start and every 4 h (`src/main/updater.ts`), installing on quit. Kept (the repo is the truth and 4 h ⊃ daily); the workflow also runs on `v*` tags. Unsigned: SmartScreen "More info → Run anyway" on first install; signing costs money and needs a certificate Josef does not have.

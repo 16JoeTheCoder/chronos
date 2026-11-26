@@ -102,7 +102,7 @@ export type Command =
   | { type: 'closure.update'; id: string; input: ClosureInput }
   | { type: 'tag.create'; input: TagInput }
   | { type: 'tag.update'; id: string; input: TagInput }
-  | { type: 'idea.add'; text: string; taskId: string | null; projectId?: string | null; files?: Attachment[] }
+  | { type: 'idea.add'; text: string; taskId: string | null; projectId?: string | null; files?: Attachment[]; draft?: boolean }
   /** Cache: add an item (text and/or files) that expires on its own; remove one; clear them all. */
   | { type: 'cache.add'; body: string; files?: Attachment[] }
   | { type: 'cache.remove'; id: string }
@@ -120,7 +120,7 @@ export type Command =
   /** Internal (MCP): log a change Claude made. */
   | { type: 'activity.claude'; taskId: string; reason: string }
   /** Edit a Log post: new body (text follows), project, and/or the line->task links (`L<line>:<taskId>`, see core/log/links). */
-  | { type: 'idea.edit'; id: string; body?: string; projectId?: string | null; parsedTaskIds?: string[] }
+  | { type: 'idea.edit'; id: string; body?: string; projectId?: string | null; parsedTaskIds?: string[]; /** false publishes a draft (sets publishedAt); true is refused on a published post. */ draft?: boolean }
   | { type: 'idea.review'; id: string; reviewed: boolean }
   | { type: 'idea.toTask'; id: string }
   | { type: 'recycle'; coll: Coll; id: string; confirmed: boolean }
@@ -594,7 +594,7 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
       if ((!text && !files.length) || text.length > 20_000) return fail('Type a thought first (up to 20,000 characters).');
       if (files.length && !filesOk(files)) return fail('Those files cannot be attached.');
       if (cmd.projectId && !liveProject(d, cmd.projectId)) return fail('Unknown project.', { projectId: 'Unknown project.' });
-      const r = create(d, 'ideas', { text: text.slice(0, 1000), body: text, taskId: cmd.taskId && get(d, 'tasks', cmd.taskId) ? cmd.taskId : null, projectId: cmd.projectId ?? null, reviewed: false, parsedTaskIds: [], ...(files.length ? { files } : {}) }, ctx);
+      const r = create(d, 'ideas', { text: text.slice(0, 1000), body: text, taskId: cmd.taskId && get(d, 'tasks', cmd.taskId) ? cmd.taskId : null, projectId: cmd.projectId ?? null, reviewed: false, parsedTaskIds: [], ...(files.length ? { files } : {}), ...(cmd.draft ? { draft: true } : {}) }, ctx);
       return ok(r.d, [], r.rec.id);
     }
     case 'cache.add': {
@@ -629,6 +629,13 @@ function applyRaw(d: Data, cmd: Command, ctx: Ctx & { deviceName?: string }): Mu
       if (cmd.parsedTaskIds !== undefined) {
         if (cmd.parsedTaskIds.length > 500 || !cmd.parsedTaskIds.every(isId)) return fail('Invalid task links.');
         patch.parsedTaskIds = cmd.parsedTaskIds;
+      }
+      if (cmd.draft !== undefined) {
+        if (cmd.draft && !n.draft) return fail('A published post cannot become a draft.');
+        if (!cmd.draft && n.draft) {
+          patch.draft = false;
+          patch.publishedAt = ctx.now;
+        }
       }
       return Object.keys(patch).length ? ok(update(d, 'ideas', n.id, patch, ctx)) : ok(d);
     }

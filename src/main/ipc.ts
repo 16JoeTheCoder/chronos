@@ -276,7 +276,7 @@ export function parseCommand(raw: unknown): Command | null {
     }
     case 'idea.add': {
       if (raw.files !== undefined && !attachmentsValid(raw.files)) return null;
-      return { type: 'idea.add', text: str(raw.text, 20_000), taskId: nullableId(raw.taskId), projectId: nullableId(raw.projectId), ...(raw.files ? { files: raw.files as Attachment[] } : {}) };
+      return { type: 'idea.add', text: str(raw.text, 20_000), taskId: nullableId(raw.taskId), projectId: nullableId(raw.projectId), ...(raw.files ? { files: raw.files as Attachment[] } : {}), ...(raw.draft === true ? { draft: true } : {}) };
     }
     case 'cache.add': {
       if (raw.files !== undefined && !attachmentsValid(raw.files)) return null;
@@ -307,6 +307,7 @@ export function parseCommand(raw: unknown): Command | null {
         ...('body' in raw ? { body: str(raw.body, 20_000) } : {}),
         ...('projectId' in raw ? { projectId: nullableId(raw.projectId) } : {}),
         ...(ids ? { parsedTaskIds: ids as string[] } : {}),
+        ...(typeof raw.draft === 'boolean' ? { draft: raw.draft } : {}),
       };
     }
     case 'idea.review':

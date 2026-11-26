@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 function boot(now: number): Controller {
-  const c = new Controller(new Store(dir), { onChange() {}, onNotify() {}, onGap() {}, onDeviceChanged() {} }, { deviceName: 'PC', monolithFile: path.join(dir, 'missing.json') });
+  const c = new Controller(new Store(dir), { onChange() {}, onNotify() {}, onGap() {}, onDeviceChanged() {} }, { deviceName: 'PC', readMonolith: () => JSON.parse(fs.readFileSync(path.join(dir, 'missing.json'), 'utf8')) });
   controllers.push(c);
   c.init(now);
   return c;
