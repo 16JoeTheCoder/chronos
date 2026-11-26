@@ -33,7 +33,7 @@ Edit `cloudflare/worker/wrangler.jsonc` and set:
 "vars": {
   "FIREBASE_PROJECT_ID": "chronos-jy",   // your Firebase projectId
   "ALLOWED_UID": "<your-uid>",           // only this account may use the Worker
-  "ALLOWED_ORIGINS": ""                  // leave empty: the desktop app sends no Origin
+  "ALLOWED_ORIGINS": ""                  // desktop sends no Origin; for the web app set "https://chronos.josefyang.com" (comma-separated list)
 }
 ```
 
@@ -58,7 +58,7 @@ Paste it, with no trailing slash, into `firebase.config.json` (copy `firebase/fi
 "filesUrl": "https://chronos-files.<your-subdomain>.workers.dev"
 ```
 
-Restart Chronos. Quick check: opening the URL in a browser shows `{"error":"not found"}`, which means the Worker is live.
+Restart Chronos. For the web app (`chronos.josefyang.com`), put the same URL in `.env.production` as `VITE_FILES_URL` and add the web origin to `ALLOWED_ORIGINS` (see `SETUP.md` section 1.6). Quick check: opening the URL in a browser shows `{"error":"not found"}`, which means the Worker is live.
 
 ## 6. Firestore rules (one time)
 
