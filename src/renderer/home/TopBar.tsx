@@ -1,6 +1,7 @@
 // The slim top bar (Phase 3.5 §3): clock left, a search-looking button centred that opens
 // the one palette (it is not a second search), the running task and its timer right.
 // Shown on every screen except Focus.
+import { api } from '../api';
 import type { ReactNode } from 'react';
 import { dateLabel, formatHM } from '../../core/format';
 import type { Data } from '../../core/model/types';
@@ -36,8 +37,8 @@ export function TopBar({ d, now, onPalette, onFocus, onHelp, sync, title }: { d:
       </p>
       <button type="button" className="tb-search" onClick={onPalette} aria-haspopup="dialog" aria-keyshortcuts="Control+K">
         <Icon name="search" size={16} />
-        <span className="tb-search-text">Add, search or ask</span>
-        <kbd>Ctrl K</kbd>
+        <span className="tb-search-text">{api.can.askClaude ? 'Add, search or ask' : 'Add or search'}</span>
+        <kbd>{/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K'}</kbd>
       </button>
       <div className="tb-right">
         {sync}

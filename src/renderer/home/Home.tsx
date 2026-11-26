@@ -14,7 +14,6 @@ import { Icon } from '../components/Icon';
 import { Rail, type Screen } from '../components/Rail';
 import { Toasts } from '../components/ui';
 import { Moments } from '../moments/Moments';
-import { BreakCard, MorningStart, ReviewHost } from '../planning/Planning';
 import { NowScreen } from './NowScreen';
 import { TaskEditor } from '../cards/TaskEditor';
 import { Unscheduled } from '../cards/Cards';
@@ -23,8 +22,7 @@ import { Onboarding } from '../onboarding/Onboarding';
 import { dayModel } from '../runway/model';
 import { Runway } from '../runway/Runway';
 import { TimeLeft } from '../runway/TimeLeft';
-import { ScheduleEditor } from '../schedule/ScheduleEditor';
-import { Settings } from '../settings/Settings';
+import { LazyBreakCard, LazyMorningStart, LazyReviewHost, LazyScheduleEditor, LazySettings } from '../screens';
 import { RecentlyDeleted, ShelfPanel, TrashButton } from '../shelf/Shelf';
 import { clearInfoToasts, run, undoLast, useAlignedNow } from '../store';
 import { DoneDrawer } from './DoneDrawer';
@@ -209,7 +207,8 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
   if (s.runwayPosition === 'bottom') planSections.reverse();
 
   const body = top === 'schedule' ? (
-    <ScheduleEditor
+    <Suspense fallback={null}>
+    <LazyScheduleEditor
       d={d}
       now={now}
       guided={guided}
@@ -220,8 +219,11 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
         close('schedule');
       }}
     />
+    </Suspense>
   ) : screen === 'settings' ? (
-    <Settings snap={snap} onSchedule={() => open('schedule')} onClose={() => go('home')} />
+    <Suspense fallback={null}>
+      <LazySettings snap={snap} onSchedule={() => open('schedule')} onClose={() => go('home')} />
+    </Suspense>
   ) : screen === 'tasks' ? (
     <Tasks
       d={d}
@@ -262,7 +264,7 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
     </main>
   ) : (
     <>
-      <MorningStart d={d} now={now} active deviceId={snap.device.deviceId} />
+      <Suspense fallback={null}><LazyMorningStart d={d} now={now} active deviceId={snap.device.deviceId} /></Suspense>
       <NowScreen d={d} m={m} now={now} deviceId={snap.device.deviceId} onFocus={() => go('focus')} onPlan={() => go('plan')} />
     </>
   );
@@ -307,8 +309,8 @@ export function Home({ snap, revealed }: { snap: Snapshot; revealed: boolean }) 
           }}
         />
       )}
-      {revealed && s.onboarded && <ReviewHost d={d} now={now} />}
-      {revealed && s.onboarded && <BreakCard d={d} now={now} />}
+      {revealed && s.onboarded && <Suspense fallback={null}><LazyReviewHost d={d} now={now} /></Suspense>}
+      {revealed && s.onboarded && <Suspense fallback={null}><LazyBreakCard d={d} now={now} /></Suspense>}
       <Moments snap={snap} inFocus={screen === 'focus'} />
       <DragChip />
       <AskHost />

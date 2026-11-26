@@ -446,5 +446,5 @@ The payload rebuilders and `parseCommand` moved from `src/main/ipc.ts` to `src/m
 ### D-190 A hidden web tab keeps the timer running
 The web bridge stops its fast tick while the tab is hidden (no work in the background). Coming back, the gap would have looked like a sleep and paused the task at the last tick, so locking the phone mid-focus would lose the time. `Controller.tick(now, alive)` lets the web count a stretch in which the page stayed alive (stopwatch behaviour). A tab that was closed or killed still pauses at its last heartbeat on the next start, like the desktop.
 
-### D-191 CSS budget 34 KB
-The phone shell (`styles/responsive.css`, ~2 KB gz) and the Log's Read/Write split took the renderer CSS from ~28.8 KB to ~31 KB gzipped. Phone layout is a Phase 4 requirement, not bloat, so the audit limit moves from 30 KB to 34 KB. CSS loads once from cache (desktop disk, web service worker).
+### D-191 CSS budget 36 KB
+The phone shell (`styles/responsive.css`, ~2 KB gz) and the Log's Read/Write split took the renderer CSS from ~28.8 KB to ~31 KB gzipped. Phone layout is a Phase 4 requirement, not bloat, plus bottom sheets and per-screen phone rules (~34.7 KB measured), so the audit limit moves from 30 KB to 36 KB. CSS loads once from cache (desktop disk, web service worker).
