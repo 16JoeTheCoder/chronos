@@ -182,3 +182,7 @@
   .bd-link { font-size: 16px; }
   .bd-num { font-size: 14px; }
 }
+
+@media (max-width: 639px) {
+  .bd-switch-btn { padding-left: 0; padding-right: 8px; }
+}

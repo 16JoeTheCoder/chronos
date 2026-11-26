@@ -162,3 +162,7 @@
   .tk-scard { padding: 12px; min-height: 56px; }
   .tk-group-empty { font-size: 14px; }
 }
+
+@media (max-width: 639px) {
+  .tk-keys { display: none; }
+}
