@@ -116,3 +116,49 @@
 }
 .tk-keys { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--c-text-2); }
 .tk-keys kbd:not(:first-child) { margin-left: 6px; }
+
+/* ---- Touch (phones and tablets) ---- */
+.tk-hint { display: none; margin: 0; color: var(--c-text-3); font-size: 14px; line-height: 20px; }
+@media (pointer: coarse) { .tk-hint { display: block; } .tk-keys { display: none; } }
+.tk-row { touch-action: pan-y; -webkit-touch-callout: none; }
+.tk-row[data-side] { background: color-mix(in srgb, var(--c-ok) calc(var(--sw, 0) * 26%), transparent); }
+.tk-row[data-side="left"] { background: color-mix(in srgb, var(--c-accent) calc(var(--sw, 0) * 26%), transparent); }
+.tk-row[data-side]::after { position: absolute; top: 50%; translate: 0 -50%; color: var(--c-text); font: 600 14px/20px var(--font-text); opacity: var(--sw, 0); pointer-events: none; }
+.tk-row[data-side="right"]::after { content: "Done"; left: 16px; }
+.tk-row[data-side="left"]::after { content: "Date"; right: 16px; }
+
+@media (max-width: 639px) {
+  .tk { padding: 12px 16px calc(24px + env(safe-area-inset-bottom)); gap: 12px; font-size: 16px; }
+  .tk-title { font-size: 26px; line-height: 32px; }
+  .tk-view { min-height: 44px; }
+  .tk-views { gap: 8px; }
+  .tk-mode button { min-height: 44px; padding: 0 14px; font-size: 14px; }
+  .tk-switch-btn { min-height: 44px; max-width: 100%; }
+  .tk-drop { position: fixed; left: 16px; right: 16px; top: auto; bottom: max(16px, env(safe-area-inset-bottom)); width: auto; max-height: 70dvh; padding: 12px; }
+  .tk-drop-list { max-height: 40dvh; }
+  .tk-drop-list button, .tk-drop-new { min-height: 44px; font-size: 16px; }
+  .tk-input { min-height: 44px; font-size: 16px; }
+  .tk-add { min-height: 52px; gap: 8px; padding: 4px 8px 4px 12px; }
+  .tk-add-input { min-height: 44px; font-size: 16px; flex-basis: 140px; }
+  .tk-add .btn-s, .tk-selbar .btn-s, .tk-done-toggle { min-height: 44px; }
+  .tk-add-chips b { font-size: 14px; }
+  .tk-row { grid-template-columns: 44px minmax(0, 1fr) 20px; gap: 4px 4px; min-height: 56px; padding: 6px 8px 6px 0; align-items: center; }
+  .tk-name { font-size: 16px; line-height: 24px; }
+  .tk-edit { min-height: 44px; font-size: 16px; }
+  .tm { font-size: 14px; }
+  .tk-badge { font-size: 14px; }
+  /* A 44 px button with the 20 px circle drawn inside it. */
+  .tk-check { position: relative; width: 44px; height: 44px; margin: 0; border: 0; background: transparent; }
+  .tk-check::before { content: ""; position: absolute; inset: 12px; border-radius: 50%; border: 1.5px solid var(--c-text-3); background: transparent; }
+  .tk-check.prio-must::before { border-color: var(--c-danger); background: color-mix(in srgb, var(--c-danger) 10%, transparent); }
+  .tk-check.prio-should::before { border-color: var(--c-warn); background: color-mix(in srgb, var(--c-warn) 10%, transparent); }
+  .tk-check.prio-nice::before { border-color: var(--tag1); background: color-mix(in srgb, var(--tag1) 10%, transparent); }
+  .tk-check.is-on::before { border-color: var(--c-text-3); background: var(--c-text-3); }
+  .tk-check svg { position: relative; }
+  .tk-row:focus-within .tk-acts { gap: 8px; padding-left: 4px; justify-content: flex-start; }
+  .tk-act { width: 44px; height: 44px; }
+  .tk-selbar { gap: 8px; }
+  .tk-sboard { gap: 12px; }
+  .tk-scard { padding: 12px; min-height: 56px; }
+  .tk-group-empty { font-size: 14px; }
+}
