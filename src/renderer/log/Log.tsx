@@ -1,18 +1,13 @@
-// The Log: a chronological feed of notes (newest first), one stream for check-ins and task notes.
-import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState } from 'react';
-import { feedOf, indexForDay, projectsWithPosts, isEmptyQuery, offsetOf, parseQuery, searchLog, visibleRange, highlight } from '../../core/log';
-import { SearchIndex } from '../../core/search';
+// The Log: two views of one stream. Read (a blog of your posts) is the default; Write (a quiet editor, its own chunk)
+// opens from the Write button or W, and returns here. Which view is showing is local state: Home's props are unchanged.
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { activeTask, todayOf } from '../../core/tasks/tasks';
-import { addDays, dateOf } from '../../core/time/zone';
 import { settingsOf } from '../../core/repo/repo';
 import { run, useSnap } from '../store';
-import { Calendar } from './Calendar';
-import { Composer, type ComposerHandle } from './Composer';
-import { whenLabel } from './ctx';
-import { Note } from './Note';
-import { Stats } from './Stats';
-import { Boundary } from '../components/Boundary';
+import { Read } from './Read';
 import './log.css';
+
+const Write = lazy(() => import('./Write'));
 
 export interface LogProps {
   /** Project view: only this project's posts, and new posts go to it. */
@@ -21,7 +16,7 @@ export interface LogProps {
   focusPostId?: string;
 }
 
-const EST_HEIGHT = 150;
+type View = { mode: 'read' } | { mode: 'write'; editId: string | null };
 
 export function Log({ projectId = null, focusPostId }: LogProps) {
   const snap = useSnap();
@@ -37,18 +32,17 @@ export function Log({ projectId = null, focusPostId }: LogProps) {
 
 function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnType<typeof useSnap>>; projectId: string | null; focusPostId?: string }) {
   const d = snap.data;
-  const s = settingsOf(d);
-  const tz = s.timezone;
-  const now = Date.now();
-  const today = todayOf(d, now);
-  const yesterday = addDays(today, -1);
+  const tz = settingsOf(d).timezone;
+  const today = todayOf(d, Date.now());
+  const [view, setView] = useState<View>({ mode: 'read' });
+  const [landed, setLanded] = useState<string | undefined>(focusPostId);
+  useEffect(() => setLanded(focusPostId), [focusPostId]);
 
-  // ---- composer project: remembered per device, follows the focused task ----
+  // New posts go to the project last used on this device; a project view fixes it; the focused task's project is followed.
   const remembered = snap.device.composerProjectId && d.projects[snap.device.composerProjectId]?.deletedAt === null ? snap.device.composerProjectId : null;
   const composerProject = projectId ?? remembered;
   const setComposerProject = useCallback((id: string | null) => void run({ type: 'device.update', patch: { composerProjectId: id } }, true), []);
-  const focused = activeTask(d);
-  const focusedProject = focused?.projectId ?? null;
+  const focusedProject = activeTask(d)?.projectId ?? null;
   const lastFollowed = useRef<string | null>(null);
   useEffect(() => {
     if (projectId !== null || !focusedProject || lastFollowed.current === focusedProject) return;
@@ -56,239 +50,22 @@ function LogView({ snap, projectId, focusPostId }: { snap: NonNullable<ReturnTyp
     if (focusedProject !== snap.device.composerProjectId) setComposerProject(focusedProject);
   }, [focusedProject, projectId, snap.device.composerProjectId, setComposerProject]);
 
-  // ---- filter chips: All + each project with posts (a project view starts on its project) ----
-  const [chip, setChip] = useState<string | null>(projectId);
-  useEffect(() => setChip(projectId), [projectId]);
-  const chipProjects = useMemo(() => {
-    const ids = projectsWithPosts(Object.values(d.ideas));
-    return Object.values(d.projects).filter((p) => p.deletedAt === null && ids.has(p.id)).sort((a, b) => (a.sortKey < b.sortKey ? -1 : 1));
-  }, [d.ideas, d.projects]);
-
-  // ---- feed ----
-  const feed = useMemo(() => feedOf(d.ideas, chip), [d.ideas, chip]);
-  const allNotes = useMemo(() => Object.values(d.ideas), [d.ideas]);
-  const heights = useRef(new Map<string, number>());
-  const [, bump] = useReducer((x: number) => x + 1, 0);
-  const raf = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const onHeight = useCallback((id: string, h: number) => {
-    if (heights.current.get(id) === h) return;
-    heights.current.set(id, h);
-    clearTimeout(raf.current);
-    raf.current = setTimeout(() => bump(), 16);
+  const openWrite = useCallback(() => setView({ mode: 'write', editId: null }), []);
+  const openEdit = useCallback((id: string) => setView({ mode: 'write', editId: id }), []);
+  const close = useCallback((postId?: string) => {
+    setLanded(postId);
+    setView({ mode: 'read' });
   }, []);
-  const hs = feed.map((n) => heights.current.get(n.id) ?? EST_HEIGHT);
-  const scroller = useRef<HTMLDivElement>(null);
-  const [scrollTop, setScrollTop] = useState(0);
-  const [viewport, setViewport] = useState(700);
-  useEffect(() => {
-    const el = scroller.current;
-    if (!el) return;
-    setViewport(el.clientHeight);
-    const ro = new ResizeObserver(() => setViewport(el.clientHeight));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  const range = visibleRange(hs, scrollTop, viewport);
-
-  const [flash, setFlash] = useState<string | null>(null);
-  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scrollToIndex = useCallback(
-    (i: number, id?: string) => {
-      const el = scroller.current;
-      if (!el || i < 0) return;
-      el.scrollTop = offsetOf(hs, i);
-      setScrollTop(el.scrollTop);
-      // Row heights are estimates until measured: settle once after layout.
-      setTimeout(() => {
-        setTimeout(() => {
-          const hh = feed.map((n) => heights.current.get(n.id) ?? EST_HEIGHT);
-          el.scrollTop = offsetOf(hh, i);
-          setScrollTop(el.scrollTop);
-          if (id) document.getElementById(`log-post-${id}`)?.focus({ preventScroll: true });
-        }, 16);
-      }, 16);
-      if (id) {
-        setFlash(id);
-        if (flashTimer.current) clearTimeout(flashTimer.current);
-        flashTimer.current = setTimeout(() => setFlash(null), 1800);
-      }
-    },
-    [hs, feed],
-  );
-  const jumpTo = useCallback((id: string) => scrollToIndex(feed.findIndex((n) => n.id === id), id), [feed, scrollToIndex]);
-
-  const focusedOnce = useRef<string | null>(null);
-  useEffect(() => {
-    if (focusPostId && focusedOnce.current !== focusPostId && feed.some((n) => n.id === focusPostId)) {
-      focusedOnce.current = focusPostId;
-      jumpTo(focusPostId);
-    }
-  }, [focusPostId, feed, jumpTo]);
-
-  // ---- calendar ----
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  // The calendar is a right drawer, closed by default; R is the reading view (Phase 3.7). Both remembered on this PC.
-  const [calOpen, setCalOpenState] = useState(() => { try { return localStorage.getItem('chronos.log.cal') === '1'; } catch { return false; } });
-  const setCalOpen = (f: (v: boolean) => boolean) => setCalOpenState((v) => { const n = f(v); try { localStorage.setItem('chronos.log.cal', n ? '1' : '0'); } catch { /* per-viewer convenience */ } return n; });
-  const [reading, setReadingState] = useState(() => { try { return localStorage.getItem('chronos.log.reading') === '1'; } catch { return false; } });
-  const setReading = (f: (v: boolean) => boolean) => setReadingState((v) => { const n = f(v); try { localStorage.setItem('chronos.log.reading', n ? '1' : '0'); } catch { /* per-viewer convenience */ } return n; });
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.key !== 'r' && e.key !== 'R') || e.ctrlKey || e.altKey || e.metaKey || (e.target as HTMLElement).closest('input, textarea, select, [contenteditable]') || document.querySelector('[aria-modal="true"]')) return;
-      e.preventDefault();
-      setReading((v) => !v);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const pickDay = (date: string) => {
-    setSelectedDay(date);
-    scrollToIndex(indexForDay(feed, date, tz));
-  };
-
-  // ---- search ----
-  const indexRef = useRef<SearchIndex | null>(null);
-  indexRef.current ??= new SearchIndex();
-  const [query, setQuery] = useState('');
-  const [resActive, setResActive] = useState(0);
-  const resId = useId();
-  const feedIds = useMemo(() => new Set(feed.map((n) => n.id)), [feed]);
-  const found = useMemo(() => {
-    if (isEmptyQuery(parseQuery(query, today))) return null;
-    const r = searchLog(d, indexRef.current!, query, { tz, today, limit: 30 });
-    return { q: r.query, hits: r.hits.filter((h) => feedIds.has(h.id)) };
-  }, [query, d.ideas, d.projects, tz, today, feedIds]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => setResActive(0), [query]);
-  const composer = useRef<ComposerHandle>(null);
-
-  const projectName = chip ? (d.projects[chip]?.name ?? null) : null;
-  const marksProject = chip ?? composerProject;
-  const markName = marksProject ? (d.projects[marksProject]?.name ?? null) : null;
-  const q = found ? found.q : null;
 
   return (
-    <section className={`log${reading ? ' is-reading' : ''}${calOpen && !reading ? ' cal-open' : ''}`} aria-label="Log">
-      <header className="log-head">
-        <h1>{projectName ? <>Log <span className="log-h-proj">· {projectName}</span></> : 'Log'}</h1>
-        <div className="search">
-          <input
-            type="search"
-            className="search-input"
-            value={query}
-            placeholder='Search posts: "exact phrase" project: before: after: is:task'
-            aria-label="Search posts"
-            role="combobox"
-            aria-expanded={!!found}
-            aria-controls={found ? resId : undefined}
-            aria-activedescendant={found?.hits.length ? `${resId}-${resActive}` : undefined}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                setQuery('');
-                return;
-              }
-              if (!found?.hits.length) return;
-              if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                e.preventDefault();
-                setResActive((a) => (a + (e.key === 'ArrowDown' ? 1 : -1) + found.hits.length) % found.hits.length);
-              } else if (e.key === 'Enter') {
-                e.preventDefault();
-                jumpTo(found.hits[resActive]!.id);
-              }
-            }}
-          />
-          {found && (
-            <ul className="results" role="listbox" id={resId} aria-label="Search results">
-              {found.hits.length === 0 && <li className="results-empty">No posts match{found.q.invalid.length ? ` (${found.q.invalid.join(' ')} not understood)` : ''}</li>}
-              {found.hits.map((h, i) => {
-                const n = d.ideas[h.id]!;
-                const line = n.body.split('\n').find((l) => found.q.phrases.some((p) => l.toLowerCase().includes(p.toLowerCase())) || found.q.words.some((w) => l.toLowerCase().includes(w.toLowerCase()))) ?? n.body.split('\n')[0] ?? '';
-                return (
-                  <li key={h.id} id={`${resId}-${i}`} role="option" aria-selected={i === resActive} className={i === resActive ? 'on' : ''} onMouseEnter={() => setResActive(i)} onMouseDown={(e) => { e.preventDefault(); jumpTo(h.id); }}>
-                    <span className="results-when">{dateOf(n.createdAt, tz)}</span>
-                    <span className="results-text">
-                      {highlight(line.slice(0, 140), found.q).map((sg, k) => (sg.hit ? <mark key={k}>{sg.text}</mark> : <span key={k}>{sg.text}</span>))}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-        <button className="log-btn" aria-pressed={reading} aria-keyshortcuts="R" onClick={() => setReading((v) => !v)} title="Reading view (R)">
-          {reading ? 'Exit reading view' : 'Reading view'} <kbd>R</kbd>
-        </button>
-        {!reading && (
-          <button className="log-btn cal-toggle" aria-expanded={calOpen} aria-controls="log-cal" onClick={() => setCalOpen((v) => !v)}>
-            {calOpen ? 'Hide calendar' : 'Calendar'}
-          </button>
-        )}
-      </header>
-      <div className="log-main">
-        <div className="log-col">
-          {!reading && <Composer
-            ref={composer}
-            data={d}
-            projectId={composerProject}
-            locked={projectId !== null}
-            onProject={setComposerProject}
-            onPosted={() => {
-              setSelectedDay(null);
-              if (scroller.current) scroller.current.scrollTop = 0;
-            }}
-          />}
-          {!reading && chipProjects.length > 0 && (
-            <div className="log-chips" role="group" aria-label="Show posts from">
-              <button type="button" className="log-chip" aria-pressed={chip === null} onClick={() => setChip(null)}>All</button>
-              {chipProjects.map((p) => (
-                <button key={p.id} type="button" className="log-chip" aria-pressed={chip === p.id} onClick={() => setChip(p.id)}>
-                  <i className="log-chip-dot" style={{ background: `var(--${p.color})` }} aria-hidden="true" />{p.name}
-                </button>
-              ))}
-            </div>
-          )}
-          <Boundary what="the posts">
-          <div
-            className="feed"
-            ref={scroller}
-            onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}
-            tabIndex={-1}
-            role="feed"
-            aria-label="Posts, newest first"
-            aria-busy={false}
-          >
-            {feed.length === 0 ? (
-              <p className="feed-empty">{projectName ? `Nothing posted in ${projectName} yet.` : 'Nothing posted yet. Write the first line above.'}</p>
-            ) : (
-              <div className="feed-spacer" style={{ height: range.total }}>
-                <div className="feed-window" style={{ transform: `translateY(${range.top}px)` }}>
-                  {feed.slice(range.start, range.end).map((n) => (
-                    <Note
-                      key={n.id}
-                      note={n}
-                      data={d}
-                      label={whenLabel(n.createdAt, tz, today, yesterday)}
-                      projectName={!chip && n.projectId ? (d.projects[n.projectId]?.name ?? null) : null}
-                      q={q}
-                      flash={flash === n.id}
-                      onHeight={onHeight}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          </Boundary>
-        </div>
-        {calOpen && !reading && <aside className="log-side open" id="log-cal" aria-label="Calendar">
-          <Boundary what="the calendar">
-            <Calendar notes={allNotes} tz={tz} today={today} projectId={marksProject} projectName={markName} selected={selectedDay} onSelect={pickDay} />
-          </Boundary>
-          <Boundary what="this month's numbers">
-            <Stats notes={allNotes} tz={tz} today={today} />
-          </Boundary>
-        </aside>}
-      </div>
+    <section className={`log is-${view.mode}`} aria-label={view.mode === 'write' ? 'Write' : 'Log'}>
+      {view.mode === 'read' ? (
+        <Read data={d} tz={tz} today={today} projectId={projectId} composerProject={composerProject} focusPostId={landed} onWrite={openWrite} onEdit={openEdit} />
+      ) : (
+        <Suspense fallback={<p className="feed-empty write-loading">Opening the editor…</p>}>
+          <Write data={d} editId={view.editId} defaultProject={composerProject} locked={projectId !== null} onProject={setComposerProject} onClose={close} />
+        </Suspense>
+      )}
     </section>
   );
 }
