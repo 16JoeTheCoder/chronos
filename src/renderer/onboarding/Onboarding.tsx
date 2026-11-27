@@ -8,7 +8,8 @@ import { run } from '../store';
 
 export function Onboarding({ s, onTimetable, onDone }: { s: Settings; onTimetable: () => void; onDone: () => void }) {
   const [step, setStep] = useState(1);
-  const [tz, setTz] = useState(s.timezone);
+  // First run: suggest this device's own zone (the stored default is Josef's, Asia/Jakarta).
+  const [tz, setTz] = useState(() => (s.onboarded ? s.timezone : deviceZone() ?? s.timezone));
   const [start, setStart] = useState(formatHM(s.dayStartMin));
   const [end, setEnd] = useState(formatHM(s.dayEndMin));
   const [error, setError] = useState('');
@@ -80,4 +81,13 @@ export function Onboarding({ s, onTimetable, onDone }: { s: Settings; onTimetabl
       </section>
     </div>
   );
+}
+
+function deviceZone(): string | null {
+  try {
+    const z = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return z && isValidZone(z) ? z : null;
+  } catch {
+    return null;
+  }
 }

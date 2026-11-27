@@ -16,7 +16,7 @@ Branch `p4/qa`. `npx tsc --noEmit` clean. New: `tests/web/` (13 vitest tests), `
 
 ### Firestore reads at start-up (memory provider; real Firestore numbers need the deployed app)
 
-The Firestore emulator does run here (`firebase-tools` 15.37, Java present, jar downloads), but the tests use `memoryProvider` so they run anywhere. A fresh web device pulling 25 tasks plus settings and holidays: **65 reads cold, 45 warm** (same IndexedDB, saved cursors). Warm is higher than it should be: the warm device still has listeners deliver 35 docs, and 14 listener opens happen for 7 collections, only 4 of them with a cursor (tasks, closures, timer, settings). It looks as if sync starts twice per page start and the first round re-reads from 0. Not investigated further (not a QA fix). On real Firestore each delivered doc is one billed read. Real numbers: read `bridge.web.usage()` on the deployed app after a cold and a warm start.
+The Firestore emulator does run here (`firebase-tools` 15.37, Java present, jar downloads), but the tests use `memoryProvider` so they run anywhere. A fresh web device pulling 25 tasks plus settings and holidays: **65 reads cold, 45 warm** (same IndexedDB, saved cursors). Lead follow-up: cursors are restored on the warm start (checked: same `device.sync.cursors` before and after); the 35 re-delivered docs are the seed batch, which the memory server stamped with one `serverUpdatedAt`, and the cursor query is `>=` on purpose (docs sharing the cursor's timestamp must not be missed). The 14 listener opens are 2 × 7 from the cold and warm devices both being alive in the test. In real use each edit commits separately, so a warm start re-reads about one doc per non-empty collection. On real Firestore each delivered doc is one billed read. Real numbers: read `bridge.web.usage()` on the deployed app after a cold and a warm start.
 
 ### Viewports (`scripts/viewports.mjs`: Chromium, fake clock, local-only build plus a dummy-Firebase build for sign-in)
 
@@ -46,7 +46,7 @@ The `impeccable` skill was offered and loaded, but its detector run was not done
 
 ### Known issues
 
-1. Warm start re-reads about as many docs as a cold one (above): sync starts twice, cursors missing on the first round.
+1. ~~Warm start re-reads~~ explained (above): a test artefact of one batch timestamp, not a double start.
 2. Toasts stack on phones and cover controls: "Task added" and "Project created" sat over the Board Add/Done buttons and Home's Pause, and stay several seconds.
 3. The default zone is Asia/Jakarta in a UK browser (all times read 17:00 for a 10:00 UTC clock); the web should default to the browser's `Intl` zone.
 4. Phone Board is one column with To do / Doing / Done chips, not swipeable full-width columns (swipe not verified); the last card is clipped at the scroll edge (`board-390x844`).

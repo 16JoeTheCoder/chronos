@@ -69,3 +69,12 @@
 .home[data-viewport="tablet"] .screen > * { min-width: 0; }
 .home[data-viewport="phone"] .home-main { position: relative; }
 .home[data-viewport="phone"] .focus-exit { position: absolute; z-index: 2; top: calc(env(safe-area-inset-top) + 4px); right: 0; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--c-text-2); cursor: pointer; }
+
+/* Phase 4 QA fixes. Phone: toasts sit above the running pill and tab bar and show one at a time (they covered Board's Add/Done). */
+.home[data-viewport="phone"] .toasts { bottom: calc(var(--sh-tab) + var(--sh-pill) + env(safe-area-inset-bottom) + 12px); width: calc(100% - 2 * var(--sh-gutter)); }
+.home[data-viewport="phone"] .toasts .toast:not(:last-child) { display: none; }
+.home[data-viewport="phone"] .toast { width: 100%; box-sizing: border-box; }
+.home[data-viewport="phone"] .stray textarea, .home[data-viewport="phone"] .post-link { min-height: 44px; }
+/* Tablet and phone: the Settings section list scrolls sideways instead of clipping a label. */
+.home:is([data-viewport="phone"], [data-viewport="tablet"]) .st-nav { overflow-x: auto; scrollbar-width: thin; }
+.home:is([data-viewport="phone"], [data-viewport="tablet"]) .st-nav-item { flex: none; white-space: nowrap; }
