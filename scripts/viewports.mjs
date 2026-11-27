@@ -70,7 +70,8 @@ const MEASURE = () => {
   const vh = window.innerHeight;
   const targets = [];
   for (const el of document.querySelectorAll('button, a[href], input:not([type=hidden]), select, textarea, [role=button], [role=tab], [role=switch], [role=checkbox], summary')) {
-    const r = el.getBoundingClientRect();
+    // A checkbox is tapped through its label: measure that.
+    const r = ((el.type === 'checkbox' || el.type === 'radio') && el.labels && el.labels[0] ? el.labels[0] : el).getBoundingClientRect();
     if (r.width === 0 || r.height === 0 || r.bottom < 0 || r.right < 0 || r.top > vh || r.left > vw) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) === 0) continue;
@@ -138,12 +139,12 @@ async function seed(page, nav) {
   // Two Log posts through Write -> Publish.
   for (const text of ['Shipped the first cut of the homepage. Next up is the contact form.', '- slow start\n- fast finish\n\nNotes for tomorrow: **call the accountant**.']) {
     await nav('log');
-    await page.getByRole('button', { name: 'Write', exact: true }).first().click();
+    await page.getByRole('button', { name: /^Write( W)?$/ }).first().click();
     const box = page.locator('textarea.write-input');
     await box.waitFor();
     await box.fill(text);
     await settle(1300); // autosave
-    await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    await page.getByRole('button', { name: /^Publish\b/ }).click();
     await settle(600);
   }
 }
@@ -242,7 +243,7 @@ async function run() {
     await step('log-read', async () => { await nav('log'); await shot(page, 'log-read'); });
     await step('log-write', async () => {
       await nav('log');
-      await page.getByRole('button', { name: 'Write', exact: true }).first().click();
+      await page.getByRole('button', { name: /^Write( W)?$/ }).first().click();
       const box = page.locator('textarea.write-input');
       await box.waitFor();
       await box.fill('A draft in progress. Autosave keeps it.\n\n- one\n- two');

@@ -10,9 +10,7 @@
    "tab": 56,
    "tabLabelPx": 12,
    "bodyPx": 16,
-   "targets": [
-    "button.link \"Show blocks\" 90x32"
-   ]
+   "targets": []
   },
   {
    "viewport": "360x740",
@@ -98,9 +96,7 @@
    "tab": 56,
    "tabLabelPx": 12,
    "bodyPx": 16,
-   "targets": [
-    "button.trash \"Trash: drop items here, \" 84x32"
-   ]
+   "targets": []
   },
   {
    "viewport": "360x740",
@@ -163,9 +159,7 @@
    "tab": 0,
    "tabLabelPx": 0,
    "bodyPx": 16,
-   "targets": [
-    "input 24x24"
-   ]
+   "targets": []
   },
   {
    "viewport": "390x844",
@@ -177,10 +171,7 @@
    "tab": 56,
    "tabLabelPx": 12,
    "bodyPx": 16,
-   "targets": [
-    "button.link \"Show blocks\" 90x32",
-    "button.link \"Focus view F\" 79x32"
-   ]
+   "targets": []
   },
   {
    "viewport": "390x844",
@@ -266,9 +257,7 @@
    "tab": 56,
    "tabLabelPx": 12,
    "bodyPx": 16,
-   "targets": [
-    "button.trash \"Trash: drop items here, \" 84x32"
-   ]
+   "targets": []
   },
   {
    "viewport": "390x844",
@@ -331,9 +320,7 @@
    "tab": 0,
    "tabLabelPx": 0,
    "bodyPx": 16,
-   "targets": [
-    "input 24x24"
-   ]
+   "targets": []
   },
   {
    "viewport": "412x915",
@@ -345,10 +332,7 @@
    "tab": 56,
    "tabLabelPx": 12,
    "bodyPx": 16,
-   "targets": [
-    "button.link \"Show blocks\" 90x32",
-    "button.link \"Focus view F\" 79x32"
-   ]
+   "targets": []
   },
   {
    "viewport": "412x915",
@@ -398,9 +382,7 @@
    "tab": 56,
    "tabLabelPx": 12,
    "bodyPx": 16,
-   "targets": [
-    "button.trash \"Trash: drop items here, \" 84x32"
-   ]
+   "targets": []
   },
   {
    "viewport": "412x915",
@@ -704,6 +686,24 @@
    "targets": [
     "button.tb-search \"Add or searchCtrl K\" 272x40",
     "button.tb-task \"Write the proposal25:00\" 219x40",
+    "button.tb-help \"Shortcuts and help\" 36x36",
+    "button.post-link \"Edit post from 17:00\" 31x44",
+    "button.post-link \"Edit post from 17:00\" 31x44"
+   ]
+  },
+  {
+   "viewport": "768x1024",
+   "screen": "log-write",
+   "overflow": false,
+   "scrollWidth": 768,
+   "top": 56,
+   "pill": 0,
+   "tab": 0,
+   "tabLabelPx": 0,
+   "bodyPx": 15,
+   "targets": [
+    "button.tb-search \"Add or searchCtrl K\" 272x40",
+    "button.tb-task \"Write the proposal25:00\" 219x40",
     "button.tb-help \"Shortcuts and help\" 36x36"
    ]
   },
@@ -749,9 +749,7 @@
    "tab": 0,
    "tabLabelPx": 0,
    "bodyPx": 15,
-   "targets": [
-    "input 24x24"
-   ]
+   "targets": []
   },
   {
    "viewport": "1366x768",
@@ -1010,7 +1008,29 @@
     "button.tb-task \"Write the proposal25:00\" 219x40",
     "button.tb-help \"Shortcuts and help\" 36x36",
     "button.log-btn \"Calendar\" 84x36",
-    "button.log-btn.log-btn-primary \"Write W\" 89x36"
+    "button.log-btn.log-btn-primary \"Write W\" 89x36",
+    "button.post-link.post-offer \"Add as task?\" 83x28",
+    "button.post-link \"Edit post from 17:00\" 31x28",
+    "button.post-link \"Edit post from 17:00\" 31x28"
+   ]
+  },
+  {
+   "viewport": "1366x768",
+   "screen": "log-write",
+   "overflow": false,
+   "scrollWidth": 1366,
+   "top": 56,
+   "pill": 0,
+   "tab": 0,
+   "tabLabelPx": 0,
+   "bodyPx": 15,
+   "targets": [
+    "button.tb-search \"Add or searchCtrl K\" 520x40",
+    "button.tb-task \"Write the proposal25:00\" 219x40",
+    "button.tb-help \"Shortcuts and help\" 36x36",
+    "button.log-btn.log-btn-quiet \"Back to Read\" 80x36",
+    "select.log-select \"Project\" 107x36",
+    "button.log-btn.log-btn-primary \"Publish\" 72x36"
    ]
   },
   {
@@ -1058,9 +1078,7 @@
    "tab": 0,
    "tabLabelPx": 0,
    "bodyPx": 15,
-   "targets": [
-    "input 24x24"
-   ]
+   "targets": []
   },
   {
    "viewport": "1920x1080",
@@ -1233,7 +1251,10 @@
     "button.tb-task \"Write the proposal25:00\" 219x40",
     "button.tb-help \"Shortcuts and help\" 36x36",
     "button.log-btn \"Calendar\" 84x36",
-    "button.log-btn.log-btn-primary \"Write W\" 89x36"
+    "button.log-btn.log-btn-primary \"Write W\" 89x36",
+    "button.post-link.post-offer \"Add as task?\" 83x28",
+    "button.post-link \"Edit post from 17:00\" 31x28",
+    "button.post-link \"Edit post from 17:00\" 31x28"
    ]
   },
   {
@@ -1253,12 +1274,5 @@
    ]
   }
  ],
- "problems": [
-  "768x1024 seed: locator.click: Timeout 30000ms exceeded.",
-  "768x1024 log-write: locator.click: Timeout 30000ms exceeded.",
-  "1366x768 seed: locator.click: Timeout 30000ms exceeded.",
-  "1366x768 log-write: locator.click: Timeout 30000ms exceeded.",
-  "1920x1080 seed: locator.click: Timeout 30000ms exceeded.",
-  "1920x1080 log-write: locator.click: Timeout 30000ms exceeded."
- ]
+ "problems": []
 }
