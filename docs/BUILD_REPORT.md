@@ -1,5 +1,59 @@
 # Build report: Chronos (Phase 3.7: one task model, Tasks, polish)
 
+## Phase 4 (web app, QA)
+
+Branch `p4/qa`. `npx tsc --noEmit` clean. New: `tests/web/` (13 vitest tests), `tests/e2e/pwa.mjs`, `scripts/viewports.mjs` (run `node scripts/viewports.mjs --signin <dir of a dummy-Firebase build>`; add `"viewports": "node scripts/viewports.mjs"` to package.json for `npm run viewports`, QA may not edit it). Screens: `docs/screens/web/<screen>-<w>x<h>.jpg` (2.3 MB), numbers in `docs/screens/web/report.json`.
+
+### Bundle sizes (gzip, `npm run build:web`, local-only build)
+
+| Piece | gz |
+| --- | --- |
+| Initial JS: entry `web-*.js` 40.7 KB + main chunk 123.6 KB + shared `index` 6.6 KB | about 171 KB (entry + main: 164 KB) |
+| Initial CSS `main-*.css` | 18.6 KB |
+| Lazy: Settings 17.1, Log 9.4, Board 5.6, Planning 2.4 KB (plus small Write, Cache, Palette, ScheduleEditor, Attachments chunks) | on demand |
+| Lazy Firebase (`firebase` 29.3 + `firebase-auth` 37.9 + `firebase-firestore` 149.4 KB) | 217 KB, only loaded when a Firebase config exists; never in local-only mode |
+| Whole `dist-web/` | 2.9 MB on disk (fonts about 0.5 MB woff2), 69 files, service worker 3.6 KB |
+
+### Firestore reads at start-up (memory provider; real Firestore numbers need the deployed app)
+
+The Firestore emulator does run here (`firebase-tools` 15.37, Java present, jar downloads), but the tests use `memoryProvider` so they run anywhere. A fresh web device pulling 25 tasks plus settings and holidays: **65 reads cold, 45 warm** (same IndexedDB, saved cursors). Warm is higher than it should be: the warm device still has listeners deliver 35 docs, and 14 listener opens happen for 7 collections, only 4 of them with a cursor (tasks, closures, timer, settings). It looks as if sync starts twice per page start and the first round re-reads from 0. Not investigated further (not a QA fix). On real Firestore each delivered doc is one billed read. Real numbers: read `bridge.web.usage()` on the deployed app after a cold and a warm start.
+
+### Viewports (`scripts/viewports.mjs`: Chromium, fake clock, local-only build plus a dummy-Firebase build for sign-in)
+
+| Viewport | Screens | Horizontal overflow | Chrome (top + pill + tab) | Targets under 44 px |
+| --- | --- | --- | --- | --- |
+| 360x740 | 13 | none | 156 px = 21.1 % | 3 |
+| 390x844 | 13 | none | 156 px = 18.5 % (limit 20 %), pill showing | 3 |
+| 412x915 | 7 | none | 17.0 % | 3 |
+| 768x1024 | 13 | none | tablet | 172 (not a phone size, not checked) |
+| 1366x768 | 13 | none | n/a | 161 (mouse targets, not checked) |
+| 1920x1080 | 7 | none | n/a | 102 |
+
+The budget fails the run only at 390x844 (as specified). 360x740 is 21.1 % because the bars are fixed px on a 740 px screen. Phone rules read off the page all held: top bar 52 px, pill 48 px, tab bar 56 px, tab labels 12 px, body 16 px. The three phone targets left: the Focus thinking-space textarea (24 px high, full width) and two Log "Edit post" buttons (31x44). Before the fix below, `.link` buttons ("Show blocks", "Focus view") and Plan's Trash were 32 px high.
+
+### Critique (self-scored, 9 heuristics 0-4, 36 max, from the screenshots and the live app)
+
+The `impeccable` skill was offered and loaded, but its detector run was not done (time), so these are my scores.
+
+| Width | Score | Notes |
+| --- | --- | --- |
+| 390 | 25/36 | visibility 3, match 3, control 3, consistency 3, error prevention 3, recognition 3, flexibility 2, minimalist 3, error recovery 2 (not exercised) |
+| 1366 | 26/36 | flexibility 3 (Ctrl+K, key hints); Home states free time twice; Board leaves two thirds of the width empty |
+
+### Fixed by QA (CSS only)
+
+- `src/renderer/styles/responsive.css:28`: `.link` and `.trash` get `min-height: 44px` in the phone layout (were 32 px).
+
+### Known issues
+
+1. Warm start re-reads about as many docs as a cold one (above): sync starts twice, cursors missing on the first round.
+2. Toasts stack on phones and cover controls: "Task added" and "Project created" sat over the Board Add/Done buttons and Home's Pause, and stay several seconds.
+3. The default zone is Asia/Jakarta in a UK browser (all times read 17:00 for a 10:00 UTC clock); the web should default to the browser's `Intl` zone.
+4. Phone Board is one column with To do / Doing / Done chips, not swipeable full-width columns (swipe not verified); the last card is clipped at the scroll edge (`board-390x844`).
+5. Tablet 768x1024 uses desktop-size controls (172 targets under 44 px with touch on).
+6. Focus textarea 24 px high; Log "Edit" 31 px wide; Settings section tabs cut a label ("Focu") with no scroll hint (`settings-390x844`); Plan's runway shows only 16:00 to 18:00 until scrolled.
+7. The sign-in checkbox is 24 px but its label row is 44 px, so it passes.
+
 ## Status (2026-11-19)
 
 `npm run typecheck` clean · `npm test` 957 passed (72 files) · `npm run audit` passed · smoke passed (Xvfb; adds Tasks quick add and complete, Home drag-to-pause / drag-to-start / Esc-cancel, Plan now-line, notepad push). Cross-screen test: `tests/core/crossScreen.test.ts`.
