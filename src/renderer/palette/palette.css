@@ -1,0 +1,22 @@
+/* Palette on a phone: a full-screen sheet that slides up, input at the top, results scroll below it.
+   The desktop dialog lives in styles/shell.css and is untouched. Theme tokens only. */
+.pal-close { display: none; }
+
+@media (max-width: 639px) {
+  :root .pal-scrim.in-app { align-items: stretch; padding: 0; background: var(--c-ground); backdrop-filter: none; animation: pal-up var(--dur-base) var(--ease-snap, var(--ease)) both; }
+  :root .pal-scrim.in-app .pal { width: 100%; height: 100%; max-height: none; border: 0; border-radius: 0; box-shadow: none; padding-top: env(safe-area-inset-top, 0px); }
+  .pal-head { position: relative; padding: 12px 16px 10px; gap: 8px; }
+  .pal-head .pal-eyebrow { font-size: 14px; padding-right: 88px; }
+  .pal-close { display: inline-flex; align-items: center; justify-content: center; position: absolute; top: 4px; right: 8px; min-width: 44px; min-height: 44px; padding: 0 12px; border: 0; border-radius: var(--r-md); background: transparent; color: var(--c-text-2); font: 500 16px/24px var(--font-text); cursor: pointer; }
+  :root .pal .pal-input { font-size: 18px; min-height: 44px; }
+  .pal-chips b, .pal-hint { font-size: 14px; }
+  .pal-list { flex: 1; min-height: 0; padding: 4px 8px calc(8px + env(safe-area-inset-bottom, 0px)); overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .pal-list li { min-height: 48px; }
+  .pal-label { font-size: 16px; white-space: normal; overflow-wrap: anywhere; }
+  .pal-note { padding: 8px 16px; font-size: 14px; }
+  .pal-foot { display: none; }
+}
+
+@keyframes pal-up { from { transform: translateY(32px); opacity: 0; } to { transform: none; opacity: 1; } }
+:root[data-motion="off"] .pal-scrim { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .pal-scrim { animation: none !important; } }

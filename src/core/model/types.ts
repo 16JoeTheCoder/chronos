@@ -259,7 +259,33 @@ export interface Idea extends Base {
   parsedTaskIds: string[];
   /** Files and images (absent on posts made before attachments). */
   files?: Attachment[];
+  /** Phase 4: a Log draft (Write view autosave). Absent = published (D-184). Drafts never show in the feed, search or stats. */
+  draft?: boolean;
+  /** Phase 4: when a draft was published (the post's time in the feed). Absent = createdAt. */
+  publishedAt?: number;
 }
+
+/** A Log post is a draft (Phase 4 Write view). */
+export const isDraft = (n: Pick<Idea, 'draft'>): boolean => n.draft === true;
+/** The time a post shows under in the feed: when it was published, else when it was created. */
+export const postedAt = (n: Pick<Idea, 'createdAt' | 'publishedAt'>): number => n.publishedAt ?? n.createdAt;
+
+/**
+ * Phase 4.5 (reserved, no UI and not synced yet: not in COLLS): a voice note ("Ramble") recorded on a phone,
+ * transcribed and processed server-side. Path users/{uid}/rambles/{id}; rules and validator exist (D-185).
+ */
+export interface Ramble extends Base {
+  recordedAt: number;
+  durationSec: number;
+  device: string;
+  projectId: string | null;
+  transcript: string;
+  status: 'pending' | 'processed' | 'failed';
+  output: { points: string[]; summary: string; tasks: string[] } | null;
+  model: string | null;
+  processedAt: number | null;
+}
+export const RAMBLE_STATUSES = ['pending', 'processed', 'failed'] as const;
 
 /** Cache: short-lived things to carry between devices (a command, a path, a screenshot). Expires on its own. */
 export interface CacheItem extends Base {

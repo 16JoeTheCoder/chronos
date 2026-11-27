@@ -7,7 +7,6 @@
 // not watching, we stop the clock at the last moment we *know* we were alive
 // and ask the user whether the unobserved stretch should count.
 
-import fs from 'node:fs';
 import { apply, type Command, type Result } from '../core/commands';
 import { defaultActiveTimer, defaultDevice, defaultSettings, emptyData, taskPrefs } from '../core/model/defaults';
 import { newId } from '../core/model/ids';
@@ -29,7 +28,20 @@ import { takeover } from '../core/sync/engine';
 import { advance, pauseAt, start } from '../core/timer/timer';
 import { isObj, recordProblem, validateDevice } from '../core/validation';
 import { clockOf, formatHuman, phaseLabel } from '../core/format';
-import type { Store } from './store';
+/** What the controller persists to: the JSON files in main (store.ts), IndexedDB-backed memory on the web (src/platform/web). Loads are synchronous: the web store hydrates before the controller starts. */
+export interface ControllerStore {
+  data: { load(): unknown; save(v: unknown): void };
+  device: { load(): unknown; save(v: unknown): void };
+  outbox: { load(): unknown; save(v: unknown): void };
+  conflicts: { load(): unknown; save(v: unknown): void };
+  quarantine: { load(): unknown; save(v: unknown): void };
+  listSnapshots(): string[];
+  writeSnapshot(value: unknown, name: string): string;
+  hasSnapshot(date: string): boolean;
+  readSnapshot(name: string): unknown;
+  writeHeartbeat(now: number): void;
+  readHeartbeat(): number | null;
+}
 
 export const HEARTBEAT_MS = 5_000;
 export const STARTUP_GAP_MS = 15_000;
@@ -57,8 +69,8 @@ export const LIST_CAP = 500;
 
 export interface ControllerOptions {
   deviceName: string;
-  /** %APPDATA%\Monolith\monolith-data.json, read only on explicit import. */
-  monolithFile: string;
+  /** Reads %APPDATA%\Monolith\monolith-data.json (parsed), only on explicit import; throws or returns undefined when absent. */
+  readMonolith?: () => unknown;
 }
 
 export class Controller {
@@ -81,7 +93,7 @@ export class Controller {
   /** Dedupe keys for notifications already shown this run (prep nudges, checkpoints). */
   private notified = new Set<string>();
 
-  constructor(private store: Store, private hooks: ControllerHooks = noHooks, private opts: ControllerOptions = { deviceName: 'This PC', monolithFile: '' }) {
+  constructor(private store: ControllerStore, private hooks: ControllerHooks = noHooks, private opts: ControllerOptions = { deviceName: 'This PC' }) {
     this.device = defaultDevice(newId(), opts.deviceName);
     this.engine = new SyncEngine(this.syncHost(), { deviceId: () => this.device.deviceId, now: () => Date.now() });
   }
@@ -324,8 +336,12 @@ export class Controller {
     return activeTask(this.data)?.runtime.status === 'running';
   }
 
-  /** Fast tick (main runs it every 250 ms only while a timer runs). Detects jumps, processes boundaries, heartbeats. */
-  tick(now: number): void {
+  /**
+   * Fast tick (main runs it every 250 ms only while a timer runs). Detects jumps, processes boundaries, heartbeats.
+   * `alive`: the caller knows the app ran through the silence (a web tab coming back from hidden, D-190), so a
+   * forward gap counts like a stopwatch instead of pausing at the last tick.
+   */
+  tick(now: number, alive = false): void {
     const prev = this.lastTick;
     this.lastTick = now;
     const task = activeTask(this.data);
@@ -337,7 +353,7 @@ export class Controller {
       this.changed(true);
       return;
     }
-    if (now - prev > TICK_GAP_MS) {
+    if (now - prev > TICK_GAP_MS && !alive) {
       // We were not scheduled for a while (sleep, suspension, forward jump).
       this.pauseUnobserved(task, prev, now);
       this.changed(true);
@@ -452,7 +468,8 @@ export class Controller {
   private importMonolith(now: number): Result {
     let raw: unknown;
     try {
-      raw = JSON.parse(fs.readFileSync(this.opts.monolithFile, 'utf8'));
+      raw = this.opts.readMonolith?.();
+      if (raw === undefined) throw new Error('none');
     } catch {
       return { ok: false, error: 'No Monolith data found on this PC.' };
     }

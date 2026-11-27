@@ -20,7 +20,7 @@ afterEach(() => {
 });
 
 function boot(now: number, notices: Notice[] = []): Controller {
-  const c = new Controller(new Store(dir), { onChange() {}, onNotify: (n) => notices.push(n), onGap() {}, onDeviceChanged() {} }, { deviceName: 'PC', monolithFile: path.join(dir, 'missing.json') });
+  const c = new Controller(new Store(dir), { onChange() {}, onNotify: (n) => notices.push(n), onGap() {}, onDeviceChanged() {} }, { deviceName: 'PC', readMonolith: () => JSON.parse(fs.readFileSync(path.join(dir, 'missing.json'), 'utf8')) });
   c.init(now);
   return c;
 }
@@ -147,7 +147,7 @@ describe('device settings and import', () => {
     expect(c.command({ type: 'data.import', source: 'monolith' }, T0).ok).toBe(false);
     const file = path.join(dir, 'monolith.json');
     fs.writeFileSync(file, JSON.stringify({ version: 2, tasks: [{ id: 'a', name: 'Old', finishCondition: 'Old task is done', status: 'queued' }] }));
-    const c2 = new Controller(new Store(dir), undefined, { deviceName: 'PC', monolithFile: file });
+    const c2 = new Controller(new Store(dir), undefined, { deviceName: 'PC', readMonolith: () => JSON.parse(fs.readFileSync(file, 'utf8')) });
     c2.init(T0);
     expect(c2.command({ type: 'data.import', source: 'monolith' }, T0)).toEqual({ ok: true, id: '1' });
   });

@@ -15,7 +15,8 @@ import { settingsOf } from '../../core/repo/repo';
 import { zonedToUtc } from '../../core/time/zone';
 import { timeGrid } from './grid';
 import { Icon } from '../components/Icon';
-import { beginDrag, registerTarget, useDrag, type DragItem } from '../components/drag';
+import { beginPress, registerTarget, useDrag, type DragItem } from '../components/drag';
+import './runway.css';
 import { dropOnTrash, recycleWithUndo } from '../components/actions';
 import { Segmented } from '../components/ui';
 import { run } from '../store';
@@ -150,7 +151,7 @@ export function Runway({ d, m, now, range, setRange, onEditEvent }: { d: Data; m
                 style={{ left: pct(i.start), width: width(i.start, i.end), '--c': `var(--${tag?.color ?? 'tag7'})`, '--i': n } as CSSProperties}
                 aria-label={`${i.event.title}, fixed, ${clockOf(i.start, m.tz)} to ${clockOf(i.end, m.tz)}. Arrows move it, Shift for bigger steps.`}
                 title={`${i.event.title} · ${clockOf(i.start, m.tz)}-${clockOf(i.end, m.tz)}`}
-                onPointerDown={(e) => beginDrag(e, () => item(e))}
+                onPointerDown={(e) => beginPress(e, () => item(e))}
                 aria-haspopup="menu"
                 onContextMenu={(e) => {
                   e.preventDefault();
@@ -197,7 +198,7 @@ export function Runway({ d, m, now, range, setRange, onEditEvent }: { d: Data; m
             const tag = b.tagId ? d.tags[b.tagId] : undefined;
             const isDone = done(b);
             const move = (mode: 'move' | 'start' | 'end') => (ev: React.PointerEvent) =>
-              beginDrag(ev, () => ({ kind: 'block', blockId: b.id, title: b.title, mode, offsetMin: pointerMinute(m, ev.clientX, lane.current) - b.startMin }));
+              beginPress(ev, () => ({ kind: 'block', blockId: b.id, title: b.title, mode, offsetMin: pointerMinute(m, ev.clientX, lane.current) - b.startMin }));
             return (
               <div
                 key={b.id}
@@ -242,7 +243,7 @@ export function Runway({ d, m, now, range, setRange, onEditEvent }: { d: Data; m
                 <button
                   className="tray-item"
                   aria-label={`${e.title}, ${formatHuman(e.durationMin * MIN)}, needs a time. Drag onto the Fixed lane, or press Enter to place it in the first free slot.`}
-                  onPointerDown={(ev) => beginDrag(ev, { kind: 'event', eventId: e.id, title: e.title, date: m.date, recurring: false, unplaced: true, durMin: e.durationMin, offsetMin: 0, startMin: null, endMin: null })}
+                  onPointerDown={(ev) => beginPress(ev, { kind: 'event', eventId: e.id, title: e.title, date: m.date, recurring: false, unplaced: true, durMin: e.durationMin, offsetMin: 0, startMin: null, endMin: null })}
                   onKeyDown={(ev) => {
                     if (ev.key !== 'Enter') return;
                     ev.preventDefault();

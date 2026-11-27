@@ -6,7 +6,7 @@ import { isValidZone } from './time/zone';
 import { isSortKey } from './model/sortKey';
 import { isId } from './model/ids';
 import { RETENTION_OPTIONS, SNAP_OPTIONS } from './model/defaults';
-import { ATTACH_INLINE_MAX_CHARS, ATTACH_MAX_FILES, COLLS, PARSER_REPORTS_MAX, PRIORITIES, SCHEMA_V, SCOPES, TAG_COLORS, TASK_SOURCES, TASK_STATUSES, type Coll, type DeviceSettings, type Settings } from './model/types';
+import { ATTACH_INLINE_MAX_CHARS, ATTACH_MAX_FILES, COLLS, PARSER_REPORTS_MAX, PRIORITIES, SCHEMA_V, SCOPES, TAG_COLORS, RAMBLE_STATUSES, TASK_SOURCES, TASK_STATUSES, type Coll, type DeviceSettings, type Settings } from './model/types';
 
 const SEC = 1000;
 const MIN = 60 * SEC;
@@ -263,7 +263,7 @@ const SHAPES: Record<Coll, Record<string, Check>> = {
   blocks: { taskId: idRef, tagId: idRef, title: str(500), date: DATE, startMin: minute, endMin: minute, tz: isValidZone, kind: oneOf(['work', 'sprint', 'break']), auto: isBool },
   sessions: { taskId: isId, blockId: idRef, startedAt: anyNum, endedAt: anyNum, phase: oneOf(['work', 'break']), overrunMs: anyNum },
   tags: { name: str(200), color: oneOf(TAG_COLORS), kind: oneOf(['class', 'project', 'general']) },
-  ideas: { text: str(5000), body: str(100_000), taskId: idRef, projectId: idRef, reviewed: isBool, parsedTaskIds: arrOf(isId, 500), files: attachments },
+  ideas: { text: str(5000), body: str(100_000), taskId: idRef, projectId: idRef, reviewed: isBool, parsedTaskIds: arrOf(isId, 500), files: attachments, draft: (v) => v === undefined || isBool(v), publishedAt: (v) => v === undefined || anyNum(v) },
   activity: { type: oneOf(['started', 'finished', 'dropped', 'killed', 'claude']), taskId: (v) => v === '' || isId(v), at: anyNum, reason: str(5000) },
   timer: { taskId: idRef, ownerDeviceId: str(200), ownerName: str(200), takeoverAt: nullable(anyNum) },
   settings: {},
@@ -304,3 +304,25 @@ export function recordProblem(coll: string, rec: unknown): string | null {
 }
 
 
+
+/** Phase 4.5 reserve (D-185): why a ramble document is invalid, or null. Not wired to sync yet. */
+export function rambleProblem(rec: unknown): string | null {
+  if (!isObj(rec)) return 'not an object';
+  if (!isId(rec.id)) return 'bad id';
+  for (const [k, c] of Object.entries(BASE)) if (!c(rec[k])) return `bad ${k}`;
+  const strs = (v: unknown, n: number, len: number) => Array.isArray(v) && v.length <= n && v.every((x) => typeof x === 'string' && x.length <= len);
+  const out = rec.output;
+  const checks: Record<string, boolean> = {
+    recordedAt: anyNum(rec.recordedAt),
+    durationSec: typeof rec.durationSec === 'number' && rec.durationSec >= 0 && rec.durationSec <= 4 * 3600,
+    device: typeof rec.device === 'string' && rec.device.length <= 200,
+    projectId: rec.projectId === null || isId(rec.projectId),
+    transcript: typeof rec.transcript === 'string' && rec.transcript.length <= 200_000,
+    status: (RAMBLE_STATUSES as readonly unknown[]).includes(rec.status),
+    output: out === null || (isObj(out) && strs(out.points, 200, 2000) && typeof out.summary === 'string' && out.summary.length <= 20_000 && strs(out.tasks, 100, 500)),
+    model: rec.model === null || (typeof rec.model === 'string' && rec.model.length <= 200),
+    processedAt: rec.processedAt === null || anyNum(rec.processedAt),
+  };
+  const bad = Object.keys(checks).find((k) => !checks[k]);
+  return bad ? `bad ${bad}` : null;
+}

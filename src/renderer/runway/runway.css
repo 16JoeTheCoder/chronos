@@ -1,0 +1,13 @@
+/* Plan's time grid on touch: it scrolls sideways inside its own box and nothing else moves. */
+.rw-wrap { min-width: 0; }
+.rw-scroll { overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+@media (pointer: coarse) {
+  .blk-edge { width: 20px; }
+  .ev, .blk, .blk-body { -webkit-touch-callout: none; user-select: none; }
+}
+@media (max-width: 639px) {
+  .runway { min-width: 0; max-width: 100%; }
+  .rw-wrap { grid-template-columns: 44px minmax(0, 1fr); }
+  .rw-labels span { font-size: 12px; }
+  .ev, .blk-body { font-size: 14px; }
+}

@@ -9,7 +9,7 @@ import { clockOf, formatHM, formatHuman } from '../../core/format';
 import type { Data } from '../../core/model/types';
 import { blockSpan, deriveQueue, ownsTimer, todayOf } from '../../core/tasks/tasks';
 import { homeModel } from '../../core/tasks/screens';
-import { beginDrag, registerTarget, useDrag } from '../components/drag';
+import { beginPress, registerTarget, useDrag } from '../components/drag';
 import { DEFAULT_DUR } from '../runway/model';
 import { TodayShelf } from './TodayShelf';
 import { upcoming } from '../../core/time/schedule';
@@ -94,7 +94,7 @@ export function NowScreen({ d, m, now, deviceId, onFocus, onPlan, onDone, onSche
             <div
               className="now-head now-grab"
               title="Drag to the shelf below to pause"
-              onPointerDown={(e) => (e.target as HTMLElement).closest('button') || beginDrag(e, { kind: 'task', taskId: task.id, title: task.title, dur: task.estimateMin ?? DEFAULT_DUR })}
+              onPointerDown={(e) => (e.target as HTMLElement).closest('button') || beginPress(e, { kind: 'task', taskId: task.id, title: task.title, dur: task.estimateMin ?? DEFAULT_DUR })}
             >
               <h1 className="now-title">
                 {lead && <span className="light">{lead}: </span>}

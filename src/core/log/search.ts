@@ -1,7 +1,7 @@
 // Log search: MiniSearch (core/search) for the words, then phrases and filters on top.
 // Shared by the Log screen and the MCP search_log tool.
 
-import type { Data } from '../model/types';
+import { isDraft, postedAt, type Data } from '../model/types';
 import { dateOf } from '../time/zone';
 import type { SearchIndex } from '../search';
 import { hasTaskPrefix } from './lines';
@@ -21,14 +21,14 @@ export interface LogSearchOpts {
 /** Does the note pass the project / before / after / is:task filters and every phrase? */
 export function passes(d: Data, id: string, q: LogQuery, tz: string): boolean {
   const n = d.ideas[id];
-  if (!n || n.deletedAt !== null) return false;
+  if (!n || n.deletedAt !== null || isDraft(n)) return false;
   if (q.project) {
     const want = q.project.toLowerCase();
     const p = n.projectId ? d.projects[n.projectId] : undefined;
     if (!p || !(p.id === q.project || p.name.toLowerCase() === want || p.name.toLowerCase().startsWith(want))) return false;
   }
   if (q.before || q.after) {
-    const day = dateOf(n.createdAt, tz);
+    const day = dateOf(postedAt(n), tz);
     if (q.before && !(day < q.before)) return false;
     if (q.after && !(day > q.after)) return false;
   }
@@ -47,7 +47,7 @@ export function searchLog(d: Data, index: SearchIndex, query: string, o: LogSear
     index.update(d);
     ids = index.search(q.words.join(' '), { types: ['note'], limit: 200 }).map((h) => ({ id: h.id, score: h.score }));
   } else {
-    ids = Object.values(d.ideas).filter((n) => n.deletedAt === null).sort((a, b) => b.createdAt - a.createdAt || (a.id < b.id ? 1 : -1)).map((n) => ({ id: n.id, score: 0 }));
+    ids = Object.values(d.ideas).filter((n) => n.deletedAt === null && !isDraft(n)).sort((a, b) => postedAt(b) - postedAt(a) || (a.id < b.id ? 1 : -1)).map((n) => ({ id: n.id, score: 0 }));
   }
   return { hits: ids.filter((h) => passes(d, h.id, q, o.tz)).slice(0, limit), query: q };
 }

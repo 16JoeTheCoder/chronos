@@ -1,7 +1,7 @@
 // The one palette (Phase 3.5 §3). Ctrl+K in the app, the global shortcut, or the top-bar
 // search button all open it. A centred dialog over a dimmed, blurred app: add with live parse
 // chips (Enter adds, Shift+Enter adds a fixed event as a task, Tab asks Claude), search matches
-// (tasks, events, Log posts, projects), and ">" commands. Esc closes and returns focus to
+// (tasks, events, Log posts, projects), and ">" commands. Ask Claude rows only where can.askClaude. Esc closes and returns focus to
 // where it was. Home mounts <Palette open onClose onNavigate />; the standalone window mounts
 // the same component with `standalone`.
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -15,6 +15,8 @@ import { useOptionalTheme } from '../theme/ThemeProvider';
 import { paletteCommands, type PalAction } from './commands';
 import { chipsOf, commandFromParse, describeParse, explicitKind, parseLine } from './fromParse';
 import { todayOf } from '../../core/tasks/tasks';
+import { useKeyboardInset } from '../components/Sheet';
+import './palette.css';
 
 export interface PaletteProps {
   open: boolean;
@@ -38,6 +40,7 @@ export function Palette({ open, onClose, standalone, onNavigate }: PaletteProps)
   const input = useRef<HTMLInputElement>(null);
   const index = useRef(new SearchIndex());
   const returnTo = useRef<HTMLElement | null>(null);
+  const kb = useKeyboardInset();
   const mission = useOptionalTheme()?.theme.motion.signature.kind === 'mission-clock';
 
   const reset = () => { setQ(''); setSel(0); setReport(null); setTimeout(() => input.current?.focus(), 0); };
@@ -100,7 +103,7 @@ export function Palette({ open, onClose, standalone, onNavigate }: PaletteProps)
         await exec({ type: 'parser.report', input: last.current.slice(0, 300), expected: report.trim().slice(0, 500), actual: describeParse(r, d) }, () => 'Thanks, reported');
       } }];
     }
-    if (cmdMode) return paletteCommands(d, q.slice(1), listThemeChoices()).map((c, i) => ({ key: c.key, label: c.label, hint: c.hint, group: i === 0 ? 'Commands' : undefined, run: () => doAction(c.action) }));
+    if (cmdMode) return paletteCommands(d, q.slice(1), listThemeChoices(), api.can.askClaude).map((c, i) => ({ key: c.key, label: c.label, hint: c.hint, group: i === 0 ? 'Commands' : undefined, run: () => doAction(c.action) }));
     if (!text) return [];
     const out: Row[] = [];
     const r = parseLine(text, d, Date.now());
@@ -115,7 +118,7 @@ export function Palette({ open, onClose, standalone, onNavigate }: PaletteProps)
     out.push({ key: 'add', label: r.kind === 'fixed' ? 'Add fixed event' : asNote ? 'Post to the Log' : 'Add task', hint: 'Enter', run: add(false) });
     if (r.kind === 'fixed') out.push({ key: 'addtask', label: 'Add as a task instead', hint: 'Shift Enter', run: add(true) });
     else if (!asNote) out.push({ key: 'addnote', label: 'Post to the Log instead', run: add(false, true) });
-    out.push({ key: 'ask', label: `Ask Claude: "${text.slice(0, 60)}"`, hint: 'Tab', run: () => askClaude(text) });
+    if (api.can.askClaude) out.push({ key: 'ask', label: `Ask Claude: "${text.slice(0, 60)}"`, hint: 'Tab', run: () => askClaude(text) });
     index.current.update(d);
     index.current.search(text, { limit: 6 }).filter((h) => !h.deleted).forEach((h, i) => out.push({
       key: `${h.type}:${h.id}`, label: h.title, hint: HIT_LABEL[h.type], group: i === 0 ? 'Matches' : undefined,
@@ -137,7 +140,7 @@ export function Palette({ open, onClose, standalone, onNavigate }: PaletteProps)
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (report !== null) { setReport(null); setQ(''); } else finish(); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); setSel((s) => Math.min(s + 1, rows.length - 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setSel((s) => Math.max(s - 1, 0)); }
-    else if (e.key === 'Tab') { e.preventDefault(); if (!cmdMode && text && report === null) void askClaude(text); }
+    else if (e.key === 'Tab') { e.preventDefault(); if (api.can.askClaude && !cmdMode && text && report === null) void askClaude(text); }
     else if (e.key === 'Enter') {
       e.preventDefault();
       if (e.shiftKey) void rows.find((r) => r.key === 'addtask')?.run();
@@ -146,9 +149,10 @@ export function Palette({ open, onClose, standalone, onNavigate }: PaletteProps)
   };
 
   return (
-    <div className={`pal-scrim${standalone ? '' : ' in-app'}`} onMouseDown={(e) => e.target === e.currentTarget && finish()}>
+    <div className={`pal-scrim${standalone ? '' : ' in-app'}`} style={kb ? { bottom: kb } : undefined} onMouseDown={(e) => e.target === e.currentTarget && finish()}>
       <div className="pal" role="dialog" aria-modal="true" aria-labelledby="pal-label">
         <div className="pal-head">
+          <button type="button" className="pal-close" onMouseDown={(e) => e.preventDefault()} onClick={finish}>Close</button>
           <label id="pal-label" htmlFor="pal-input" className="pal-eyebrow">{report !== null ? 'Report misparse' : cmdMode ? 'Command' : mission ? 'Call Mission Control' : 'Add or search'}</label>
           <input
             id="pal-input"
@@ -157,6 +161,8 @@ export function Palette({ open, onClose, standalone, onNavigate }: PaletteProps)
             value={report !== null ? report : q}
             maxLength={300}
             autoComplete="off"
+            enterKeyHint="go"
+            autoCapitalize="sentences"
             spellCheck={false}
             role="combobox"
             aria-expanded={rows.length > 0}

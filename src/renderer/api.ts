@@ -1,10 +1,5 @@
-// The preload bridge, typed. The renderer talks to main only through this.
-import type { ChronosApi } from '../preload/api';
+// The platform bridge, typed. The renderer talks to the platform only through this
+// (Electron preload or the web bridge, src/platform). The preload global is read only in src/platform/electron.ts.
+import { getBridge, type ChronosBridge } from '../platform';
 
-declare global {
-  interface Window {
-    chronos: ChronosApi;
-  }
-}
-
-export const api: ChronosApi = window.chronos;
+export const api: ChronosBridge = getBridge();

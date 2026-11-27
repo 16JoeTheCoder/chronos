@@ -10,7 +10,7 @@ service cloud.firestore {
         return request.auth != null && request.auth.uid == uid;
       }
       function known() {
-        return collection in ['tasks', 'events', 'eventExceptions', 'closures', 'blocks', 'sessions', 'tags', 'ideas', 'activity', 'timer', 'settings', 'projects', 'reviews', 'cache'];
+        return collection in ['tasks', 'events', 'eventExceptions', 'closures', 'blocks', 'sessions', 'tags', 'ideas', 'activity', 'timer', 'settings', 'projects', 'reviews', 'cache', 'rambles'];
       }
       function valid() {
         let d = request.resource.data;
@@ -28,7 +28,17 @@ service cloud.firestore {
         return (collection != 'events'
             || ((!('durationMin' in d) || (d.durationMin is int && d.durationMin >= 1 && d.durationMin <= 1440))
               && (d.get('startMin', null) == null) == (d.get('endMin', null) == null)))
-          && (collection != 'ideas' || d.get('projectId', null) == null || d.projectId is string)
+          && (collection != 'ideas'
+            || ((d.get('projectId', null) == null || d.projectId is string)
+              && (!('draft' in d) || d.draft is bool)
+              && (!('publishedAt' in d) || d.publishedAt is number)))
+          // Phase 4.5 reserve (D-185): voice notes, written by the phone and the processing Worker.
+          && (collection != 'rambles'
+            || (d.recordedAt is number && d.durationSec is number && d.durationSec >= 0 && d.durationSec <= 14400
+              && d.device is string && d.transcript is string && d.transcript.size() <= 200000
+              && d.status in ['pending', 'processed', 'failed']
+              && (d.get('projectId', null) == null || d.projectId is string)
+              && (d.get('output', null) == null || (d.output is map && d.output.points is list && d.output.summary is string && d.output.tasks is list))))
           && (collection != 'tasks'
             || ((!('labels' in d) || (d.labels is list && d.labels.size() <= 20))
               && (!('priority' in d) || d.priority in ['must', 'should', 'nice', 'none'])))

@@ -7,7 +7,7 @@ const KEYS: [string, string][] = [
   ['P', 'Plan: the day as a time grid, and unscheduled tasks'],
   ['F', 'Focus: only the task and its timer'],
   ['N', 'New task'],
-  ['Ctrl L', 'Log (R inside it: reading view)'],
+  ['Ctrl L', 'Log (W inside it: write; Ctrl Enter publishes; Esc Esc back to reading)'],
   ['Ctrl Shift C', 'Cache: things to carry to your other devices'],
   ['E · Del · Ctrl Enter · S', 'On a task row: edit, delete, complete, start'],
   ['Ctrl Shift P', 'Switch project (Board) or pick the post\'s project (Log)'],

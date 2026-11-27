@@ -2,7 +2,21 @@
 
 A fresh session can resume from this file alone. Newest state first. Decisions: `decision.md` (D-001..D-183, unique and ascending). Spec for Phase 3.5: the prompt in the PR description (sections 0-15); Phase 2+3 spec: `docs/PHASE23_PROMPT.md`.
 
-## State (2026-11-19, end of Phase 3.7)
+## State (2026-11-27, end of Phase 4 web app)
+
+Branch `claude/gallant-euler-xrzpkf` (prompt said `phase-4-web`; the session's branch rule wins). Swarm: lead + Bridge-Web, Web-Infra, Renderer-Port, Mobile-Layout, Log, QA (`docs/swarm/BOARD.md`). Checks at checkpoint C: typecheck clean, 1056 tests, audit green, `npm run build:web` OK (initial JS ~184 KB gz; Firebase lazy). Nothing deployed (the deployment agent does that, `SETUP.md`).
+
+- A: bridge interface frozen (`src/platform/types.ts`), Electron adapter, web bridge (Controller in the page over IndexedDB, leader tab via Web Locks, followers over BroadcastChannel, Firestore persistent cache), both compile.
+- B: web build runs locally in local-only mode (no Firebase config here). Real sign-in and Firestore sync are untested until the web config exists (deployment agent registers the Web app).
+- C: phone shell (52 px top bar, running pill, 5-item tab bar, More sheet, pull to refresh), bottom sheets, full-screen palette, swipeable Board, Tasks swipe gestures, Log Read/Write with drafts, sign-in screen, install-desktop button, usage meter.
+- D: QA done. 1069 tests, audit green, desktop smoke green, PWA offline e2e green (`node tests/e2e/pwa.mjs`), viewports script (`node scripts/viewports.mjs`): no overflow at any of the 6 sizes, chrome 18.5 % at 390×844. Critique (self-scored by QA, impeccable detector not run): 25/36 at 390, 26/36 at 1366: target ≥ 32 **not met**.
+
+### Deferred / open
+- Real Google sign-in and Firestore sync in a browser: untested until the deployment agent registers the Web app and sets `VITE_FIREBASE_*`.
+- Critique gaps (see `docs/BUILD_REPORT.md`): tablet uses desktop-size controls; secondary text 14 px on phone; Log Write has no attachments; touch gestures (swipe, long-press, hold) not tried on a real phone.
+- Chrome budget is 21.1 % at 360×740 and 22.5 % with an iPhone home-indicator inset (the rule is measured at 390×844).
+
+## Previous: State (2026-11-19, end of Phase 3.7)
 
 Branch `claude/phase-3-7-refinements-iwku6e` (the prompt said `phase-3-7`; the session's branch rule wins). Checks: `npm run typecheck` clean; `npm test` 957 passed (72 files); `npm run audit` passed; smoke passed (Xvfb). Deploy: Firestore rules changed (schema v4); see `SETUP.md`.
 

@@ -6,6 +6,7 @@ import type { Snapshot } from '../../core/model/types';
 import { settingsOf } from '../../core/repo/repo';
 import { UI_SCALES } from '../../core/validation';
 import { composite, contrast, exportTheme, importTheme, minutesOfDay, parseColor, parseThemeId, resolveActiveTheme, type ChronosTheme, type ThemeCheck } from '../../core/theme';
+import { api } from '../api';
 import { Icon } from '../components/Icon';
 import { playCue } from '../sound/sound';
 import { run, toast } from '../store';
@@ -189,9 +190,9 @@ export function LookSection({ snap }: { snap: Snapshot }) {
         </div>
       </Group>
 
-      <Group title="Size and layout" note="Zoom is turned off (Ctrl + and Ctrl − do nothing) so layouts never break. Pick a size here instead. This PC only.">
+      <Group title="Size and layout" note={api.can.zoom ? 'Zoom is turned off (Ctrl + and Ctrl − do nothing) so layouts never break. Pick a size here instead. This PC only.' : undefined}>
         <Toggle label="Pin the project list on the Board" hint="Off: switch projects from the project name in the Board header (Ctrl+Shift+P)." checked={dev.projectList !== 'hidden'} onChange={(on) => run({ type: 'device.update', patch: { projectList: on ? 'full' : 'hidden' } })} />
-        <Seg label="Size" value={String(dev.uiScale) as '100'} options={UI_SCALES.map((n) => [String(n), `${n} %`] as ['100', string])} onChange={(v) => void run({ type: 'device.update', patch: { uiScale: Number(v) } })} />
+        {api.can.zoom && <Seg label="Size" value={String(dev.uiScale) as '100'} options={UI_SCALES.map((n) => [String(n), `${n} %`] as ['100', string])} onChange={(v) => void run({ type: 'device.update', patch: { uiScale: Number(v) } })} />}
       </Group>
 
       <Group title="Widgets on the desktop">
@@ -206,8 +207,8 @@ export function LookSection({ snap }: { snap: Snapshot }) {
         <Toggle label="Living reactor" hint="The timer ring charges, turns and breathes" checked={motion && s.energy.livingReactor} disabled={!motion} onChange={(livingReactor) => saveSettings({ energy: { ...s.energy, livingReactor } })} />
         <Toggle label="Holographic depth" hint="Panels tilt a few degrees with the mouse and assemble when they open" checked={motion && s.energy.holographicDepth} disabled={!motion} onChange={(holographicDepth) => saveSettings({ energy: { ...s.energy, holographicDepth } })} />
         <Toggle label="Reactive data" hint="The momentum cell charges toward your weekly goal; the day dial fills per block" checked={motion && s.energy.reactiveData} disabled={!motion} onChange={(reactiveData) => saveSettings({ energy: { ...s.energy, reactiveData } })} />
-        <Row label="Reduce motion in the app" hint="Follow Windows, or choose for this app.">
-          <Seg label="Reduce motion" value={s.reduceMotion === null ? 'os' : s.reduceMotion ? 'reduce' : 'full'} options={[['os', 'Follow Windows'], ['reduce', 'Reduce'], ['full', 'Full']]} onChange={(v) => void saveSettings({ reduceMotion: v === 'os' ? null : v === 'reduce' })} />
+        <Row label="Reduce motion in the app" hint={api.platform === 'web' ? 'Follow your device, or choose for this app.' : 'Follow Windows, or choose for this app.'}>
+          <Seg label="Reduce motion" value={s.reduceMotion === null ? 'os' : s.reduceMotion ? 'reduce' : 'full'} options={[['os', api.platform === 'web' ? 'Follow device' : 'Follow Windows'], ['reduce', 'Reduce'], ['full', 'Full']]} onChange={(v) => void saveSettings({ reduceMotion: v === 'os' ? null : v === 'reduce' })} />
         </Row>
       </Group>
 
@@ -221,14 +222,15 @@ export function LookSection({ snap }: { snap: Snapshot }) {
         </Row>
       </Group>
 
-      <Group title="Desktop and layout">
-        <Toggle label="Live on the desktop (experimental, off by default)" hint="Home sits behind your desktop icons, so Win+D shows it. Not yet verified on Windows: run the Desktop layer part of docs/WINDOWS_CHECKLIST.md first. If it cannot attach it runs as a normal window." checked={dev.liveOnDesktop} onChange={(liveOnDesktop) => run({ type: 'device.update', patch: { liveOnDesktop } })} />
+      <Group title={api.can.desktopLayer ? 'Desktop and layout' : 'Layout'}>
+        {api.can.desktopLayer && <><Toggle label="Live on the desktop (experimental, off by default)" hint="Home sits behind your desktop icons, so Win+D shows it. Not yet verified on Windows: run the Desktop layer part of docs/WINDOWS_CHECKLIST.md first. If it cannot attach it runs as a normal window." checked={dev.liveOnDesktop} onChange={(liveOnDesktop) => run({ type: 'device.update', patch: { liveOnDesktop } })} />
         {snap.desktopLayer?.startsWith('fallback') && !dev.desktopTipSeen && (
           <div className="st-tip" role="note">
             <p><b>Win+D will not show Chronos on this PC</b> ({snap.desktopLayer.replace(/^fallback, /, '')}). Pin Chronos to the taskbar and press Win+1 to bring it up.</p>
             <Btn onClick={() => void run({ type: 'device.update', patch: { desktopTipSeen: true } })}>Got it</Btn>
           </div>
         )}
+        </>}
         <Row label="Runway position">
           <Seg label="Runway position" value={s.runwayPosition} options={[['top', 'Top'], ['bottom', 'Bottom']]} onChange={(runwayPosition) => void saveSettings({ runwayPosition })} />
         </Row>

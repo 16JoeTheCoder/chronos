@@ -10,7 +10,9 @@ import { dateLabel, formatHuman } from '../../core/format';
 import type { Project, Snapshot, Task } from '../../core/model/types';
 import { live, settingsOf } from '../../core/repo/repo';
 import { todayOf } from '../../core/tasks/tasks';
+import { activeColumn } from '../components/gesture';
 import { Icon } from '../components/Icon';
+import { Sheet } from '../components/Sheet';
 import { run, toast, useSnap } from '../store';
 import './board.css';
 
@@ -288,6 +290,9 @@ function Columns({ snap, project, announce, onEnterFocus, onOpenTask }: { snap: 
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<Spot | null>(null);
   const [grab, setGrab] = useState<{ id: string; spot: Spot } | null>(null);
+  const [mover, setMover] = useState<Task | null>(null);
+  const [page, setPage] = useState(0);
+  const strip = useRef<HTMLDivElement>(null);
   const refs = useRef(new Map<string, HTMLElement>());
   const colName = (id: string) => project.columns.find((c) => c.id === id)?.name ?? id;
   const others = (col: string, skip: string) => (cards[col] ?? []).filter((t) => t.id !== skip);
@@ -345,8 +350,29 @@ function Columns({ snap, project, announce, onEnterFocus, onOpenTask }: { snap: 
   const moving = grab?.id ?? dragId;
   const indicator = grab?.spot ?? over;
 
+  // Phone: one full-width column at a time (scroll-snap). The pager above shows which one and jumps to another.
+  const onScroll = () => {
+    const el = strip.current;
+    const first = el?.firstElementChild as HTMLElement | null;
+    if (!el || !first) return;
+    setPage(activeColumn(el.scrollLeft, first.offsetWidth, parseFloat(getComputedStyle(el).columnGap) || 0, project.columns.length));
+  };
+  const jump = (i: number) => {
+    const el = strip.current;
+    const target = el?.children[i] as HTMLElement | undefined;
+    if (el && target) el.scrollTo({ left: target.offsetLeft - el.offsetLeft, behavior: 'smooth' });
+  };
+
   return (
-    <div className="bd-cols" style={{ ['--n' as string]: project.columns.length }}>
+    <div className="bd-colwrap">
+      <nav className="bd-pager" aria-label="Columns">
+        {project.columns.map((c, i) => (
+          <button key={c.id} type="button" className="bd-pager-btn" aria-current={page === i ? 'true' : undefined} onClick={() => jump(i)}>
+            {c.name} <span>{(cards[c.id] ?? []).length}</span>
+          </button>
+        ))}
+      </nav>
+    <div className="bd-cols" ref={strip} onScroll={onScroll} style={{ ['--n' as string]: project.columns.length }}>
       {project.columns.map((c) => {
         const list = cards[c.id] ?? [];
         const isDoing = c.id === doing;
@@ -396,6 +422,7 @@ function Columns({ snap, project, announce, onEnterFocus, onOpenTask }: { snap: 
                         {isSwap && <span className="bd-swap">Swaps with this card</span>}
                         {overflow.has(t.id) && <span className="bd-swap">Extra card in the focus slot. Move it out.</span>}
                       </button>
+                      <button type="button" className="bd-btn bd-move" onClick={() => setMover(t)} aria-label={`Move ${t.title}`}>Move to…</button>
                       {isDoing && !overflow.has(t.id) && onEnterFocus && (
                         <button type="button" className="bd-btn bd-btn-solid bd-enter" onClick={() => onEnterFocus(t.id)}>Enter focus</button>
                       )}
@@ -410,6 +437,19 @@ function Columns({ snap, project, announce, onEnterFocus, onOpenTask }: { snap: 
         );
       })}
       <span id="bd-kbd-hint" className="bd-sr">Space picks this card up, arrow keys move it, Space drops it.</span>
+    </div>
+    {mover && (
+      <Sheet title="Move to" onClose={() => setMover(null)}>
+        <p className="muted">{mover.title}</p>
+        <ul className="bd-moves">
+          {project.columns.map((c) => (
+            <li key={c.id}>
+              <button type="button" className="bd-btn" aria-current={mover.columnId === c.id ? 'true' : undefined} onClick={() => { const t = mover; setMover(null); void drop(t.id, { col: c.id, index: others(c.id, t.id).length }); }}>{c.name}</button>
+            </li>
+          ))}
+        </ul>
+      </Sheet>
+    )}
     </div>
   );
 }

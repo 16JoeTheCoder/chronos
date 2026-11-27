@@ -36,7 +36,7 @@ export async function prepare(file: File, area: Area, cloud: boolean, held: Atta
   const mime = (file.type || 'application/octet-stream').slice(0, 100);
   const id = crypto.randomUUID();
   let why = '';
-  if (cloud) {
+  if (cloud && api.can.cloudFiles) {
     const r = await api.files.put({ area, id, name, mime, bytes: new Uint8Array(await file.arrayBuffer()) });
     if (r.ok) return { ok: true, att: { id, name, mime, size: file.size, cloud: true, data: null } };
     why = r.error;

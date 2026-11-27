@@ -67,7 +67,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          name: Chronos ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           body: Download Chronos-Setup-*.exe to install, or Chronos-Portable-*.exe to run without installing. Unsigned build; SmartScreen shows More info -> Run anyway.
           files: |
             release/Chronos-Setup-*.exe

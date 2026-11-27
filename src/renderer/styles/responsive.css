@@ -1,0 +1,80 @@
+/* Phase 4: the phone and tablet shell. Loaded by home/Home.tsx.
+   Breakpoints (one source: shell/viewport.ts, which sets .home[data-viewport]):
+     phone   < 640        one column, top bar 52, running pill 48, tab bar 56 (<= 20 % of a 390x844 screen)
+     tablet  640 - 1023   the rail stays (compact), 24 px gutters
+     desktop >= 1024      untouched: nothing below applies
+   CSS order (D-171): Vite may emit this before screens.css, so every override is scoped to
+   .home[data-viewport="..."] (specificity 0,2,0 and up), never !important.
+   Colours come only from theme tokens (--c-*). */
+
+:root { --sh-top: 52px; --sh-pill: 48px; --sh-tab: 56px; --sh-gutter: 16px; }
+
+@media (max-width: 639.98px) {
+  html body { height: 100dvh; font-size: 16px; line-height: 1.5; }
+}
+
+.home[data-viewport="phone"] { display: flex; flex-direction: column; height: 100dvh; min-width: 0; }
+.home[data-viewport="phone"] .home-main { flex: 1; min-width: 0; min-height: 0; gap: 0; padding: env(safe-area-inset-top) max(var(--sh-gutter), env(safe-area-inset-right)) 0 max(var(--sh-gutter), env(safe-area-inset-left)); }
+.home[data-viewport="phone"] kbd { display: none; }
+
+.home[data-viewport="phone"] .topbar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: var(--sh-top); }
+.home[data-viewport="phone"] .tb-title { margin: 0; min-width: 0; font: 600 22px/1.2 var(--font-display); color: var(--c-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home[data-viewport="phone"] .tb-icon { flex: none; width: 44px; height: 44px; margin-right: -10px; display: grid; place-items: center; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--c-text); cursor: pointer; }
+
+.home[data-viewport="phone"] .screen { gap: 24px; padding: 8px 0 32px; overflow-x: hidden; overscroll-behavior-y: contain; scrollbar-gutter: auto; }
+.home[data-viewport="phone"] .screen > * { min-width: 0; max-width: 100%; }
+.home[data-viewport="phone"] .plan-back { flex-wrap: wrap; gap: 8px; }
+.home[data-viewport="phone"] .plan-back .plan-home, .home[data-viewport="phone"] .plan-back .plan-back-gap { display: none; }
+.home[data-viewport="phone"] .btn, .home[data-viewport="phone"] .seg button, .home[data-viewport="phone"] .link, .home[data-viewport="phone"] .trash { min-height: 44px; }
+
+.pull { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; overflow: hidden; transition: height var(--dur-base) var(--ease); }
+.pull-text { font: 500 13px/16px var(--font-text); color: var(--c-text-2); }
+.pull-line { width: 48px; height: 2px; border-radius: var(--r-pill); background: var(--c-line-strong); transition: background var(--dur-fast) var(--ease), width var(--dur-base) var(--ease); }
+.pull-ready .pull-line { width: 96px; background: var(--c-text); }
+.pull-refreshing .pull-line { width: 96px; background: var(--c-text); }
+
+.dock { flex: none; display: flex; flex-direction: column; background: var(--c-ground); }
+.runpill { height: var(--sh-pill); display: flex; align-items: center; gap: 12px; padding: 0 max(var(--sh-gutter), env(safe-area-inset-right)) 0 max(var(--sh-gutter), env(safe-area-inset-left)); border: 0; border-top: 1px solid var(--c-line); background: color-mix(in srgb, var(--c-text) 7%, var(--c-ground)); color: var(--c-text); font: 600 16px/1.5 var(--font-text); text-align: left; cursor: pointer; }
+.runpill-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c-text-3); }
+.runpill.live .runpill-dot { background: var(--c-now); }
+.runpill-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.runpill .digits { flex: none; font-size: 16px; color: var(--c-text-2); }
+
+.tabbar { height: calc(var(--sh-tab) + env(safe-area-inset-bottom)); box-sizing: border-box; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); border-top: 1px solid var(--c-line); background: var(--c-ground); }
+.tab { min-width: 44px; height: var(--sh-tab); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--c-text-2); font: 500 12px/16px var(--font-text); cursor: pointer; }
+.tab.on { color: var(--c-text); font-weight: 700; box-shadow: inset 0 2px 0 var(--c-text); }
+
+.sheet-scrim { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; background: var(--c-scrim, color-mix(in srgb, var(--c-ground) 70%, transparent)); animation: pal-fade var(--dur-fast) var(--ease) both; }
+.sheet { width: 100%; box-sizing: border-box; padding: 8px max(var(--sh-gutter), env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(var(--sh-gutter), env(safe-area-inset-left)); background: var(--c-panel); border-top: 1px solid var(--c-line-strong); border-radius: var(--r-lg) var(--r-lg) 0 0; box-shadow: var(--depth-float); animation: sheet-up var(--dur-base) var(--ease) both; }
+@keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } }
+.reduce .sheet { animation: none; }
+.sheet-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sheet-item { width: 100%; min-height: 56px; display: flex; align-items: center; gap: 16px; padding: 8px 12px; border: 0; border-radius: var(--r-md); background: transparent; color: var(--c-text); text-align: left; cursor: pointer; }
+.sheet-item.on { background: color-mix(in srgb, var(--c-text) 7%, var(--c-panel)); }
+.sheet-text { display: flex; flex-direction: column; min-width: 0; }
+.sheet-label { font: 600 16px/1.5 var(--font-text); }
+.sheet-hint { font: 400 14px/1.4 var(--font-text); color: var(--c-text-2); }
+
+.home[data-viewport="phone"] .toasts { bottom: calc(var(--sh-tab) + var(--sh-pill) + env(safe-area-inset-bottom) + 16px); max-width: calc(100% - 2 * var(--sh-gutter)); }
+
+
+.home[data-viewport="tablet"] { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: none; height: 100dvh; }
+.home[data-viewport="tablet"][data-screen="focus"] { grid-template-columns: minmax(0, 1fr); }
+.home[data-viewport="tablet"] .rail-nav { order: 0; width: 72px; flex-direction: column; justify-content: flex-start; padding: 24px 0; border-right: 1px solid var(--c-line); border-top: 0; }
+.home[data-viewport="tablet"] .rail-mark { display: block; }
+.home[data-viewport="tablet"] .rail-end { margin-top: auto; }
+.home[data-viewport="tablet"] .rail-btn { width: 56px; min-height: 56px; border-radius: var(--r-md); }
+.home[data-viewport="tablet"] .rail-btn.on { background: color-mix(in srgb, var(--c-text) 7%, transparent); box-shadow: none; }
+.home[data-viewport="tablet"] .home-main { min-width: 0; padding: 24px 24px 16px; gap: 20px; }
+.home[data-viewport="tablet"] .screen > * { min-width: 0; }
+.home[data-viewport="phone"] .home-main { position: relative; }
+.home[data-viewport="phone"] .focus-exit { position: absolute; z-index: 2; top: calc(env(safe-area-inset-top) + 4px); right: 0; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--c-text-2); cursor: pointer; }
+
+/* Phase 4 QA fixes. Phone: toasts sit above the running pill and tab bar and show one at a time (they covered Board's Add/Done). */
+.home[data-viewport="phone"] .toasts { bottom: calc(var(--sh-tab) + var(--sh-pill) + env(safe-area-inset-bottom) + 12px); width: calc(100% - 2 * var(--sh-gutter)); }
+.home[data-viewport="phone"] .toasts .toast:not(:last-child) { display: none; }
+.home[data-viewport="phone"] .toast { width: 100%; box-sizing: border-box; }
+.home[data-viewport="phone"] .stray textarea, .home[data-viewport="phone"] .post-link { min-height: 44px; }
+/* Tablet and phone: the Settings section list scrolls sideways instead of clipping a label. */
+.home:is([data-viewport="phone"], [data-viewport="tablet"]) .st-nav { overflow-x: auto; scrollbar-width: thin; }
+.home:is([data-viewport="phone"], [data-viewport="tablet"]) .st-nav-item { flex: none; white-space: nowrap; }

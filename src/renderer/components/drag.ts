@@ -4,6 +4,7 @@
 // Every drag here also has a keyboard path (see Home/Runway/Tasks).
 
 import { useSyncExternalStore, type PointerEvent as RPointerEvent } from 'react';
+import { LONG_PRESS_MS, LONG_PRESS_SLOP } from './gesture';
 
 export type DragItem =
   | { kind: 'task'; taskId: string; title: string; dur: number }
@@ -64,6 +65,13 @@ function hit(item: DragItem, x: number, y: number, free: boolean): [string | nul
 export function beginDrag(e: RPointerEvent, item: DragItem | (() => DragItem), onClick?: () => void): void {
   if (e.button !== 0) return;
   e.stopPropagation();
+  // Touch: once a drag is picked up the page must not scroll under the finger, and Android must not open its context menu.
+  const touch = e.pointerType === 'touch';
+  const block = (ev: Event) => { if (ev.cancelable) ev.preventDefault(); };
+  if (touch) {
+    window.addEventListener('touchmove', block, { passive: false });
+    window.addEventListener('contextmenu', block);
+  }
   const x0 = e.clientX;
   const y0 = e.clientY;
   let active = false;
@@ -87,6 +95,8 @@ export function beginDrag(e: RPointerEvent, item: DragItem | (() => DragItem), o
     window.removeEventListener('pointercancel', cancel);
     window.removeEventListener('keydown', esc, true);
     window.removeEventListener('blur', cancel);
+    window.removeEventListener('touchmove', block);
+    window.removeEventListener('contextmenu', block);
     document.documentElement.classList.remove('dragging');
     const s = state;
     state = null;
@@ -113,4 +123,32 @@ export function beginDrag(e: RPointerEvent, item: DragItem | (() => DragItem), o
   window.addEventListener('pointercancel', cancel);
   window.addEventListener('keydown', esc, true);
   window.addEventListener('blur', cancel);
+}
+
+/**
+ * A press that picks something up. Mouse and pen: as beginDrag (4 px). Touch: a long press (420 ms, finger
+ * still) picks it up; moving earlier is a scroll or swipe and nothing happens. A short tap calls onClick.
+ */
+export function beginPress(e: RPointerEvent, item: DragItem | (() => DragItem), onClick?: () => void): void {
+  if (e.pointerType !== 'touch') return beginDrag(e, item, onClick);
+  if (e.button !== 0) return;
+  const x0 = e.clientX;
+  const y0 = e.clientY;
+  let timer = 0;
+  const stop = () => {
+    window.clearTimeout(timer);
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', stop);
+  };
+  const move = (ev: PointerEvent) => { if (Math.hypot(ev.clientX - x0, ev.clientY - y0) > LONG_PRESS_SLOP) stop(); };
+  const up = () => { stop(); onClick?.(); };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', stop);
+  timer = window.setTimeout(() => {
+    stop();
+    try { navigator.vibrate?.(12); } catch { /* optional */ }
+    beginDrag(e, item, undefined);
+  }, LONG_PRESS_MS);
 }

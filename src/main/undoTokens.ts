@@ -7,7 +7,8 @@ import type { Command, Result, RevertOp } from '../core/commands';
 
 export const UNDO_TTL_MS = 60_000;
 export const UNDO_KEEP = 20;
-export const TOKEN_RE = /^[a-f0-9]{24}$/;
+import { TOKEN_RE } from './parseCommand';
+export { TOKEN_RE };
 
 export class UndoTokens {
   private held = new Map<string, { ops: RevertOp[]; expires: number }>();

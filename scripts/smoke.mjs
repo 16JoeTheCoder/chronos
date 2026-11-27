@@ -208,7 +208,7 @@ try {
   await home.keyboard.press('Control+k');
   await home.keyboard.type('>go log');
   await home.keyboard.press('Enter');
-  await home.waitForSelector('textarea[aria-label="Write a post"]');
+  await home.waitForSelector('input[aria-label="Search posts"]');
   if (await home.locator('.pal').count()) throw new Error('palette stayed open after navigating');
 
   step('? opens the help sheet; Esc closes it');
@@ -249,7 +249,7 @@ try {
   await palette.keyboard.press('Escape');
   await home.bringToFront();
 
-  step('Settings, Board and Log from the rail; a Log post edit is saved through idea.edit');
+  step('Settings, Board and Log from the rail; a Log post edit (Write view) is saved through idea.edit');
   await home.getByRole('button', { name: 'Settings', exact: true }).first().click();
   await home.getByRole('heading', { name: 'Settings' }).first().waitFor();
   await home.screenshot({ path: `${shots}/5-settings.png` });
@@ -257,14 +257,15 @@ try {
   await home.waitForTimeout(700);
   await home.getByRole('button', { name: 'Home', exact: true }).click();
   await home.keyboard.press('Control+l');
-  await home.waitForSelector('textarea[aria-label="Write a post"]');
+  await home.waitForSelector('input[aria-label="Search posts"]');
   await home.getByRole('button', { name: /^Edit post from/ }).first().click();
   const editBox = home.locator('textarea[aria-label="Edit post"]');
   await editBox.fill('Edited in the smoke test: the Log saves through idea.edit.');
   await home.waitForTimeout(1500);
   const saved = await home.evaluate(async () => Object.values((await window.chronos.getSnapshot()).data.ideas).some((i) => i.body.startsWith('Edited in the smoke test')));
   if (!saved) throw new Error('Log post edit was not saved (idea.edit)');
-  await home.locator('.note-head').getByRole('button', { name: 'Done' }).first().click();
+  await home.getByRole('button', { name: 'Save', exact: true }).click();
+  await home.waitForSelector('input[aria-label="Search posts"]');
   await home.getByRole('button', { name: 'Home', exact: true }).click();
 
   step('Board: create a project from the header switcher, pin and unpin the list');
